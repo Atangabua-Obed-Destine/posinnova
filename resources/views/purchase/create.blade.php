@@ -27,7 +27,7 @@
 	{!! Form::open(['url' => action([\App\Http\Controllers\PurchaseController::class, 'store']), 'method' => 'post', 'id' => 'add_purchase_form', 'files' => true ]) !!}
 	@component('components.widget', ['class' => 'box-primary'])
 		<div class="row">
-			<div class="@if(!empty($default_purchase_status)) col-sm-4 @else col-sm-3 @endif">
+			<div class="col-sm-3">
 				<div class="form-group">
 					{!! Form::label('supplier_id', __('purchase.supplier') . ':*') !!}
 					<div class="input-group">
@@ -45,14 +45,14 @@
 				</strong>
 				<div id="supplier_address_div"></div>
 			</div>
-			<div class="@if(!empty($default_purchase_status)) col-sm-4 @else col-sm-3 @endif">
+			<div class="col-sm-3">
 				<div class="form-group">
 					{!! Form::label('ref_no', __('purchase.ref_no').':') !!}
 					@show_tooltip(__('lang_v1.leave_empty_to_autogenerate'))
 					{!! Form::text('ref_no', null, ['class' => 'form-control']); !!}
 				</div>
 			</div>
-			<div class="@if(!empty($default_purchase_status)) col-sm-4 @else col-sm-3 @endif">
+			<div class="col-sm-3">
 				<div class="form-group">
 					{!! Form::label('transaction_date', __('purchase.purchase_date') . ':*') !!}
 					<div class="input-group">
@@ -63,7 +63,7 @@
 					</div>
 				</div>
 			</div>
-			<div class="col-sm-3 @if(!empty($default_purchase_status)) hide @endif">
+			<div class="col-sm-3">
 				<div class="form-group">
 					{!! Form::label('status', __('purchase.purchase_status') . ':*') !!} @show_tooltip(__('tooltip.order_status'))
 					{!! Form::select('status', $orderStatuses, $default_purchase_status, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select'), 'required']); !!}

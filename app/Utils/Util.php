@@ -590,21 +590,29 @@ class Util
 
         //Find related subunits for the product.
         $related_sub_units = [];
+        $product_scoped = false;
         if (! empty($product_id)) {
             $product = Product::where('business_id', $business_id)->findOrFail($product_id);
-            $related_sub_units = $product->sub_unit_ids;
+            $raw = $product->sub_unit_ids;
+            if (is_array($raw)) {
+                $related_sub_units = array_values(array_filter(array_map('intval', $raw), fn($v) => $v > 0));
+            }
+            $product_scoped = true;
         }
 
         $sub_units = [];
 
-        //Add main unit as per given parameter or conditions.
-        if (($return_main_unit_if_empty && count($unit->sub_units) == 0)) {
-            $sub_units[$unit->id] = [
-                'name' => $unit->actual_name,
-                'multiplier' => 1,
-                'allow_decimal' => $unit->allow_decimal,
-            ];
-        } elseif (empty($related_sub_units) || in_array($unit->id, $related_sub_units)) {
+        // PosInnova: when a product is supplied, treat an empty sub_unit_ids
+        // as "no related sub-units" (base unit only). The upstream behavior
+        // of "empty == all related units" caused the POS / price-list to
+        // show sub-units (e.g. card-10) for products that explicitly have
+        // none mapped on their edit page.
+        $include_main = ($return_main_unit_if_empty && count($unit->sub_units) == 0)
+            || ! $product_scoped
+            || empty($related_sub_units)
+            || in_array((int) $unit->id, $related_sub_units, true);
+
+        if ($include_main) {
             $sub_units[$unit->id] = [
                 'name' => $unit->actual_name,
                 'multiplier' => 1,
@@ -614,8 +622,12 @@ class Util
 
         if (count($unit->sub_units) > 0) {
             foreach ($unit->sub_units as $sub_unit) {
-                //Check if subunit is related to the product or not.
-                if (empty($related_sub_units) || in_array($sub_unit->id, $related_sub_units)) {
+                // Without a product context, keep legacy behavior (return all
+                // sub-units of the base unit). With a product context, only
+                // include sub-units explicitly mapped in sub_unit_ids.
+                $allowed = ! $product_scoped
+                    || in_array((int) $sub_unit->id, $related_sub_units, true);
+                if ($allowed) {
                     $sub_units[$sub_unit->id] = [
                         'name' => $sub_unit->actual_name,
                         'multiplier' => $sub_unit->base_unit_multiplier,

@@ -332,6 +332,7 @@ $(document).ready(function() {
                             not_for_selling: 0,
                             search_fields: search_fields,
                             auto_add_single: true,
+                            auto_add_only_exact_sku: $('#pos_disable_auto_add').val() == 1 ? 1 : 0,
                             product_row: $('input#product_row_count').val(),
                             customer_id: customer_id,
                             is_direct_sell: is_direct_sell,
@@ -370,7 +371,14 @@ $(document).ready(function() {
                     if (ui.content.length == 1 && ui.content[0].auto_added) {
                         return;
                     }
-                    
+
+                    // PosInnova: when `Disable Auto-Add Product on Search` is on, the cashier
+                    // must explicitly click a suggestion for typed searches. Barcode scans are
+                    // handled server-side (auto_add only on exact SKU match) so we just bail.
+                    if ($('#pos_disable_auto_add').val() == 1) {
+                        return;
+                    }
+
                     if (ui.content.length == 1) {
                         ui.item = ui.content[0];
 

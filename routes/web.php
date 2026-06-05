@@ -109,6 +109,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
 
     Route::resource('purchase-requisition', PurchaseRequisitionController::class)->except(['edit', 'update']);
     Route::post('/get-requisition-products', [PurchaseRequisitionController::class, 'getRequisitionProducts'])->name('get-requisition-products');
+    Route::get('/get-purchase-requisition-product-row/{variation_id}', [PurchaseRequisitionController::class, 'getProductRow'])->name('get-purchase-requisition-product-row');
     Route::get('get-purchase-requisitions/{location_id}', [PurchaseRequisitionController::class, 'getPurchaseRequisitions']);
     Route::get('get-purchase-requisition-lines/{purchase_requisition_id}', [PurchaseRequisitionController::class, 'getPurchaseRequisitionLines']);
 
@@ -282,6 +283,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('/reports/purchase-sell', [ReportController::class, 'getPurchaseSell']);
     Route::get('/reports/customer-supplier', [ReportController::class, 'getCustomerSuppliers']);
     Route::get('/reports/stock-report', [ReportController::class, 'getStockReport']);
+    Route::get('/reports/products-price-list', [ReportController::class, 'getProductsPriceList']);
     Route::get('/reports/stock-details', [ReportController::class, 'getStockDetails']);
     Route::get('/reports/tax-report', [ReportController::class, 'getTaxReport']);
     Route::get('/reports/tax-details', [ReportController::class, 'getTaxDetails']);
@@ -366,7 +368,13 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('/inventory-count/{id}/csv-import', [\App\Http\Controllers\InventoryCountController::class, 'csvImport'])->whereNumber('id');
     Route::post('/inventory-count/{id}/scan', [\App\Http\Controllers\InventoryCountController::class, 'scanLookup'])->whereNumber('id');
     Route::post('/inventory-count/{id}/save-line', [\App\Http\Controllers\InventoryCountController::class, 'saveLine'])->whereNumber('id');
+    Route::get('/inventory-count/{id}/variation-search', [\App\Http\Controllers\InventoryCountController::class, 'variationSearch'])->whereNumber('id');
+    Route::post('/inventory-count/{id}/add-lot', [\App\Http\Controllers\InventoryCountController::class, 'addLot'])->whereNumber('id');
+    Route::post('/inventory-count/{id}/update-lot', [\App\Http\Controllers\InventoryCountController::class, 'updateLot'])->whereNumber('id');
     Route::post('/inventory-count/{id}/update-sell-price', [\App\Http\Controllers\InventoryCountController::class, 'updateSellPrice'])->whereNumber('id');
+    Route::post('/inventory-count/{id}/update-unit-cost', [\App\Http\Controllers\InventoryCountController::class, 'updateUnitCost'])->whereNumber('id');
+    Route::post('/inventory-count/{id}/update-alert-quantity', [\App\Http\Controllers\InventoryCountController::class, 'updateAlertQuantity'])->whereNumber('id');
+    Route::post('/inventory-count/{id}/update-product-unit', [\App\Http\Controllers\InventoryCountController::class, 'updateProductUnit'])->whereNumber('id');
     Route::get('/inventory-count/{id}/unit-prices-grid', [\App\Http\Controllers\InventoryCountController::class, 'unitPricesGrid'])->whereNumber('id');
     Route::post('/inventory-count/{id}/post', [\App\Http\Controllers\InventoryCountController::class, 'post'])->whereNumber('id');
     Route::post('/inventory-count/{id}/approve', [\App\Http\Controllers\InventoryCountController::class, 'approve'])->whereNumber('id');

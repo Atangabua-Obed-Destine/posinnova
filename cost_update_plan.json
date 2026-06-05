@@ -1,0 +1,5510 @@
+{
+    "matched": [
+        {
+            "code": "ACELIX",
+            "desc": "ACELIX ( ACECLOFENAC 100MG)",
+            "cost": 1308,
+            "product_id": 929,
+            "variation_id": 929,
+            "name": "ACELIX ( ACECLOFENAC 100MG)",
+            "old_dpp": 416.92,
+            "old_dpp_inc": 416.92,
+            "tax_id": null
+        },
+        {
+            "code": "ACFOL_B\/25",
+            "desc": "ACFOL  ( FOLIC ACID) B\/25",
+            "cost": 1285,
+            "product_id": 930,
+            "variation_id": 930,
+            "name": "ACFOL ( FOLIC ACID) B\/25",
+            "old_dpp": 1285,
+            "old_dpp_inc": 1285,
+            "tax_id": null
+        },
+        {
+            "code": "ACICLO",
+            "desc": "ACICLOVIR 400MG TABLETS",
+            "cost": 132,
+            "product_id": 931,
+            "variation_id": 931,
+            "name": "ACICLOVIR 400MG TABLETS",
+            "old_dpp": 122.09,
+            "old_dpp_inc": 122.09,
+            "tax_id": null
+        },
+        {
+            "code": "ACLAVE_1G_SACHET_B",
+            "desc": "ACLAV 1G SACHET B\/12",
+            "cost": 3330,
+            "product_id": 932,
+            "variation_id": 932,
+            "name": "ACLAV 1G SACHET B\/12",
+            "old_dpp": 8325,
+            "old_dpp_inc": 8325,
+            "tax_id": null
+        },
+        {
+            "code": "ACLAV_100MG\/12.5ML",
+            "desc": "ACLAV 100MG\/12.5ML",
+            "cost": 3062,
+            "product_id": 933,
+            "variation_id": 933,
+            "name": "ACLAV 100MG\/12.5ML",
+            "old_dpp": 3062,
+            "old_dpp_inc": 3062,
+            "tax_id": null
+        },
+        {
+            "code": "ACTRAPID_RET",
+            "desc": "ACTRAPID RETAIL",
+            "cost": 45,
+            "product_id": 934,
+            "variation_id": 934,
+            "name": "ACTRAPID RETAIL",
+            "old_dpp": 45,
+            "old_dpp_inc": 45,
+            "tax_id": null
+        },
+        {
+            "code": "ACUPAN__NEFOPAM",
+            "desc": "ACUPAN ( NEFOPAM 20MG \/2ML)",
+            "cost": 600,
+            "product_id": 935,
+            "variation_id": 935,
+            "name": "ACUPAN ( NEFOPAM 20MG \/2ML)",
+            "old_dpp": 3155.56,
+            "old_dpp_inc": 3155.56,
+            "tax_id": null
+        },
+        {
+            "code": "ADMISSION_KIT",
+            "desc": "ADMISSION KIT",
+            "cost": 0,
+            "product_id": 936,
+            "variation_id": 936,
+            "name": "ADMISSION KIT",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "ADRE",
+            "desc": "ADRENALINE INJECTION  1MG\/1ML",
+            "cost": 60,
+            "product_id": 937,
+            "variation_id": 937,
+            "name": "ADRENALINE INJECTION 1MG\/1ML",
+            "old_dpp": 455.48,
+            "old_dpp_inc": 455.48,
+            "tax_id": null
+        },
+        {
+            "code": "ALBENDAZOL_SIROP",
+            "desc": "ALBENDAZOL SIROP",
+            "cost": 897.6,
+            "product_id": 938,
+            "variation_id": 938,
+            "name": "ALBENDAZOL SIROP",
+            "old_dpp": 897.6,
+            "old_dpp_inc": 897.6,
+            "tax_id": null
+        },
+        {
+            "code": "ALBEN_T",
+            "desc": "ALBENDAZOLE 400MG TABLETS",
+            "cost": 99,
+            "product_id": 939,
+            "variation_id": 939,
+            "name": "ALBENDAZOLE 400MG TABLETS",
+            "old_dpp": 91.74,
+            "old_dpp_inc": 91.74,
+            "tax_id": null
+        },
+        {
+            "code": "ALDAC",
+            "desc": "ALDACTONE ( SPIRINOLACTONE) 50MG TABLET",
+            "cost": 164.05,
+            "product_id": 940,
+            "variation_id": 940,
+            "name": "ALDACTONE ( SPIRINOLACTONE) 50MG TABLET",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "ALERCHECK_EYE_DROP",
+            "desc": "ALLERCHECK EYE DROP 0.1%",
+            "cost": 2671,
+            "product_id": 941,
+            "variation_id": 941,
+            "name": "ALLERCHECK EYE DROP 0.1%",
+            "old_dpp": 4958.2,
+            "old_dpp_inc": 4958.2,
+            "tax_id": null
+        },
+        {
+            "code": "ALLO",
+            "desc": "ALLOPURINOL 100MG TABLETS",
+            "cost": 791,
+            "product_id": 942,
+            "variation_id": 942,
+            "name": "ALLOPURINOL 100MG TABLETS",
+            "old_dpp": 791,
+            "old_dpp_inc": 791,
+            "tax_id": null
+        },
+        {
+            "code": "ALUM",
+            "desc": "ALUMINIUM HYDROXIDE 500MG TAB",
+            "cost": 11.88,
+            "product_id": 943,
+            "variation_id": 943,
+            "name": "ALUMINIUM HYDROXIDE 500MG TAB",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "ALUMA",
+            "desc": "MAGNESIUM TRISILICATE\/ALUMINIUM HYDROXIDE 250MG\/120MG TABLETS",
+            "cost": 15.84,
+            "product_id": 944,
+            "variation_id": 944,
+            "name": "MAGNESIUM TRISILICATE\/ALUMINIUM HYDROX",
+            "old_dpp": 15.83,
+            "old_dpp_inc": 15.83,
+            "tax_id": null
+        },
+        {
+            "code": "AMIFER_INJECT",
+            "desc": "AMIFER INJECTION",
+            "cost": 2064.4,
+            "product_id": 945,
+            "variation_id": 945,
+            "name": "AMIFER INJECTION",
+            "old_dpp": 2064.4,
+            "old_dpp_inc": 2064.4,
+            "tax_id": null
+        },
+        {
+            "code": "AMIFER_SIROP",
+            "desc": "AMIFER SIROP F\/200ML",
+            "cost": 2846,
+            "product_id": 946,
+            "variation_id": 946,
+            "name": "AMIFER SIROP F\/200ML",
+            "old_dpp": 2846,
+            "old_dpp_inc": 2846,
+            "tax_id": null
+        },
+        {
+            "code": "AMINOP",
+            "desc": "AMINOPHYLINE 25MG\/ML INJECTION",
+            "cost": 165,
+            "product_id": 947,
+            "variation_id": 947,
+            "name": "AMINOPHYLINE 25MG\/ML INJECTION",
+            "old_dpp": 216.43,
+            "old_dpp_inc": 216.43,
+            "tax_id": null
+        },
+        {
+            "code": "AMINO_T",
+            "desc": "AMINOPHYLINE 100MG TABLETS",
+            "cost": 13.2,
+            "product_id": 948,
+            "variation_id": 948,
+            "name": "AMINOPHYLINE 100MG TABLETS",
+            "old_dpp": 13.2,
+            "old_dpp_inc": 13.2,
+            "tax_id": null
+        },
+        {
+            "code": "AMITRIP",
+            "desc": "AMITRIPTYLLINE 25MG TABLETS",
+            "cost": 15.84,
+            "product_id": 949,
+            "variation_id": 949,
+            "name": "AMITRIPTYLLINE 25MG TABLETS",
+            "old_dpp": 15.38,
+            "old_dpp_inc": 15.38,
+            "tax_id": null
+        },
+        {
+            "code": "AMLO",
+            "desc": "AMLODIPINE 10MG TABLETS B\/28",
+            "cost": 924,
+            "product_id": 950,
+            "variation_id": 950,
+            "name": "AMLODIPINE 10MG TABLETS B\/28",
+            "old_dpp": 835.49,
+            "old_dpp_inc": 835.49,
+            "tax_id": null
+        },
+        {
+            "code": "AMLODIPINE_5MG_GH",
+            "desc": "AMLODIPINE 5MG GH B\/10",
+            "cost": 1922,
+            "product_id": 951,
+            "variation_id": 951,
+            "name": "AMLODIPINE 5MG GH B\/10",
+            "old_dpp": 1922,
+            "old_dpp_inc": 1922,
+            "tax_id": null
+        },
+        {
+            "code": "AMOX",
+            "desc": "Amox",
+            "cost": 0,
+            "product_id": 952,
+            "variation_id": 952,
+            "name": "Amox",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "AMOXICILIN_250MG_T",
+            "desc": "AMOXICILLIN 250MG TABLET",
+            "cost": 0,
+            "product_id": 953,
+            "variation_id": 953,
+            "name": "AMOXICILLIN 250MG TABLET",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "AMOXICLAV_500",
+            "desc": "AMOXICLAV 625MG TABLET",
+            "cost": 211.2,
+            "product_id": 954,
+            "variation_id": 954,
+            "name": "AMOXICLAV 625MG TABLET",
+            "old_dpp": 201.55,
+            "old_dpp_inc": 201.55,
+            "tax_id": null
+        },
+        {
+            "code": "AMOXICLAV_INJ",
+            "desc": "AMOXICLAV 1G INJECTION",
+            "cost": 1452,
+            "product_id": 955,
+            "variation_id": 955,
+            "name": "AMOXICLAV 1G INJECTION",
+            "old_dpp": 1452,
+            "old_dpp_inc": 1452,
+            "tax_id": null
+        },
+        {
+            "code": "AMOXICLAV_S",
+            "desc": "AMOXICLAV 250\/62.5 MG SYRUP",
+            "cost": 1584,
+            "product_id": 956,
+            "variation_id": 956,
+            "name": "AMOXICLAV 250\/62.5 MG SYRUP",
+            "old_dpp": 1580.75,
+            "old_dpp_inc": 1580.75,
+            "tax_id": null
+        },
+        {
+            "code": "AMOXICLAV_T",
+            "desc": "AMOXICLAV 1G TABLETS",
+            "cost": 250.9,
+            "product_id": 957,
+            "variation_id": 957,
+            "name": "AMOXICLAV 1G TABLETS",
+            "old_dpp": 245.82,
+            "old_dpp_inc": 245.82,
+            "tax_id": null
+        },
+        {
+            "code": "AMOX_S",
+            "desc": "AMOXICILLIN SYRUP 100ML",
+            "cost": 726,
+            "product_id": 958,
+            "variation_id": 958,
+            "name": "AMOXICILLIN SYRUP 100ML",
+            "old_dpp": 721.28,
+            "old_dpp_inc": 721.28,
+            "tax_id": null
+        },
+        {
+            "code": "AMOX_T",
+            "desc": "AMOXICILIN 500MG TABLETS",
+            "cost": 29.04,
+            "product_id": 959,
+            "variation_id": 959,
+            "name": "AMOXICILIN 500MG TABLETS",
+            "old_dpp": 29.04,
+            "old_dpp_inc": 29.04,
+            "tax_id": null
+        },
+        {
+            "code": "AMPI",
+            "desc": "AMPICILLIN 1G INJECTION",
+            "cost": 211.2,
+            "product_id": 960,
+            "variation_id": 960,
+            "name": "AMPICILLIN 1G INJECTION",
+            "old_dpp": 211.21,
+            "old_dpp_inc": 211.21,
+            "tax_id": null
+        },
+        {
+            "code": "ANC",
+            "desc": "ANC CARD",
+            "cost": 50.16,
+            "product_id": 961,
+            "variation_id": 961,
+            "name": "ANC CARD",
+            "old_dpp": 44.21,
+            "old_dpp_inc": 44.21,
+            "tax_id": null
+        },
+        {
+            "code": "ANOM",
+            "desc": "ANOMEX SUPPOSITORIES B\/10",
+            "cost": 3490,
+            "product_id": 962,
+            "variation_id": 962,
+            "name": "ANOMEX SUPPOSITORIES B\/10",
+            "old_dpp": 3327,
+            "old_dpp_inc": 3327,
+            "tax_id": null
+        },
+        {
+            "code": "ANTAL",
+            "desc": "ANTALGEX T 37.5\/325MG  B\/20",
+            "cost": 2100,
+            "product_id": 963,
+            "variation_id": 963,
+            "name": "ANTALGEX T 37.5\/325MG B\/20",
+            "old_dpp": 1792.71,
+            "old_dpp_inc": 1792.71,
+            "tax_id": null
+        },
+        {
+            "code": "ANTIHAEMOR_S",
+            "desc": "ANTIHAEMORRHOIDAL SUPPO B\/10",
+            "cost": 2173,
+            "product_id": 964,
+            "variation_id": 964,
+            "name": "ANTIHAEMORRHOIDAL SUPPO B\/10",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "ANTIMA",
+            "desc": "ARTEMETR LUMEFAN 6*1",
+            "cost": 924,
+            "product_id": 965,
+            "variation_id": 965,
+            "name": "ARTEMETR LUMEFAN 6*1",
+            "old_dpp": 924,
+            "old_dpp_inc": 924,
+            "tax_id": null
+        },
+        {
+            "code": "ANTITETA",
+            "desc": "ANTI TETANUS SERUM 1ML",
+            "cost": 924,
+            "product_id": 966,
+            "variation_id": 966,
+            "name": "ANTI TETANUS SERUM 1ML",
+            "old_dpp": 925.64,
+            "old_dpp_inc": 925.64,
+            "tax_id": null
+        },
+        {
+            "code": "ANTI_D",
+            "desc": "ANTI D VACCINE (RHOCLONE)",
+            "cost": 18808,
+            "product_id": 967,
+            "variation_id": 967,
+            "name": "ANTI D VACCINE (RHOCLONE)",
+            "old_dpp": 18808,
+            "old_dpp_inc": 18808,
+            "tax_id": null
+        },
+        {
+            "code": "ANTI_RABBIES_VACCI",
+            "desc": "ANTI RABBIES VACCIN",
+            "cost": 6800,
+            "product_id": 968,
+            "variation_id": 968,
+            "name": "ANTI RABBIES VACCIN",
+            "old_dpp": 6800,
+            "old_dpp_inc": 6800,
+            "tax_id": null
+        },
+        {
+            "code": "ANTI_SNAKE",
+            "desc": "ANTI SNAKE VENUM",
+            "cost": 58500,
+            "product_id": 969,
+            "variation_id": 969,
+            "name": "ANTI SNAKE VENUM",
+            "old_dpp": 58500,
+            "old_dpp_inc": 58500,
+            "tax_id": null
+        },
+        {
+            "code": "ARBITEL_40MG_",
+            "desc": "ARBITEL 40MG  CP B\/30",
+            "cost": 3866,
+            "product_id": 970,
+            "variation_id": 970,
+            "name": "ARBITEL 40MG CP B\/30",
+            "old_dpp": 3422,
+            "old_dpp_inc": 3422,
+            "tax_id": null
+        },
+        {
+            "code": "ARBITEL_80MG",
+            "desc": "ARBITEL 80MG CP B\/30",
+            "cost": 3678,
+            "product_id": 971,
+            "variation_id": 971,
+            "name": "ARBITEL 80MG CP B\/30",
+            "old_dpp": 69882,
+            "old_dpp_inc": 69882,
+            "tax_id": null
+        },
+        {
+            "code": "ART\/LUM_20\/120",
+            "desc": "ARTEMETER\/LUMEFANTRIN 6*2 20\/120MG",
+            "cost": 0,
+            "product_id": 972,
+            "variation_id": 972,
+            "name": "ARTEMETER\/LUMEFANTRIN 6*2 20\/120MG",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "ART\/LUM_20\/120_",
+            "desc": "ARTEM\/LUMEFANTRIN 6*4",
+            "cost": 0,
+            "product_id": 973,
+            "variation_id": 973,
+            "name": "ARTEM\/LUMEFANTRIN 6*4",
+            "old_dpp": 160,
+            "old_dpp_inc": 160,
+            "tax_id": null
+        },
+        {
+            "code": "ARTE\/LUM_20\/120",
+            "desc": "ARTEMETHER\/LUMEFANTRINE 20\/120 6*3",
+            "cost": 55,
+            "product_id": 974,
+            "variation_id": 974,
+            "name": "ARTEMETHER\/LUMEFANTRINE 20\/120 6*3",
+            "old_dpp": 107,
+            "old_dpp_inc": 107,
+            "tax_id": null
+        },
+        {
+            "code": "ARTELAC_COLLYRE_10",
+            "desc": "ARTELAC EYE DROP 10ML",
+            "cost": 2225,
+            "product_id": 975,
+            "variation_id": 975,
+            "name": "ARTELAC EYE DROP 10ML",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "ARTEM",
+            "desc": "ARTEMETHER 80MG INJECTION",
+            "cost": 198,
+            "product_id": 976,
+            "variation_id": 976,
+            "name": "ARTEMETHER 80MG INJECTION",
+            "old_dpp": 197.94,
+            "old_dpp_inc": 197.94,
+            "tax_id": null
+        },
+        {
+            "code": "ARTEM\/LUM_T",
+            "desc": "ARTEMETHER\/LUMFANTRINE 6*1  120MG\/20MG",
+            "cost": 0,
+            "product_id": 977,
+            "variation_id": 977,
+            "name": "ARTEMETHER\/LUMFANTRINE 6*1 120MG\/20MG",
+            "old_dpp": 128.08,
+            "old_dpp_inc": 128.08,
+            "tax_id": null
+        },
+        {
+            "code": "ARTESU",
+            "desc": "ARTESUNATE 60MG INJECTION",
+            "cost": 462,
+            "product_id": 978,
+            "variation_id": 978,
+            "name": "ARTESUNATE 60MG INJECTION",
+            "old_dpp": 546.44,
+            "old_dpp_inc": 546.44,
+            "tax_id": null
+        },
+        {
+            "code": "ARTESUNATE_SUPPOSI",
+            "desc": "ARTESUNATE SUPPOSITORY 100MG",
+            "cost": 0,
+            "product_id": 979,
+            "variation_id": 979,
+            "name": "ARTESUNATE SUPPOSITORY 100MG",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "ARTLUME",
+            "desc": "ARTEMETHER\/LUMEFANTRINE 480MG\/80MG  B\/6",
+            "cost": 924,
+            "product_id": 980,
+            "variation_id": 980,
+            "name": "ARTEMETHER\/LUMEFANTRINE 480MG\/80MG B\/6",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "ASPIR",
+            "desc": "ASPIRIN 100MG TABLET",
+            "cost": 25.56,
+            "product_id": 981,
+            "variation_id": 981,
+            "name": "ASPIRIN 100MG TABLET",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "ASPIRI",
+            "desc": "ASPIRIN 81 MG TABLETS",
+            "cost": 18.08,
+            "product_id": 982,
+            "variation_id": 982,
+            "name": "ASPIRIN 81 MG TABLETS",
+            "old_dpp": 18.09,
+            "old_dpp_inc": 18.09,
+            "tax_id": null
+        },
+        {
+            "code": "ASTAPH_SIROP",
+            "desc": "ASTAPH SIROP 60ML",
+            "cost": 2374,
+            "product_id": 983,
+            "variation_id": 983,
+            "name": "ASTAPH SIROP 60ML",
+            "old_dpp": 2623.9,
+            "old_dpp_inc": 2623.9,
+            "tax_id": null
+        },
+        {
+            "code": "ASTAPH_T",
+            "desc": "ASTAPH (FLUCLOXACILLIN) 500MG CAPSULES B\/24",
+            "cost": 3491,
+            "product_id": 984,
+            "variation_id": 984,
+            "name": "ASTAPH (FLUCLOXACILLIN) 500MG CAPSULES",
+            "old_dpp": 11782.13,
+            "old_dpp_inc": 11782.13,
+            "tax_id": null
+        },
+        {
+            "code": "ATENOLOL_50MG_",
+            "desc": "ATENOLOL 50MG TABLETS",
+            "cost": 1319.36,
+            "product_id": 985,
+            "variation_id": 985,
+            "name": "ATENOLOL 50MG TABLETS",
+            "old_dpp": 1319.48,
+            "old_dpp_inc": 1319.48,
+            "tax_id": null
+        },
+        {
+            "code": "ATORFIT_40MG",
+            "desc": "ATORVASTAIN 40MG B\/30",
+            "cost": 3500,
+            "product_id": 986,
+            "variation_id": 986,
+            "name": "ATORVASTAIN 40MG B\/30",
+            "old_dpp": 3500,
+            "old_dpp_inc": 3500,
+            "tax_id": null
+        },
+        {
+            "code": "ATOR_10",
+            "desc": "ATORVASTATIN (AVAS) 10MG B\/30",
+            "cost": 1700,
+            "product_id": 987,
+            "variation_id": 987,
+            "name": "ATORVASTATIN (AVAS) 10MG B\/30",
+            "old_dpp": 1995.97,
+            "old_dpp_inc": 1995.97,
+            "tax_id": null
+        },
+        {
+            "code": "ATOR_20",
+            "desc": "ATORVASTATIN (AVAS) 20NG TABLETS B\/30",
+            "cost": 2500,
+            "product_id": 988,
+            "variation_id": 988,
+            "name": "ATORVASTATIN (AVAS) 20NG TABLETS B\/30",
+            "old_dpp": 2500,
+            "old_dpp_inc": 2500,
+            "tax_id": null
+        },
+        {
+            "code": "ATROP",
+            "desc": "ATROPINE 1MG\/1ML INJECTION",
+            "cost": 1000,
+            "product_id": 989,
+            "variation_id": 989,
+            "name": "ATROPINE 1MG\/1ML INJECTION",
+            "old_dpp": 419.22,
+            "old_dpp_inc": 419.22,
+            "tax_id": null
+        },
+        {
+            "code": "AUGMENTIN_NOURISSO",
+            "desc": "AUGMENTIN NOURISSON",
+            "cost": 1702,
+            "product_id": 990,
+            "variation_id": 990,
+            "name": "AUGMENTIN NOURISSON",
+            "old_dpp": 66331,
+            "old_dpp_inc": 66331,
+            "tax_id": null
+        },
+        {
+            "code": "AZITHRO_250",
+            "desc": "AZITHROMYCIN 250MG TABLETS",
+            "cost": 92.4,
+            "product_id": 991,
+            "variation_id": 991,
+            "name": "AZITHROMYCIN 250MG TABLETS",
+            "old_dpp": 92.52,
+            "old_dpp_inc": 92.52,
+            "tax_id": null
+        },
+        {
+            "code": "AZITHR_S",
+            "desc": "AZITHROMYCINE SYRUP 200MG\/5ML ( AZITHRINE)",
+            "cost": 1320,
+            "product_id": 992,
+            "variation_id": 992,
+            "name": "AZITHROMYCINE SYRUP 200MG\/5ML ( AZITHRI",
+            "old_dpp": 1197.82,
+            "old_dpp_inc": 1197.82,
+            "tax_id": null
+        },
+        {
+            "code": "A_CERU",
+            "desc": "A CERUMEN EAR SOLUTION",
+            "cost": 1591,
+            "product_id": 993,
+            "variation_id": 993,
+            "name": "A CERUMEN EAR SOLUTION",
+            "old_dpp": 5231.5,
+            "old_dpp_inc": 5231.5,
+            "tax_id": null
+        },
+        {
+            "code": "BAG",
+            "desc": "PRINTED PLASTIC BAG BIG 25cm X 40cm",
+            "cost": 47.52,
+            "product_id": 994,
+            "variation_id": 994,
+            "name": "PRINTED PLASTIC BAG BIG 25cm X 40cm",
+            "old_dpp": 63.9,
+            "old_dpp_inc": 63.9,
+            "tax_id": null
+        },
+        {
+            "code": "BAG_S",
+            "desc": "PRINTED PLASTIC BAG SMALL 20cm X 30cm",
+            "cost": 23.76,
+            "product_id": 995,
+            "variation_id": 995,
+            "name": "PRINTED PLASTIC BAG SMALL 20cm X 30cm",
+            "old_dpp": 23.75,
+            "old_dpp_inc": 23.75,
+            "tax_id": null
+        },
+        {
+            "code": "BENZA",
+            "desc": "BENZATHIN BENZYL PENICILLIN 2.4MU INJECTION",
+            "cost": 250.8,
+            "product_id": 996,
+            "variation_id": 996,
+            "name": "BENZATHIN BENZYL PENICILLIN 2.4MU INJECTI",
+            "old_dpp": 250.79,
+            "old_dpp_inc": 250.79,
+            "tax_id": null
+        },
+        {
+            "code": "BENZYL",
+            "desc": "BENZYLE BENZOATE SOLUTION 100ML",
+            "cost": 1188,
+            "product_id": 997,
+            "variation_id": 997,
+            "name": "BENZYLE BENZOATE SOLUTION 100ML",
+            "old_dpp": 1188,
+            "old_dpp_inc": 1188,
+            "tax_id": null
+        },
+        {
+            "code": "BENZYLB",
+            "desc": "ASCABIOL (BENZYLE BENZOATE)   SOLUTION 200ML",
+            "cost": 2781,
+            "product_id": 998,
+            "variation_id": 998,
+            "name": "ASCABIOL (BENZYLE BENZOATE) SOLUTION",
+            "old_dpp": 973.77,
+            "old_dpp_inc": 973.77,
+            "tax_id": null
+        },
+        {
+            "code": "BISACO",
+            "desc": "BISACODYL 5MG TABLET",
+            "cost": 7.92,
+            "product_id": 999,
+            "variation_id": 999,
+            "name": "BISACODYL 5MG TABLET",
+            "old_dpp": 7.89,
+            "old_dpp_inc": 7.89,
+            "tax_id": null
+        },
+        {
+            "code": "BRONC",
+            "desc": "BRONCOXIL SIROP",
+            "cost": 1349,
+            "product_id": 1000,
+            "variation_id": 1000,
+            "name": "BRONCOXIL SIROP",
+            "old_dpp": 426,
+            "old_dpp_inc": 426,
+            "tax_id": null
+        },
+        {
+            "code": "BRONCO",
+            "desc": "BRONCOXIL SIROP",
+            "cost": 1349,
+            "product_id": 1001,
+            "variation_id": 1001,
+            "name": "BRONCOXIL SIROP",
+            "old_dpp": 1349,
+            "old_dpp_inc": 1349,
+            "tax_id": null
+        },
+        {
+            "code": "BRONQUIDIAZINA_S.B",
+            "desc": "BRONQUIDIAZINA S.BUV 150ML",
+            "cost": 2260,
+            "product_id": 1002,
+            "variation_id": 1002,
+            "name": "BRONQUIDIAZINA S.BUV 150ML",
+            "old_dpp": 2260,
+            "old_dpp_inc": 2260,
+            "tax_id": null
+        },
+        {
+            "code": "BRUST",
+            "desc": "BRUSTAN TABLET B\/10",
+            "cost": 866,
+            "product_id": 1003,
+            "variation_id": 1003,
+            "name": "BRUSTAN TABLET B\/10",
+            "old_dpp": 119.46,
+            "old_dpp_inc": 119.46,
+            "tax_id": null
+        },
+        {
+            "code": "BURETTE",
+            "desc": "BURETTE",
+            "cost": 1500,
+            "product_id": 1004,
+            "variation_id": 1004,
+            "name": "BURETTE",
+            "old_dpp": 1500,
+            "old_dpp_inc": 1500,
+            "tax_id": null
+        },
+        {
+            "code": "BUTTERF",
+            "desc": "BUTTERFLY NEEDLE 23G",
+            "cost": 40,
+            "product_id": 1005,
+            "variation_id": 1005,
+            "name": "BUTTERFLY NEEDLE 23G",
+            "old_dpp": 35.34,
+            "old_dpp_inc": 35.34,
+            "tax_id": null
+        },
+        {
+            "code": "CAESARIAN",
+            "desc": "CAESARIAN KIT SPINAL",
+            "cost": 34000,
+            "product_id": 1006,
+            "variation_id": 1006,
+            "name": "CAESARIAN KIT SPINAL",
+            "old_dpp": 34000,
+            "old_dpp_inc": 34000,
+            "tax_id": null
+        },
+        {
+            "code": "CALCID",
+            "desc": "CALCI D DENK EFFERVESCENT TABLETS",
+            "cost": 3999,
+            "product_id": 1007,
+            "variation_id": 1007,
+            "name": "CALCI D DENK EFFERVESCENT TABLETS",
+            "old_dpp": 724.37,
+            "old_dpp_inc": 724.37,
+            "tax_id": null
+        },
+        {
+            "code": "CALCI_6",
+            "desc": "CALCIUM 500MG +VIT D3 TABLETS",
+            "cost": 600,
+            "product_id": 1008,
+            "variation_id": 1008,
+            "name": "CALCIUM 500MG +VIT D3 TABLETS",
+            "old_dpp": 194.5,
+            "old_dpp_inc": 194.5,
+            "tax_id": null
+        },
+        {
+            "code": "CALCI_I",
+            "desc": "CALCIUM GLUCONATE 10% INJECTION",
+            "cost": 165,
+            "product_id": 1009,
+            "variation_id": 1009,
+            "name": "CALCIUM GLUCONATE 10% INJECTION",
+            "old_dpp": 165,
+            "old_dpp_inc": 165,
+            "tax_id": null
+        },
+        {
+            "code": "CALCI_T",
+            "desc": "CALCIUM LACTATE 300MG TABLETS",
+            "cost": 10.56,
+            "product_id": 1010,
+            "variation_id": 1010,
+            "name": "CALCIUM LACTATE 300MG TABLETS",
+            "old_dpp": 10.55,
+            "old_dpp_inc": 10.55,
+            "tax_id": null
+        },
+        {
+            "code": "CALMAG_NATIVA",
+            "desc": "CALMAG NATIVA TABLETS",
+            "cost": 100,
+            "product_id": 1011,
+            "variation_id": 1011,
+            "name": "CALMAG NATIVA TABLETS",
+            "old_dpp": 100,
+            "old_dpp_inc": 100,
+            "tax_id": null
+        },
+        {
+            "code": "CANDI_V6",
+            "desc": "CANDI V6 CP COMBI 100MG B\/6",
+            "cost": 2727,
+            "product_id": 1012,
+            "variation_id": 1012,
+            "name": "CANDI V6 CP COMBI 100MG B\/6",
+            "old_dpp": 954,
+            "old_dpp_inc": 954,
+            "tax_id": null
+        },
+        {
+            "code": "CAPTO",
+            "desc": "CAPTOPRIL 25MG TABLETS",
+            "cost": 15.84,
+            "product_id": 1013,
+            "variation_id": 1013,
+            "name": "CAPTOPRIL 25MG TABLETS",
+            "old_dpp": 15.84,
+            "old_dpp_inc": 15.84,
+            "tax_id": null
+        },
+        {
+            "code": "CARBA",
+            "desc": "CARBAMAZEPIN 200MG TABLETS",
+            "cost": 36.96,
+            "product_id": 1014,
+            "variation_id": 1014,
+            "name": "CARBAMAZEPIN 200MG TABLETS",
+            "old_dpp": 31.88,
+            "old_dpp_inc": 31.88,
+            "tax_id": null
+        },
+        {
+            "code": "CARBOSOL_EYE_DROP",
+            "desc": "CARBOSOL EYE DROP",
+            "cost": 1329,
+            "product_id": 1015,
+            "variation_id": 1015,
+            "name": "CARBOSOL EYE DROP",
+            "old_dpp": 1329,
+            "old_dpp_inc": 1329,
+            "tax_id": null
+        },
+        {
+            "code": "CARBO_AD",
+            "desc": "CARBOCYSTEINE 5% SYRUP 100ML ( ADULT)",
+            "cost": 792,
+            "product_id": 1016,
+            "variation_id": 1016,
+            "name": "CARBOCYSTEINE 5% SYRUP 100ML ( ADULT)",
+            "old_dpp": 813.94,
+            "old_dpp_inc": 813.94,
+            "tax_id": null
+        },
+        {
+            "code": "CARBO_CH",
+            "desc": "CARBOCYSTEINE 2% SYRUP 100ML (CHILD)",
+            "cost": 594,
+            "product_id": 1017,
+            "variation_id": 1017,
+            "name": "CARBOCYSTEINE 2% SYRUP 100ML (CHILD)",
+            "old_dpp": 594.92,
+            "old_dpp_inc": 594.92,
+            "tax_id": null
+        },
+        {
+            "code": "CARTEOL_COLLYRE",
+            "desc": "CARTEOL COLLYRE 2%",
+            "cost": 4590,
+            "product_id": 1018,
+            "variation_id": 1018,
+            "name": "CARTEOL COLLYRE 2%",
+            "old_dpp": 4590,
+            "old_dpp_inc": 4590,
+            "tax_id": null
+        },
+        {
+            "code": "CATHER_FO",
+            "desc": "CATHETER FOLEY 18 G",
+            "cost": 396,
+            "product_id": 1019,
+            "variation_id": 1019,
+            "name": "CATHETER FOLEY 18 G",
+            "old_dpp": 396,
+            "old_dpp_inc": 396,
+            "tax_id": null
+        },
+        {
+            "code": "CATHETER_FO",
+            "desc": "CATHETER FOLEY 16 G",
+            "cost": 594,
+            "product_id": 1020,
+            "variation_id": 1020,
+            "name": "CATHETER FOLEY 16 G",
+            "old_dpp": 594,
+            "old_dpp_inc": 594,
+            "tax_id": null
+        },
+        {
+            "code": "CEFIXI_S",
+            "desc": "CEFIXIME 100MG SYRUP 60ML",
+            "cost": 1320,
+            "product_id": 1021,
+            "variation_id": 1021,
+            "name": "CEFIXIME 100MG SYRUP 60ML",
+            "old_dpp": 1573.13,
+            "old_dpp_inc": 1573.13,
+            "tax_id": null
+        },
+        {
+            "code": "CEFIXI_T",
+            "desc": "CEFIXIME 200MG TABLETS  B\/10",
+            "cost": 1320,
+            "product_id": 1022,
+            "variation_id": 1022,
+            "name": "CEFIXIME 200MG TABLETS B\/10",
+            "old_dpp": 1320,
+            "old_dpp_inc": 1320,
+            "tax_id": null
+        },
+        {
+            "code": "CEFOTA",
+            "desc": "CEFOTAXIME 1 G INJECTION",
+            "cost": 858,
+            "product_id": 1023,
+            "variation_id": 1023,
+            "name": "CEFOTAXIME 1 G INJECTION",
+            "old_dpp": 887.97,
+            "old_dpp_inc": 887.97,
+            "tax_id": null
+        },
+        {
+            "code": "CEFTRIA",
+            "desc": "CEFTRIAXONE DISODIUM 1G INJECTION",
+            "cost": 330,
+            "product_id": 1024,
+            "variation_id": 1024,
+            "name": "CEFTRIAXONE DISODIUM 1G INJECTION",
+            "old_dpp": 330,
+            "old_dpp_inc": 330,
+            "tax_id": null
+        },
+        {
+            "code": "CELEC",
+            "desc": "CELECOXIB 200MG TABLETS",
+            "cost": 179.9,
+            "product_id": 1025,
+            "variation_id": 1025,
+            "name": "CELECOXIB 200MG TABLETS",
+            "old_dpp": 79.97,
+            "old_dpp_inc": 79.97,
+            "tax_id": null
+        },
+        {
+            "code": "CELEST_D",
+            "desc": "CELESTENE DROP 0.05% FL\/30ML",
+            "cost": 2113,
+            "product_id": 1026,
+            "variation_id": 1026,
+            "name": "CELESTENE DROP 0.05% FL\/30ML",
+            "old_dpp": 61277,
+            "old_dpp_inc": 61277,
+            "tax_id": null
+        },
+        {
+            "code": "CETAFOR_1G_INJ",
+            "desc": "CETAFOR 1G INJECTION",
+            "cost": 2305,
+            "product_id": 1027,
+            "variation_id": 1027,
+            "name": "CETAFOR 1G INJECTION",
+            "old_dpp": 498.92,
+            "old_dpp_inc": 498.92,
+            "tax_id": null
+        },
+        {
+            "code": "CHARCO",
+            "desc": "ACTIVATED CHACOAL (ACTICARBINE)",
+            "cost": 42.86,
+            "product_id": 1028,
+            "variation_id": 1028,
+            "name": "ACTIVATED CHACOAL (ACTICARBINE)",
+            "old_dpp": 41.54,
+            "old_dpp_inc": 41.54,
+            "tax_id": null
+        },
+        {
+            "code": "CHERICO",
+            "desc": "CHERICOF NF SYRUP",
+            "cost": 1241,
+            "product_id": 1029,
+            "variation_id": 1029,
+            "name": "CHERICOF NF SYRUP",
+            "old_dpp": 17374,
+            "old_dpp_inc": 17374,
+            "tax_id": null
+        },
+        {
+            "code": "CHLORHEX",
+            "desc": "CHLORHEXIDINE\/ALKONIUM (DERMOBACTER) 125ML",
+            "cost": 1782,
+            "product_id": 1030,
+            "variation_id": 1030,
+            "name": "CHLORHEXIDINE\/ALKONIUM (DERMOBACTER)",
+            "old_dpp": 1782,
+            "old_dpp_inc": 1782,
+            "tax_id": null
+        },
+        {
+            "code": "CHLORPHEN",
+            "desc": "CHLORPHENIRAMINE 4MG TABLETS",
+            "cost": 6.6,
+            "product_id": 1031,
+            "variation_id": 1031,
+            "name": "CHLORPHENIRAMINE 4MG TABLETS",
+            "old_dpp": 6.6,
+            "old_dpp_inc": 6.6,
+            "tax_id": null
+        },
+        {
+            "code": "CHLORPROM",
+            "desc": "CHLORPROMAZINE HCL 25MG\/2ML  INJECTION",
+            "cost": 198,
+            "product_id": 1032,
+            "variation_id": 1032,
+            "name": "CHLORPROMAZINE HCL 25MG\/2ML INJECTION",
+            "old_dpp": 190.24,
+            "old_dpp_inc": 190.24,
+            "tax_id": null
+        },
+        {
+            "code": "CIMETI",
+            "desc": "CIMETIDINE 200MG\/2ML INJECTION",
+            "cost": 92.4,
+            "product_id": 1033,
+            "variation_id": 1033,
+            "name": "CIMETIDINE 200MG\/2ML INJECTION",
+            "old_dpp": 92.41,
+            "old_dpp_inc": 92.41,
+            "tax_id": null
+        },
+        {
+            "code": "CIPINEM_1G",
+            "desc": "CIPINEM 1G",
+            "cost": 4600,
+            "product_id": 1034,
+            "variation_id": 1034,
+            "name": "CIPINEM 1G",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "CIPRO",
+            "desc": "CIPROFLOXACIN  500MG TABS",
+            "cost": 38.28,
+            "product_id": 1035,
+            "variation_id": 1035,
+            "name": "CIPROFLOXACIN 500MG TABS",
+            "old_dpp": 38.33,
+            "old_dpp_inc": 38.33,
+            "tax_id": null
+        },
+        {
+            "code": "CIPROFLOX_INJ",
+            "desc": "CIPROFLOXACIN INFUSION",
+            "cost": 594,
+            "product_id": 1036,
+            "variation_id": 1036,
+            "name": "CIPROFLOXACIN INFUSION",
+            "old_dpp": 594,
+            "old_dpp_inc": 594,
+            "tax_id": null
+        },
+        {
+            "code": "CITAL_SIROP",
+            "desc": "CITAL SIROP",
+            "cost": 3500,
+            "product_id": 1037,
+            "variation_id": 1037,
+            "name": "CITAL SIROP",
+            "old_dpp": 3500,
+            "old_dpp_inc": 3500,
+            "tax_id": null
+        },
+        {
+            "code": "CLARITHRO",
+            "desc": "CLARITHROMYCINE 500MG TABLET",
+            "cost": 60,
+            "product_id": 1038,
+            "variation_id": 1038,
+            "name": "CLARITHROMYCINE 500MG TABLET",
+            "old_dpp": 350,
+            "old_dpp_inc": 350,
+            "tax_id": null
+        },
+        {
+            "code": "CLOPIDOGREL_GH",
+            "desc": "CLOPIDOGREL GH 75MG CPR B\/30",
+            "cost": 6847,
+            "product_id": 1039,
+            "variation_id": 1039,
+            "name": "CLOPIDOGREL GH 75MG CPR B\/30",
+            "old_dpp": 6847,
+            "old_dpp_inc": 6847,
+            "tax_id": null
+        },
+        {
+            "code": "CLOXA",
+            "desc": "CLOXACILLIN 500MG CAPSULES",
+            "cost": 46.86,
+            "product_id": 1040,
+            "variation_id": 1040,
+            "name": "CLOXACILLIN 500MG CAPSULES",
+            "old_dpp": 29.06,
+            "old_dpp_inc": 29.06,
+            "tax_id": null
+        },
+        {
+            "code": "CLOXACILLINE_SIROP",
+            "desc": "CLOXACILLINE SIROP",
+            "cost": 1320,
+            "product_id": 1041,
+            "variation_id": 1041,
+            "name": "CLOXACILLINE SIROP",
+            "old_dpp": 1320,
+            "old_dpp_inc": 1320,
+            "tax_id": null
+        },
+        {
+            "code": "CLOXA_I",
+            "desc": "CLOXACILLIN 500MG INJECTION",
+            "cost": 184.8,
+            "product_id": 1042,
+            "variation_id": 1042,
+            "name": "CLOXACILLIN 500MG INJECTION",
+            "old_dpp": 184,
+            "old_dpp_inc": 184,
+            "tax_id": null
+        },
+        {
+            "code": "COC",
+            "desc": "COC LEVOFEM 0.15",
+            "cost": 358,
+            "product_id": 1043,
+            "variation_id": 1043,
+            "name": "COC LEVOFEM 0.15",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "COLCHI",
+            "desc": "COLCHICINE OPOCALCIUM 1MG B\/20",
+            "cost": 1591,
+            "product_id": 1044,
+            "variation_id": 1044,
+            "name": "COLCHICINE OPOCALCIUM 1MG B\/20",
+            "old_dpp": 1591,
+            "old_dpp_inc": 1591,
+            "tax_id": null
+        },
+        {
+            "code": "COLI",
+            "desc": "COLINIL DROPS  F\/15ML",
+            "cost": 1364,
+            "product_id": 1045,
+            "variation_id": 1045,
+            "name": "COLINIL DROPS F\/15ML",
+            "old_dpp": 7729.5,
+            "old_dpp_inc": 7729.5,
+            "tax_id": null
+        },
+        {
+            "code": "COMPRESS",
+            "desc": "COMPRESS STERILE 40 X 40 CM",
+            "cost": 70,
+            "product_id": 1046,
+            "variation_id": 1046,
+            "name": "COMPRESS STERILE 40 X 40 CM",
+            "old_dpp": 65.71,
+            "old_dpp_inc": 65.71,
+            "tax_id": null
+        },
+        {
+            "code": "COND",
+            "desc": "MALE CONDOM",
+            "cost": 23.6,
+            "product_id": 1047,
+            "variation_id": 1047,
+            "name": "MALE CONDOM",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "CONSULT_BOOK",
+            "desc": "CONSULTATION BOOK",
+            "cost": 75,
+            "product_id": 1048,
+            "variation_id": 1048,
+            "name": "CONSULTATION BOOK",
+            "old_dpp": 75,
+            "old_dpp_inc": 75,
+            "tax_id": null
+        },
+        {
+            "code": "CORD_CLAMP",
+            "desc": "CORD CLAMP",
+            "cost": 100,
+            "product_id": 1049,
+            "variation_id": 1049,
+            "name": "CORD CLAMP",
+            "old_dpp": 329.12,
+            "old_dpp_inc": 329.12,
+            "tax_id": null
+        },
+        {
+            "code": "COTIPRED_20MG_CP_B",
+            "desc": "COTIPRED 20MG CPEFF B\/20",
+            "cost": 2508,
+            "product_id": 1050,
+            "variation_id": 1050,
+            "name": "COTIPRED 20MG CPEFF B\/20",
+            "old_dpp": 22572,
+            "old_dpp_inc": 22572,
+            "tax_id": null
+        },
+        {
+            "code": "COTRIM_S",
+            "desc": "COTRIMOXAZOLE 200MG\/40MG SYRUP",
+            "cost": 528,
+            "product_id": 1051,
+            "variation_id": 1051,
+            "name": "COTRIMOXAZOLE 200MG\/40MG SYRUP",
+            "old_dpp": 503.49,
+            "old_dpp_inc": 503.49,
+            "tax_id": null
+        },
+        {
+            "code": "COTRIM_T",
+            "desc": "COTRIMOXAZOLE 400MG\/80MG TABLETS",
+            "cost": 13.2,
+            "product_id": 1052,
+            "variation_id": 1052,
+            "name": "COTRIMOXAZOLE 400MG\/80MG TABLETS",
+            "old_dpp": 13.31,
+            "old_dpp_inc": 13.31,
+            "tax_id": null
+        },
+        {
+            "code": "COTT",
+            "desc": "COTTON 50 G",
+            "cost": 250,
+            "product_id": 1053,
+            "variation_id": 1053,
+            "name": "COTTON 50 G",
+            "old_dpp": 257.24,
+            "old_dpp_inc": 257.24,
+            "tax_id": null
+        },
+        {
+            "code": "CO_ARINATE_ADULTE",
+            "desc": "CO ARINATE ADULT B\/3",
+            "cost": 1709,
+            "product_id": 1054,
+            "variation_id": 1054,
+            "name": "CO ARINATE ADULT B\/3",
+            "old_dpp": 1709,
+            "old_dpp_inc": 1709,
+            "tax_id": null
+        },
+        {
+            "code": "CRAMP_EASE",
+            "desc": "CRAMP EASE TABLETS",
+            "cost": 167,
+            "product_id": 1055,
+            "variation_id": 1055,
+            "name": "CRAMP EASE TABLETS",
+            "old_dpp": 167,
+            "old_dpp_inc": 167,
+            "tax_id": null
+        },
+        {
+            "code": "CRAMP_EASE_GEL",
+            "desc": "CRAMP EASE GEL",
+            "cost": 3000,
+            "product_id": 1056,
+            "variation_id": 1056,
+            "name": "CRAMP EASE GEL",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "CREPE_B",
+            "desc": "CREPE BANDAGE 7.5CM X 4M",
+            "cost": 211,
+            "product_id": 1057,
+            "variation_id": 1057,
+            "name": "CREPE BANDAGE 7.5CM X 4M",
+            "old_dpp": 211.04,
+            "old_dpp_inc": 211.04,
+            "tax_id": null
+        },
+        {
+            "code": "CYTEA",
+            "desc": "CYTEAL LOTION F\/250ML",
+            "cost": 2330,
+            "product_id": 1058,
+            "variation_id": 1058,
+            "name": "CYTEAL LOTION F\/250ML",
+            "old_dpp": 2330,
+            "old_dpp_inc": 2330,
+            "tax_id": null
+        },
+        {
+            "code": "DAFLON_500MG",
+            "desc": "DAFLON 500CP B\/30",
+            "cost": 3403,
+            "product_id": 1059,
+            "variation_id": 1059,
+            "name": "DAFLON 500CP B\/30",
+            "old_dpp": 2165.43,
+            "old_dpp_inc": 2165.43,
+            "tax_id": null
+        },
+        {
+            "code": "DAKIN",
+            "desc": "DAKIN SOL 250ML",
+            "cost": 2206,
+            "product_id": 1060,
+            "variation_id": 1060,
+            "name": "DAKIN SOL 250ML",
+            "old_dpp": 871.94,
+            "old_dpp_inc": 871.94,
+            "tax_id": null
+        },
+        {
+            "code": "DEEP_B",
+            "desc": "DEEP HEAT POMMADE T\/100G BIG",
+            "cost": 2747,
+            "product_id": 1061,
+            "variation_id": 1061,
+            "name": "DEEP HEAT POMMADE T\/100G BIG",
+            "old_dpp": 52198,
+            "old_dpp_inc": 52198,
+            "tax_id": null
+        },
+        {
+            "code": "DEEP_S",
+            "desc": "DEEP HEAT POMMADE T\/35 G  SMALL",
+            "cost": 1548,
+            "product_id": 1062,
+            "variation_id": 1062,
+            "name": "DEEP HEAT POMMADE T\/35 G SMALL",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "DELIVERY_KIT_PLAN_",
+            "desc": "DELIVERY KIT PLAN FOR KITS",
+            "cost": 0,
+            "product_id": 1063,
+            "variation_id": 1063,
+            "name": "DELIVERY KIT PLAN FOR KITS",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "DEL_KIT",
+            "desc": "DELIVERY KIT",
+            "cost": 3800,
+            "product_id": 1064,
+            "variation_id": 1064,
+            "name": "DELIVERY KIT",
+            "old_dpp": 3800,
+            "old_dpp_inc": 3800,
+            "tax_id": null
+        },
+        {
+            "code": "DEPO",
+            "desc": "DEPO PROVERA",
+            "cost": 72.6,
+            "product_id": 1065,
+            "variation_id": 1065,
+            "name": "DEPO PROVERA",
+            "old_dpp": 72.6,
+            "old_dpp_inc": 72.6,
+            "tax_id": null
+        },
+        {
+            "code": "DERMOBACT",
+            "desc": "DERMOBACTER",
+            "cost": 1782,
+            "product_id": 1066,
+            "variation_id": 1066,
+            "name": "DERMOBACTER",
+            "old_dpp": 1407.17,
+            "old_dpp_inc": 1407.17,
+            "tax_id": null
+        },
+        {
+            "code": "DESOMEDINE_EYE_DRO",
+            "desc": "DESOMEDINE EYE B\/10",
+            "cost": 1220,
+            "product_id": 1067,
+            "variation_id": 1067,
+            "name": "DESOMEDINE EYE B\/10",
+            "old_dpp": 498.63,
+            "old_dpp_inc": 498.63,
+            "tax_id": null
+        },
+        {
+            "code": "DEXA",
+            "desc": "DEXAMETHASONE 4MG\/ML INJECTION",
+            "cost": 59.4,
+            "product_id": 1068,
+            "variation_id": 1068,
+            "name": "DEXAMETHASONE 4MG\/ML INJECTION",
+            "old_dpp": 57.85,
+            "old_dpp_inc": 57.85,
+            "tax_id": null
+        },
+        {
+            "code": "DEXA_T",
+            "desc": "DEXAMETHASONE 5MG TABLET",
+            "cost": 39.6,
+            "product_id": 1069,
+            "variation_id": 1069,
+            "name": "DEXAMETHASONE 5MG TABLET",
+            "old_dpp": 13.53,
+            "old_dpp_inc": 13.53,
+            "tax_id": null
+        },
+        {
+            "code": "DEXT",
+            "desc": "DEXTROSE 5%  SOLUTION 250ML",
+            "cost": 429,
+            "product_id": 1070,
+            "variation_id": 1070,
+            "name": "DEXTROSE 5% SOLUTION 250ML",
+            "old_dpp": 429,
+            "old_dpp_inc": 429,
+            "tax_id": null
+        },
+        {
+            "code": "DEXTSALINE",
+            "desc": "MIXTE (DEXTROSE 5% + NORMAL SALINE 0.9%)",
+            "cost": 594,
+            "product_id": 1071,
+            "variation_id": 1071,
+            "name": "MIXTE (DEXTROSE 5% + NORMAL SALINE 0.9%)",
+            "old_dpp": 594,
+            "old_dpp_inc": 594,
+            "tax_id": null
+        },
+        {
+            "code": "DEXT_10",
+            "desc": "DEXTROSE 10% 500ML SOL",
+            "cost": 594,
+            "product_id": 1072,
+            "variation_id": 1072,
+            "name": "DEXTROSE 10% 500ML SOL",
+            "old_dpp": 594,
+            "old_dpp_inc": 594,
+            "tax_id": null
+        },
+        {
+            "code": "DEX_5",
+            "desc": "DEXTROSE 5% 500ML SOL",
+            "cost": 495,
+            "product_id": 1073,
+            "variation_id": 1073,
+            "name": "DEXTROSE 5% 500ML SOL",
+            "old_dpp": 495.14,
+            "old_dpp_inc": 495.14,
+            "tax_id": null
+        },
+        {
+            "code": "DIAZE_I",
+            "desc": "DIAZEPAM 5MG\/2ML INJECTION",
+            "cost": 264,
+            "product_id": 1074,
+            "variation_id": 1074,
+            "name": "DIAZEPAM 5MG\/2ML INJECTION",
+            "old_dpp": 264,
+            "old_dpp_inc": 264,
+            "tax_id": null
+        },
+        {
+            "code": "DIAZE_T",
+            "desc": "DIAZEPAM 10MG TABLETS",
+            "cost": 52.9,
+            "product_id": 1075,
+            "variation_id": 1075,
+            "name": "DIAZEPAM 10MG TABLETS",
+            "old_dpp": 52.38,
+            "old_dpp_inc": 52.38,
+            "tax_id": null
+        },
+        {
+            "code": "DICLO",
+            "desc": "DICLO DENK 50MG GASTRO RESISTANT TABLETS",
+            "cost": 37.2,
+            "product_id": 1076,
+            "variation_id": 1076,
+            "name": "DICLO DENK 50MG GASTRO RESISTANT TABLE",
+            "old_dpp": 36.42,
+            "old_dpp_inc": 36.42,
+            "tax_id": null
+        },
+        {
+            "code": "DICLO_G",
+            "desc": "DICLOFENAC GEL 30G",
+            "cost": 528,
+            "product_id": 1077,
+            "variation_id": 1077,
+            "name": "DICLOFENAC GEL 30G",
+            "old_dpp": 455.19,
+            "old_dpp_inc": 455.19,
+            "tax_id": null
+        },
+        {
+            "code": "DICLO_I",
+            "desc": "DICLOFENAC 75MG\/3ML INJECTION",
+            "cost": 66,
+            "product_id": 1078,
+            "variation_id": 1078,
+            "name": "DICLOFENAC 75MG\/3ML INJECTION",
+            "old_dpp": 66,
+            "old_dpp_inc": 66,
+            "tax_id": null
+        },
+        {
+            "code": "DICLO_T",
+            "desc": "DICLOFENAC 50MG TABLET",
+            "cost": 5.28,
+            "product_id": 1079,
+            "variation_id": 1079,
+            "name": "DICLOFENAC 50MG TABLET",
+            "old_dpp": 5.24,
+            "old_dpp_inc": 5.24,
+            "tax_id": null
+        },
+        {
+            "code": "DICY",
+            "desc": "DICYNONE 250MG\/2ML INJECTION",
+            "cost": 467,
+            "product_id": 1080,
+            "variation_id": 1080,
+            "name": "DICYNONE 250MG\/2ML INJECTION",
+            "old_dpp": 71.81,
+            "old_dpp_inc": 71.81,
+            "tax_id": null
+        },
+        {
+            "code": "DICYN",
+            "desc": "DICYNONE 500MG CAPSULES B\/20",
+            "cost": 170.3,
+            "product_id": 1081,
+            "variation_id": 1081,
+            "name": "DICYNONE 500MG CAPSULES B\/20",
+            "old_dpp": 397.35,
+            "old_dpp_inc": 397.35,
+            "tax_id": null
+        },
+        {
+            "code": "DIGO",
+            "desc": "DIGOXINE 250 microg TABLET",
+            "cost": 19.8,
+            "product_id": 1082,
+            "variation_id": 1082,
+            "name": "DIGOXINE 250 microg TABLET",
+            "old_dpp": 19.8,
+            "old_dpp_inc": 19.8,
+            "tax_id": null
+        },
+        {
+            "code": "DOXY",
+            "desc": "DOXYCICLIN 200MG TABLETS",
+            "cost": 21.12,
+            "product_id": 1083,
+            "variation_id": 1083,
+            "name": "DOXYCICLIN 200MG TABLETS",
+            "old_dpp": 21.13,
+            "old_dpp_inc": 21.13,
+            "tax_id": null
+        },
+        {
+            "code": "DRUG",
+            "desc": "DRUG ENVELOPE",
+            "cost": 6.6,
+            "product_id": 1084,
+            "variation_id": 1084,
+            "name": "DRUG ENVELOPE",
+            "old_dpp": 6.59,
+            "old_dpp_inc": 6.59,
+            "tax_id": null
+        },
+        {
+            "code": "DUPHA",
+            "desc": "DUPHALAC 10G\/15ML SACHET B\/20",
+            "cost": 118.3,
+            "product_id": 1085,
+            "variation_id": 1085,
+            "name": "DUPHALAC 10G\/15ML SACHET B\/20",
+            "old_dpp": 3261.71,
+            "old_dpp_inc": 3261.71,
+            "tax_id": null
+        },
+        {
+            "code": "EFFERA_S",
+            "desc": "EFFERALGAN SYROP PEDIATRY",
+            "cost": 1172,
+            "product_id": 1086,
+            "variation_id": 1086,
+            "name": "EFFERALGAN SYROP PEDIATRY",
+            "old_dpp": 242.5,
+            "old_dpp_inc": 242.5,
+            "tax_id": null
+        },
+        {
+            "code": "EFFERA_T",
+            "desc": "EFFERALGAN 500MG EFFERV TABLET B\/16",
+            "cost": 1065,
+            "product_id": 1087,
+            "variation_id": 1087,
+            "name": "EFFERALGAN 500MG EFFERV TABLET B\/16",
+            "old_dpp": 721.5,
+            "old_dpp_inc": 721.5,
+            "tax_id": null
+        },
+        {
+            "code": "EFFERA_TR",
+            "desc": "EFFERALGAN 500MG TABLET RETAIL",
+            "cost": 61.7,
+            "product_id": 1088,
+            "variation_id": 1088,
+            "name": "EFFERALGAN 500MG TABLET RETAIL",
+            "old_dpp": 61.7,
+            "old_dpp_inc": 61.7,
+            "tax_id": null
+        },
+        {
+            "code": "ENOXA",
+            "desc": "ENOXAPARINE ( LOVENOX) 4000IU INJ",
+            "cost": 2772,
+            "product_id": 1089,
+            "variation_id": 1089,
+            "name": "ENOXAPARINE ( LOVENOX) 4000IU INJ",
+            "old_dpp": 2772,
+            "old_dpp_inc": 2772,
+            "tax_id": null
+        },
+        {
+            "code": "ENTA",
+            "desc": "ENTAMIZOLE DS 500MG TABLETS",
+            "cost": 2053,
+            "product_id": 1090,
+            "variation_id": 1090,
+            "name": "ENTAMIZOLE DS 500MG TABLETS",
+            "old_dpp": 3349.33,
+            "old_dpp_inc": 3349.33,
+            "tax_id": null
+        },
+        {
+            "code": "ENTA_S",
+            "desc": "ENTAMIZOLE SYRUP 100ML",
+            "cost": 2300,
+            "product_id": 1091,
+            "variation_id": 1091,
+            "name": "ENTAMIZOLE SYRUP 100ML",
+            "old_dpp": 2491,
+            "old_dpp_inc": 2491,
+            "tax_id": null
+        },
+        {
+            "code": "EOSI",
+            "desc": "EOSINE PREPARATION 100ML",
+            "cost": 1183.2,
+            "product_id": 1092,
+            "variation_id": 1092,
+            "name": "EOSINE PREPARATION 100ML",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "EPHE",
+            "desc": "EPHEDRINE INJECTION",
+            "cost": 990,
+            "product_id": 1093,
+            "variation_id": 1093,
+            "name": "EPHEDRINE INJECTION",
+            "old_dpp": 995.48,
+            "old_dpp_inc": 995.48,
+            "tax_id": null
+        },
+        {
+            "code": "ERECTOGEN",
+            "desc": "ERECTOGEN TABLETS",
+            "cost": 200,
+            "product_id": 1094,
+            "variation_id": 1094,
+            "name": "ERECTOGEN TABLETS",
+            "old_dpp": 200,
+            "old_dpp_inc": 200,
+            "tax_id": null
+        },
+        {
+            "code": "ERYTHRO",
+            "desc": "ERYTHROMYCINE 500MG TABLETS",
+            "cost": 59.4,
+            "product_id": 1095,
+            "variation_id": 1095,
+            "name": "ERYTHROMYCINE 500MG TABLETS",
+            "old_dpp": 59.45,
+            "old_dpp_inc": 59.45,
+            "tax_id": null
+        },
+        {
+            "code": "ERYTHRO_S",
+            "desc": "ERYTHROMYCINE SYROP",
+            "cost": 924,
+            "product_id": 1096,
+            "variation_id": 1096,
+            "name": "ERYTHROMYCINE SYROP",
+            "old_dpp": 858,
+            "old_dpp_inc": 858,
+            "tax_id": null
+        },
+        {
+            "code": "ESOFAG_",
+            "desc": "ESOFAG 40MG B\/30",
+            "cost": 2856,
+            "product_id": 1097,
+            "variation_id": 1097,
+            "name": "ESOFAG 40MG B\/30",
+            "old_dpp": 2856,
+            "old_dpp_inc": 2856,
+            "tax_id": null
+        },
+        {
+            "code": "ESOFAG_KIT_",
+            "desc": "ESOFAG KIT",
+            "cost": 4791,
+            "product_id": 1098,
+            "variation_id": 1098,
+            "name": "ESOFAG KIT",
+            "old_dpp": 1916.42,
+            "old_dpp_inc": 1916.42,
+            "tax_id": null
+        },
+        {
+            "code": "EXACY",
+            "desc": "EXACYL 500MG TABLETS",
+            "cost": 160.15,
+            "product_id": 1099,
+            "variation_id": 1099,
+            "name": "EXACYL 500MG TABLETS",
+            "old_dpp": 160.15,
+            "old_dpp_inc": 160.15,
+            "tax_id": null
+        },
+        {
+            "code": "EXACY_I",
+            "desc": "EXACYL 0.5G\/5ML INJECTION( TRANXENAMIC ACID)",
+            "cost": 500,
+            "product_id": 1100,
+            "variation_id": 1100,
+            "name": "EXACYL 0.5G\/5ML INJECTION( TRANXENAMIC A",
+            "old_dpp": 500,
+            "old_dpp_inc": 500,
+            "tax_id": null
+        },
+        {
+            "code": "FANSI",
+            "desc": "FANSIDER 525MG TABLETS B\/3",
+            "cost": 0,
+            "product_id": 1101,
+            "variation_id": 1101,
+            "name": "FANSIDER 525MG TABLETS B\/3",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "FEBREX_TM_",
+            "desc": "FEBREX TM",
+            "cost": 1300,
+            "product_id": 1102,
+            "variation_id": 1102,
+            "name": "FEBREX TM",
+            "old_dpp": 1300,
+            "old_dpp_inc": 1300,
+            "tax_id": null
+        },
+        {
+            "code": "FEBRI",
+            "desc": "FEBRILEX TABLETS  P\/4",
+            "cost": 263.24,
+            "product_id": 1103,
+            "variation_id": 1103,
+            "name": "FEBRILEX TABLETS P\/4",
+            "old_dpp": 143.57,
+            "old_dpp_inc": 143.57,
+            "tax_id": null
+        },
+        {
+            "code": "FENTA",
+            "desc": "FENTANYL 50MG\/2ML INJECTION",
+            "cost": 2006,
+            "product_id": 1104,
+            "variation_id": 1104,
+            "name": "FENTANYL 50MG\/2ML INJECTION",
+            "old_dpp": 2136,
+            "old_dpp_inc": 2136,
+            "tax_id": null
+        },
+        {
+            "code": "FER",
+            "desc": "FERROUS GLUCONATE 100MG\/5ML SYRUP",
+            "cost": 660,
+            "product_id": 1105,
+            "variation_id": 1105,
+            "name": "FERROUS GLUCONATE 100MG\/5ML SYRUP",
+            "old_dpp": 660,
+            "old_dpp_inc": 660,
+            "tax_id": null
+        },
+        {
+            "code": "FERACID",
+            "desc": "FERROUS\/FOLIC ACID (FEFOL) TABLET",
+            "cost": 7.92,
+            "product_id": 1106,
+            "variation_id": 1106,
+            "name": "FERROUS\/FOLIC ACID (FEFOL) TABLET",
+            "old_dpp": 7.92,
+            "old_dpp_inc": 7.92,
+            "tax_id": null
+        },
+        {
+            "code": "FERCEFOL_T",
+            "desc": "FERCEFOL TABLETS",
+            "cost": 1134,
+            "product_id": 1107,
+            "variation_id": 1107,
+            "name": "FERCEFOL TABLETS",
+            "old_dpp": 1134,
+            "old_dpp_inc": 1134,
+            "tax_id": null
+        },
+        {
+            "code": "FERCE_S",
+            "desc": "FERCEFOL SYRUP",
+            "cost": 1550,
+            "product_id": 1108,
+            "variation_id": 1108,
+            "name": "FERCEFOL SYRUP",
+            "old_dpp": 847.15,
+            "old_dpp_inc": 847.15,
+            "tax_id": null
+        },
+        {
+            "code": "FLEX",
+            "desc": "FLEXDOL TABLETS B\/30",
+            "cost": 1308,
+            "product_id": 1109,
+            "variation_id": 1109,
+            "name": "FLEXDOL TABLETS B\/30",
+            "old_dpp": 1308,
+            "old_dpp_inc": 1308,
+            "tax_id": null
+        },
+        {
+            "code": "FLUCLO_S",
+            "desc": "FLUCLOXACILLIN  250MG\/5ML SUSP",
+            "cost": 1500,
+            "product_id": 1110,
+            "variation_id": 1110,
+            "name": "FLUCLOXACILLIN 250MG\/5ML SUSP",
+            "old_dpp": 1373,
+            "old_dpp_inc": 1373,
+            "tax_id": null
+        },
+        {
+            "code": "FLUCO_S",
+            "desc": "FLUCONAZOLE 50MG\/5ML SUSP F\/100ML",
+            "cost": 1056,
+            "product_id": 1111,
+            "variation_id": 1111,
+            "name": "FLUCONAZOLE 50MG\/5ML SUSP F\/100ML",
+            "old_dpp": 1187.07,
+            "old_dpp_inc": 1187.07,
+            "tax_id": null
+        },
+        {
+            "code": "FLUCO_T",
+            "desc": "FLUCONAZOLE 200MG CAPSULE",
+            "cost": 79.2,
+            "product_id": 1112,
+            "variation_id": 1112,
+            "name": "FLUCONAZOLE 200MG CAPSULE",
+            "old_dpp": 79.2,
+            "old_dpp_inc": 79.2,
+            "tax_id": null
+        },
+        {
+            "code": "FOLIC",
+            "desc": "FOLIC ACID 5MG TABLETS",
+            "cost": 13.2,
+            "product_id": 1113,
+            "variation_id": 1113,
+            "name": "FOLIC ACID 5MG TABLETS",
+            "old_dpp": 11.54,
+            "old_dpp_inc": 11.54,
+            "tax_id": null
+        },
+        {
+            "code": "FURO_I",
+            "desc": "FUROSEMIDE 40MG\/ML INJECTION",
+            "cost": 72.6,
+            "product_id": 1114,
+            "variation_id": 1114,
+            "name": "FUROSEMIDE 40MG\/ML INJECTION",
+            "old_dpp": 73.71,
+            "old_dpp_inc": 73.71,
+            "tax_id": null
+        },
+        {
+            "code": "FURO_T",
+            "desc": "FUROSEMIDE 40MG TABLETS",
+            "cost": 10.56,
+            "product_id": 1115,
+            "variation_id": 1115,
+            "name": "FUROSEMIDE 40MG TABLETS",
+            "old_dpp": 10.56,
+            "old_dpp_inc": 10.56,
+            "tax_id": null
+        },
+        {
+            "code": "GASTRIC",
+            "desc": "GASTRICID",
+            "cost": 447.9,
+            "product_id": 1116,
+            "variation_id": 1116,
+            "name": "GASTRICID",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "GASTRO",
+            "desc": "GASTROKIT",
+            "cost": 4000,
+            "product_id": 1117,
+            "variation_id": 1117,
+            "name": "GASTROKIT",
+            "old_dpp": 4000,
+            "old_dpp_inc": 4000,
+            "tax_id": null
+        },
+        {
+            "code": "GELO",
+            "desc": "GELOPLASMA 500ML SOL",
+            "cost": 4224,
+            "product_id": 1118,
+            "variation_id": 1118,
+            "name": "GELOPLASMA 500ML SOL",
+            "old_dpp": 4224,
+            "old_dpp_inc": 4224,
+            "tax_id": null
+        },
+        {
+            "code": "GENTA_DR",
+            "desc": "GENTAMYCINE EYE DROP 0.3% 10ML",
+            "cost": 297,
+            "product_id": 1119,
+            "variation_id": 1119,
+            "name": "GENTAMYCINE EYE DROP 0.3% 10ML",
+            "old_dpp": 297,
+            "old_dpp_inc": 297,
+            "tax_id": null
+        },
+        {
+            "code": "GENTA_INJ",
+            "desc": "GENTAMYCINE SULPHATE 80MG\/2ML INJECTION",
+            "cost": 66,
+            "product_id": 1120,
+            "variation_id": 1120,
+            "name": "GENTAMYCINE SULPHATE 80MG\/2ML INJECTION",
+            "old_dpp": 63.66,
+            "old_dpp_inc": 63.66,
+            "tax_id": null
+        },
+        {
+            "code": "GLIB",
+            "desc": "GLINENCLAMIDE 5MG TABLETS",
+            "cost": 7.92,
+            "product_id": 1121,
+            "variation_id": 1121,
+            "name": "GLIBENCLAMIDE 5MG TABLETS",
+            "old_dpp": 7.92,
+            "old_dpp_inc": 7.92,
+            "tax_id": null
+        },
+        {
+            "code": "GLOVE",
+            "desc": "EXAMINATION GLOVES PAIR",
+            "cost": 28,
+            "product_id": 1122,
+            "variation_id": 1122,
+            "name": "EXAMINATION GLOVES PAIR",
+            "old_dpp": 27.39,
+            "old_dpp_inc": 27.39,
+            "tax_id": null
+        },
+        {
+            "code": "GLUCOSTOP_",
+            "desc": "GLUCOSTOP TABLETS",
+            "cost": 167,
+            "product_id": 1123,
+            "variation_id": 1123,
+            "name": "GLUCOSTOP TABLETS",
+            "old_dpp": 167,
+            "old_dpp_inc": 167,
+            "tax_id": null
+        },
+        {
+            "code": "GRISEO",
+            "desc": "GRISEOFULVIN 500MG TABLETS",
+            "cost": 72.6,
+            "product_id": 1124,
+            "variation_id": 1124,
+            "name": "GRISEOFULVIN 500MG TABLETS",
+            "old_dpp": 80,
+            "old_dpp_inc": 80,
+            "tax_id": null
+        },
+        {
+            "code": "GYN",
+            "desc": "GYNOSPAM TABLETS B\/30",
+            "cost": 1353,
+            "product_id": 1125,
+            "variation_id": 1125,
+            "name": "GYNOSPAM TABLETS B\/30",
+            "old_dpp": 1353,
+            "old_dpp_inc": 1353,
+            "tax_id": null
+        },
+        {
+            "code": "GYNAE_GLOV",
+            "desc": "GYNAECOLOGICAL SURGICAL GLOVES",
+            "cost": 1500,
+            "product_id": 1126,
+            "variation_id": 1126,
+            "name": "GYNAECOLOGICAL SURGICAL GLOVES",
+            "old_dpp": 3000,
+            "old_dpp_inc": 3000,
+            "tax_id": null
+        },
+        {
+            "code": "GYNAN",
+            "desc": "GYNANFORT OVULES B\/10",
+            "cost": 1884,
+            "product_id": 1127,
+            "variation_id": 1127,
+            "name": "GYNANFORT OVULES B\/10",
+            "old_dpp": 1256,
+            "old_dpp_inc": 1256,
+            "tax_id": null
+        },
+        {
+            "code": "GYNEACARE_TABLETS",
+            "desc": "GYNEACARE TABLETS",
+            "cost": 167,
+            "product_id": 1128,
+            "variation_id": 1128,
+            "name": "GYNEACARE TABLETS",
+            "old_dpp": 167,
+            "old_dpp_inc": 167,
+            "tax_id": null
+        },
+        {
+            "code": "HALO_I",
+            "desc": "HALOPERIDOL 5MG INJECTION",
+            "cost": 594,
+            "product_id": 1129,
+            "variation_id": 1129,
+            "name": "HALOPERIDOL 5MG INJECTION",
+            "old_dpp": 594,
+            "old_dpp_inc": 594,
+            "tax_id": null
+        },
+        {
+            "code": "HALO_T",
+            "desc": "HALOPERIDOL 5MG TABLET",
+            "cost": 12,
+            "product_id": 1130,
+            "variation_id": 1130,
+            "name": "HALOPERIDOL 5MG TABLET",
+            "old_dpp": 12,
+            "old_dpp_inc": 12,
+            "tax_id": null
+        },
+        {
+            "code": "HCT",
+            "desc": "HYDROCLOROTHIAZIDE 50MG TABLET",
+            "cost": 13.2,
+            "product_id": 1131,
+            "variation_id": 1131,
+            "name": "HYDROCLOROTHIAZIDE 50MG TABLET",
+            "old_dpp": 13.2,
+            "old_dpp_inc": 13.2,
+            "tax_id": null
+        },
+        {
+            "code": "HCT_25MG",
+            "desc": "HYDROCHLOROTHIAZIDE 25MG",
+            "cost": 10,
+            "product_id": 1132,
+            "variation_id": 1132,
+            "name": "HYDROCHLOROTHIAZIDE 25MG",
+            "old_dpp": 10,
+            "old_dpp_inc": 10,
+            "tax_id": null
+        },
+        {
+            "code": "HEXA_SPRAY",
+            "desc": "HEXA SPRAY COLL HE BADIANE \/30G",
+            "cost": 2189,
+            "product_id": 1133,
+            "variation_id": 1133,
+            "name": "HEXA SPRAY COLL HE BADIANE \/30G",
+            "old_dpp": 625.5,
+            "old_dpp_inc": 625.5,
+            "tax_id": null
+        },
+        {
+            "code": "HYDREA_500MG_B\/20",
+            "desc": "HYDREA 500MG B\/20",
+            "cost": 4900,
+            "product_id": 1134,
+            "variation_id": 1134,
+            "name": "HYDREA 500MG B\/20",
+            "old_dpp": 4900,
+            "old_dpp_inc": 4900,
+            "tax_id": null
+        },
+        {
+            "code": "HYDROPER",
+            "desc": "HYDROGEN PEROXIDE 30%",
+            "cost": 2150,
+            "product_id": 1135,
+            "variation_id": 1135,
+            "name": "HYDROGEN PEROXIDE 30%",
+            "old_dpp": 1720,
+            "old_dpp_inc": 1720,
+            "tax_id": null
+        },
+        {
+            "code": "HYOS_I",
+            "desc": "HYOSCINE BUTYLBROMIDE 20MG\/ML INJECTION",
+            "cost": 211.2,
+            "product_id": 1136,
+            "variation_id": 1136,
+            "name": "HYOSCINE BUTYLBROMIDE 20MG\/ML INJECTION",
+            "old_dpp": 186.21,
+            "old_dpp_inc": 186.21,
+            "tax_id": null
+        },
+        {
+            "code": "HYOS_T",
+            "desc": "HYOSCINE BUTYLBROMIDE 10MG TABLETS",
+            "cost": 14,
+            "product_id": 1137,
+            "variation_id": 1137,
+            "name": "HYOSCINE BUTYLBROMIDE 10MG TABLETS",
+            "old_dpp": 13.5,
+            "old_dpp_inc": 13.5,
+            "tax_id": null
+        },
+        {
+            "code": "IBEX_200\/235\/30MG",
+            "desc": "IBEX ( IBUPROFEN\/PARA\/CAFFEINE)",
+            "cost": 837,
+            "product_id": 1138,
+            "variation_id": 1138,
+            "name": "IBEX ( IBUPROFEN\/PARA\/CAFFEINE)",
+            "old_dpp": 837,
+            "old_dpp_inc": 837,
+            "tax_id": null
+        },
+        {
+            "code": "IBUMOL_",
+            "desc": "IBUMOL 400MG B\/30",
+            "cost": 1749,
+            "product_id": 1139,
+            "variation_id": 1139,
+            "name": "IBUMOL 400MG B\/30",
+            "old_dpp": 1749,
+            "old_dpp_inc": 1749,
+            "tax_id": null
+        },
+        {
+            "code": "IBUMOL_T_",
+            "desc": "IBUMOL  400MG TABLETS B\/10",
+            "cost": 804,
+            "product_id": 1140,
+            "variation_id": 1140,
+            "name": "IBUMOL 400MG TABLETS B\/10",
+            "old_dpp": 285.16,
+            "old_dpp_inc": 285.16,
+            "tax_id": null
+        },
+        {
+            "code": "IBUPAR",
+            "desc": "IBUPROFEN\/PARACETAMOL SYRUP (IBUMOL)",
+            "cost": 633,
+            "product_id": 1141,
+            "variation_id": 1141,
+            "name": "IBUPROFEN\/PARACETAMOL SYRUP (IBUMOL)",
+            "old_dpp": 633,
+            "old_dpp_inc": 633,
+            "tax_id": null
+        },
+        {
+            "code": "IBU_T",
+            "desc": "IBUPROFEN 400MG TABLETS",
+            "cost": 11.88,
+            "product_id": 1142,
+            "variation_id": 1142,
+            "name": "IBUPROFEN 400MG TABLETS",
+            "old_dpp": 11.87,
+            "old_dpp_inc": 11.87,
+            "tax_id": null
+        },
+        {
+            "code": "INF_SET",
+            "desc": "INFUSION SET",
+            "cost": 140,
+            "product_id": 1143,
+            "variation_id": 1143,
+            "name": "INFUSION SET",
+            "old_dpp": 140,
+            "old_dpp_inc": 140,
+            "tax_id": null
+        },
+        {
+            "code": "INSUACTRA",
+            "desc": "INSULIN ACTRAPID 100IU",
+            "cost": 4728,
+            "product_id": 1144,
+            "variation_id": 1144,
+            "name": "INSULIN ACTRAPID 100IU",
+            "old_dpp": 5034,
+            "old_dpp_inc": 5034,
+            "tax_id": null
+        },
+        {
+            "code": "INSUMIX",
+            "desc": "INSULIN MIXTARD 100IU",
+            "cost": 5764,
+            "product_id": 1145,
+            "variation_id": 1145,
+            "name": "INSULIN MIXTARD 100IU",
+            "old_dpp": 5764,
+            "old_dpp_inc": 5764,
+            "tax_id": null
+        },
+        {
+            "code": "INSUSYRIN",
+            "desc": "INSULIN SYRINGE 1ML",
+            "cost": 75,
+            "product_id": 1146,
+            "variation_id": 1146,
+            "name": "INSULIN SYRINGE 1ML",
+            "old_dpp": 74.94,
+            "old_dpp_inc": 74.94,
+            "tax_id": null
+        },
+        {
+            "code": "ISOFLURANE_FL\/250M",
+            "desc": "ISOFLURANE FL250NL INALATION",
+            "cost": 39600,
+            "product_id": 1147,
+            "variation_id": 1147,
+            "name": "ISOFLURANE FL250NL INALATION",
+            "old_dpp": 39600,
+            "old_dpp_inc": 39600,
+            "tax_id": null
+        },
+        {
+            "code": "IUCD",
+            "desc": "INTRA UTERINE DEVICE",
+            "cost": 14.52,
+            "product_id": 1148,
+            "variation_id": 1148,
+            "name": "INTRA UTERINE DEVICE",
+            "old_dpp": 145.2,
+            "old_dpp_inc": 145.2,
+            "tax_id": null
+        },
+        {
+            "code": "IV_18G",
+            "desc": "IV PLACEMENT 18G",
+            "cost": 100,
+            "product_id": 1149,
+            "variation_id": 1149,
+            "name": "IV PLACEMENT 18G",
+            "old_dpp": 96.48,
+            "old_dpp_inc": 96.48,
+            "tax_id": null
+        },
+        {
+            "code": "IV_20G",
+            "desc": "IV PLACEMENT 20G",
+            "cost": 100,
+            "product_id": 1150,
+            "variation_id": 1150,
+            "name": "IV PLACEMENT 20G",
+            "old_dpp": 98.07,
+            "old_dpp_inc": 98.07,
+            "tax_id": null
+        },
+        {
+            "code": "IV_22G",
+            "desc": "IV PLACEMENT 22G",
+            "cost": 100,
+            "product_id": 1151,
+            "variation_id": 1151,
+            "name": "IV PLACEMENT 22G",
+            "old_dpp": 97.1,
+            "old_dpp_inc": 97.1,
+            "tax_id": null
+        },
+        {
+            "code": "IV_24G",
+            "desc": "IV PLACEMENT 24G",
+            "cost": 100,
+            "product_id": 1152,
+            "variation_id": 1152,
+            "name": "IV PLACEMENT 24G",
+            "old_dpp": 96.81,
+            "old_dpp_inc": 96.81,
+            "tax_id": null
+        },
+        {
+            "code": "IXIM_CEFIXIM_40MG_",
+            "desc": "IXIM ( CEFIXIM 40MG SIROP)",
+            "cost": 1850,
+            "product_id": 1153,
+            "variation_id": 1153,
+            "name": "IXIM ( CEFIXIM 40MG SIROP)",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "JADEL",
+            "desc": "JADELLE ( NORPLANT)",
+            "cost": 650,
+            "product_id": 1154,
+            "variation_id": 1154,
+            "name": "JADELLE ( NORPLANT)",
+            "old_dpp": 660,
+            "old_dpp_inc": 660,
+            "tax_id": null
+        },
+        {
+            "code": "KETMIN",
+            "desc": "KETAMINE INJECTION 50MG\/ML\/2ML",
+            "cost": 1980,
+            "product_id": 1155,
+            "variation_id": 1155,
+            "name": "KETAMINE INJECTION 50MG\/ML\/2ML",
+            "old_dpp": 1818.41,
+            "old_dpp_inc": 1818.41,
+            "tax_id": null
+        },
+        {
+            "code": "KET_S",
+            "desc": "KETUM 2.5% GEL T\/60G SMALL",
+            "cost": 1624,
+            "product_id": 1156,
+            "variation_id": 1156,
+            "name": "KETUM 2.5% GEL T\/60G SMALL",
+            "old_dpp": 1624,
+            "old_dpp_inc": 1624,
+            "tax_id": null
+        },
+        {
+            "code": "KLIPAL_CODEINE_",
+            "desc": "KLIPAL CODEINE 50\/600MG\/16",
+            "cost": 1478,
+            "product_id": 1157,
+            "variation_id": 1157,
+            "name": "KLIPAL CODEINE 50\/600MG\/16",
+            "old_dpp": 1751.5,
+            "old_dpp_inc": 1751.5,
+            "tax_id": null
+        },
+        {
+            "code": "LADY_S_PAD",
+            "desc": "LADY SEPT PAD",
+            "cost": 800,
+            "product_id": 1158,
+            "variation_id": 1158,
+            "name": "LADY SEPT PAD",
+            "old_dpp": 800,
+            "old_dpp_inc": 800,
+            "tax_id": null
+        },
+        {
+            "code": "LAVRI",
+            "desc": "LAVRIL SYRUP ( PARACET\/CHLORPHEN)",
+            "cost": 924,
+            "product_id": 1159,
+            "variation_id": 1159,
+            "name": "LAVRIL SYRUP ( PARACET\/CHLORPHEN)",
+            "old_dpp": 924,
+            "old_dpp_inc": 924,
+            "tax_id": null
+        },
+        {
+            "code": "LA_CROIX",
+            "desc": "LA CROIX EAU DE JAVEL",
+            "cost": 700,
+            "product_id": 1160,
+            "variation_id": 1160,
+            "name": "LA CROIX EAU DE JAVEL",
+            "old_dpp": 700,
+            "old_dpp_inc": 700,
+            "tax_id": null
+        },
+        {
+            "code": "LEUCOVORINE_CALCIU",
+            "desc": "LEUCOVORINE CALCIUM INJ",
+            "cost": 2460,
+            "product_id": 1161,
+            "variation_id": 1161,
+            "name": "LEUCOVORINE CALCIUM INJ",
+            "old_dpp": 2460,
+            "old_dpp_inc": 2460,
+            "tax_id": null
+        },
+        {
+            "code": "LEVO",
+            "desc": "LEVOFLOXACINE 500MG TABLETS",
+            "cost": 1500,
+            "product_id": 1162,
+            "variation_id": 1162,
+            "name": "LEVOFLOXACINE 500MG TABLETS",
+            "old_dpp": 1500,
+            "old_dpp_inc": 1500,
+            "tax_id": null
+        },
+        {
+            "code": "LEVO_BD",
+            "desc": "LEVONOSTREL ( LEVO BD)",
+            "cost": 1468,
+            "product_id": 1163,
+            "variation_id": 1163,
+            "name": "LEVONOSTREL ( LEVO BD)",
+            "old_dpp": 2446.67,
+            "old_dpp_inc": 2446.67,
+            "tax_id": null
+        },
+        {
+            "code": "LIDO",
+            "desc": "LIDOCAIN PLAIN 2% 50ML",
+            "cost": 1122,
+            "product_id": 1164,
+            "variation_id": 1164,
+            "name": "LIDOCAIN PLAIN 2% 50ML",
+            "old_dpp": 1084.33,
+            "old_dpp_inc": 1084.33,
+            "tax_id": null
+        },
+        {
+            "code": "LIDO\/ADREN_INJ",
+            "desc": "LIDOCAIN\/ADRENALINE INJECTION",
+            "cost": 1188,
+            "product_id": 1165,
+            "variation_id": 1165,
+            "name": "LIDOCAIN\/ADRENALINE INJECTION",
+            "old_dpp": 1065,
+            "old_dpp_inc": 1065,
+            "tax_id": null
+        },
+        {
+            "code": "LIDOC",
+            "desc": "LIDOCAIN PLAIN 2% 20ML",
+            "cost": 412.3,
+            "product_id": 1166,
+            "variation_id": 1166,
+            "name": "LIDOCAIN PLAIN 2% 20ML",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "LIPOSIC_GEL_OPHT_T",
+            "desc": "LIPOSIC_GEL_OPHT_T\/10G",
+            "cost": 1572,
+            "product_id": 1167,
+            "variation_id": 1167,
+            "name": "LIPOSIC_GEL_OPHT_T\/10G",
+            "old_dpp": 1469.75,
+            "old_dpp_inc": 1469.75,
+            "tax_id": null
+        },
+        {
+            "code": "LISIN",
+            "desc": "LISINOPRIL 20MG TABLETS B\/28",
+            "cost": 1500,
+            "product_id": 1168,
+            "variation_id": 1168,
+            "name": "LISINOPRIL 20MG TABLETS B\/28",
+            "old_dpp": 1500,
+            "old_dpp_inc": 1500,
+            "tax_id": null
+        },
+        {
+            "code": "LISONIPRIL_T",
+            "desc": "LISINOPRIL 10MG",
+            "cost": 1000,
+            "product_id": 1169,
+            "variation_id": 1169,
+            "name": "LISINOPRIL 10MG",
+            "old_dpp": 1000,
+            "old_dpp_inc": 1000,
+            "tax_id": null
+        },
+        {
+            "code": "LITACO_S",
+            "desc": "LITACOLD SIROP 60ML",
+            "cost": 1040,
+            "product_id": 1170,
+            "variation_id": 1170,
+            "name": "LITACOLD SIROP 60ML",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "LITACO_T",
+            "desc": "LITACOLD TABLET B\/3",
+            "cost": 170.45,
+            "product_id": 1171,
+            "variation_id": 1171,
+            "name": "LITACOLD TABLET B\/3",
+            "old_dpp": 587.04,
+            "old_dpp_inc": 587.04,
+            "tax_id": null
+        },
+        {
+            "code": "LOPER",
+            "desc": "LOPERAMIDE 2MG TABLET",
+            "cost": 10.56,
+            "product_id": 1172,
+            "variation_id": 1172,
+            "name": "LOPERAMIDE 2MG TABLET",
+            "old_dpp": 10.55,
+            "old_dpp_inc": 10.55,
+            "tax_id": null
+        },
+        {
+            "code": "LORATA_S",
+            "desc": "LORATADINE  lorhist SIROP",
+            "cost": 1980,
+            "product_id": 1173,
+            "variation_id": 1173,
+            "name": "LORATADINE lorhist SIROP",
+            "old_dpp": 1690.14,
+            "old_dpp_inc": 1690.14,
+            "tax_id": null
+        },
+        {
+            "code": "LORATA_T",
+            "desc": "LORATADINE 10MG TABLETS B\/10",
+            "cost": 300,
+            "product_id": 1174,
+            "variation_id": 1174,
+            "name": "LORATADINE 10MG TABLETS B\/10",
+            "old_dpp": 272.87,
+            "old_dpp_inc": 272.87,
+            "tax_id": null
+        },
+        {
+            "code": "LORA_S",
+            "desc": "LORATADINE 5MG\/5ML (LORATOL) SYRUP 100ML",
+            "cost": 1980,
+            "product_id": 1175,
+            "variation_id": 1175,
+            "name": "LORATADINE 5MG\/5ML (LORATOL) SYRUP 100ML",
+            "old_dpp": 1598.14,
+            "old_dpp_inc": 1598.14,
+            "tax_id": null
+        },
+        {
+            "code": "LOSAR",
+            "desc": "LOSARTAN 100MG TABLETS B\/30",
+            "cost": 1500,
+            "product_id": 1176,
+            "variation_id": 1176,
+            "name": "LOSARTAN 100MG TABLETS B\/30",
+            "old_dpp": 1500,
+            "old_dpp_inc": 1500,
+            "tax_id": null
+        },
+        {
+            "code": "LOSARTAN_50MG",
+            "desc": "LOSARTAN 50MG",
+            "cost": 1200,
+            "product_id": 1177,
+            "variation_id": 1177,
+            "name": "LOSARTAN 50MG",
+            "old_dpp": 1200,
+            "old_dpp_inc": 1200,
+            "tax_id": null
+        },
+        {
+            "code": "LOXE_T",
+            "desc": "LOXEN (NICARDIPINE) 50MG LP B\/60 RETAIL",
+            "cost": 174,
+            "product_id": 1178,
+            "variation_id": 1178,
+            "name": "LOXEN (NICARDIPINE) 50MG LP B\/60 RETAIL",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "LOX_T",
+            "desc": "LOXEN (NICARDIPINE ) 20MG TABLETS B\/30",
+            "cost": 110.8,
+            "product_id": 1179,
+            "variation_id": 1179,
+            "name": "LOXEN (NICARDIPINE ) 20MG TABLETS B\/30",
+            "old_dpp": 13,
+            "old_dpp_inc": 13,
+            "tax_id": null
+        },
+        {
+            "code": "L_MESI",
+            "desc": "L MESITRAN",
+            "cost": 1748,
+            "product_id": 1180,
+            "variation_id": 1180,
+            "name": "L MESITRAN",
+            "old_dpp": 33249,
+            "old_dpp_inc": 33249,
+            "tax_id": null
+        },
+        {
+            "code": "MAAL",
+            "desc": "MAALOX SACHET B\/20 RETAIL",
+            "cost": 121.55,
+            "product_id": 1181,
+            "variation_id": 1181,
+            "name": "MAALOX SACHET B\/20 RETAIL",
+            "old_dpp": 7.51,
+            "old_dpp_inc": 7.51,
+            "tax_id": null
+        },
+        {
+            "code": "MAGN",
+            "desc": "MAGNESIUM 250MG TABLETS",
+            "cost": 50,
+            "product_id": 1182,
+            "variation_id": 1182,
+            "name": "MAGNESIUM 250MG TABLETS",
+            "old_dpp": 27.15,
+            "old_dpp_inc": 27.15,
+            "tax_id": null
+        },
+        {
+            "code": "MAG_2_DRINK",
+            "desc": "MAG 2 DRINKABLE AMPOUL RETAIL",
+            "cost": 126.36,
+            "product_id": 1183,
+            "variation_id": 1183,
+            "name": "MAG 2 DRINKABLE AMPOUL RETAIL",
+            "old_dpp": 126.37,
+            "old_dpp_inc": 126.37,
+            "tax_id": null
+        },
+        {
+            "code": "MAG_2_INJ",
+            "desc": "MAG 2 INJECTABLE RETAIL",
+            "cost": 425,
+            "product_id": 1184,
+            "variation_id": 1184,
+            "name": "MAG 2 INJECTABLE RETAIL",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "MAG_SULPHATE",
+            "desc": "MAGNESIUM SULPHATE 50MG\/10ML INJ",
+            "cost": 726,
+            "product_id": 1185,
+            "variation_id": 1185,
+            "name": "MAGNESIUM SULPHATE 50MG\/10ML INJ",
+            "old_dpp": 726,
+            "old_dpp_inc": 726,
+            "tax_id": null
+        },
+        {
+            "code": "MAG_T",
+            "desc": "MAG 2 100MG TABLETS",
+            "cost": 44.85,
+            "product_id": 1186,
+            "variation_id": 1186,
+            "name": "MAG 2 100MG TABLETS",
+            "old_dpp": 44.85,
+            "old_dpp_inc": 44.85,
+            "tax_id": null
+        },
+        {
+            "code": "MALARIA_KI",
+            "desc": "MALARIA_KIT LESS THAN 5 YEARS",
+            "cost": 0,
+            "product_id": 1187,
+            "variation_id": 1187,
+            "name": "MALARIA_KIT LESS THAN 5 YEARS",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "MALARIA_KIT",
+            "desc": "M",
+            "cost": 0,
+            "product_id": 1188,
+            "variation_id": 1188,
+            "name": "M",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "MALARIA_KIT_AD",
+            "desc": "MALARIA_KIT  PREGNANT WOWEN",
+            "cost": 0,
+            "product_id": 1189,
+            "variation_id": 1189,
+            "name": "MALARIA_KIT PREGNANT WOWEN",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "MALARIA_KIT_ADULT",
+            "desc": "MALARIA KIT ABOVE 5 YEARS",
+            "cost": 0,
+            "product_id": 1190,
+            "variation_id": 1190,
+            "name": "MALARIA KIT ABOVE 5 YEARS",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "MALOXI",
+            "desc": "MALOXINE FANSIDER B\/3",
+            "cost": 407.46,
+            "product_id": 1191,
+            "variation_id": 1191,
+            "name": "MALOXINE FANSIDER B\/3",
+            "old_dpp": 407.47,
+            "old_dpp_inc": 407.47,
+            "tax_id": null
+        },
+        {
+            "code": "MANTOL_INFU",
+            "desc": "MANNITOL INFUSION 10% 500ML",
+            "cost": 1452,
+            "product_id": 1192,
+            "variation_id": 1192,
+            "name": "MANNITOL INFUSION 10% 500ML",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "MARCAI",
+            "desc": "MARCAINE 0.5%",
+            "cost": 1584,
+            "product_id": 1193,
+            "variation_id": 1193,
+            "name": "MARCAINE 0.5%",
+            "old_dpp": 1058.4,
+            "old_dpp_inc": 1058.4,
+            "tax_id": null
+        },
+        {
+            "code": "MASK",
+            "desc": "FACE MASK",
+            "cost": 50,
+            "product_id": 1194,
+            "variation_id": 1194,
+            "name": "FACE MASK",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "MAXIDRO",
+            "desc": "MAXIDROL EYE DROP",
+            "cost": 1177,
+            "product_id": 1195,
+            "variation_id": 1195,
+            "name": "MAXIDROL EYE DROP",
+            "old_dpp": 4255.5,
+            "old_dpp_inc": 4255.5,
+            "tax_id": null
+        },
+        {
+            "code": "MEBEN_S",
+            "desc": "MEBENDAZOL SYRUP",
+            "cost": 330,
+            "product_id": 1196,
+            "variation_id": 1196,
+            "name": "MEBENDAZOL SYRUP",
+            "old_dpp": 326.86,
+            "old_dpp_inc": 326.86,
+            "tax_id": null
+        },
+        {
+            "code": "MEGRI",
+            "desc": "MEGRIFOND SIROP",
+            "cost": 1034,
+            "product_id": 1197,
+            "variation_id": 1197,
+            "name": "MEGRIFOND SIROP",
+            "old_dpp": 1034,
+            "old_dpp_inc": 1034,
+            "tax_id": null
+        },
+        {
+            "code": "METFOR",
+            "desc": "METFORMINE HYDROCLORIDE 500MG",
+            "cost": 10.56,
+            "product_id": 1198,
+            "variation_id": 1198,
+            "name": "METFORMINE HYDROCLORIDE 500MG",
+            "old_dpp": 10.37,
+            "old_dpp_inc": 10.37,
+            "tax_id": null
+        },
+        {
+            "code": "METHER",
+            "desc": "METHYLERGOMETRINE  1ML INJECTION  (METHERGIN)  RETAIL",
+            "cost": 313,
+            "product_id": 1199,
+            "variation_id": 1199,
+            "name": "METHYLERGOMETRINE 1ML INJECTION (MET",
+            "old_dpp": 277.43,
+            "old_dpp_inc": 277.43,
+            "tax_id": null
+        },
+        {
+            "code": "METHOTR",
+            "desc": "METHOTREXATE 50MG INJECTION",
+            "cost": 2570,
+            "product_id": 1200,
+            "variation_id": 1200,
+            "name": "METHOTREXATE 50MG INJECTION",
+            "old_dpp": 2336.38,
+            "old_dpp_inc": 2336.38,
+            "tax_id": null
+        },
+        {
+            "code": "METHYLATED_SPIRIT",
+            "desc": "METHYLATED SPIRIT 96% 1 LITRE",
+            "cost": 2261.9,
+            "product_id": 1201,
+            "variation_id": 1201,
+            "name": "METHYLATED SPIRIT 96% 1 LITRE",
+            "old_dpp": 2261.36,
+            "old_dpp_inc": 2261.36,
+            "tax_id": null
+        },
+        {
+            "code": "METHYLDO",
+            "desc": "METHYLDOPA (ALDOMET) 250MG TABLETS",
+            "cost": 52.8,
+            "product_id": 1202,
+            "variation_id": 1202,
+            "name": "METHYLDOPA (ALDOMET) 250MG TABLETS",
+            "old_dpp": 52.38,
+            "old_dpp_inc": 52.38,
+            "tax_id": null
+        },
+        {
+            "code": "METHYLER",
+            "desc": "METHYLERGOMETRINE ( LERIN ) 0.125MG TABLET",
+            "cost": 80.86,
+            "product_id": 1203,
+            "variation_id": 1203,
+            "name": "METHYLERGOMETRINE ( LERIN ) 0.125MG TABL",
+            "old_dpp": 80.84,
+            "old_dpp_inc": 80.84,
+            "tax_id": null
+        },
+        {
+            "code": "METHYLERGOME",
+            "desc": "METHYLERGOMETRINE ( LERIN ) INJECTION",
+            "cost": 302.94,
+            "product_id": 1204,
+            "variation_id": 1204,
+            "name": "METHYLERGOMETRINE ( LERIN ) INJECTION",
+            "old_dpp": 302.91,
+            "old_dpp_inc": 302.91,
+            "tax_id": null
+        },
+        {
+            "code": "METHYL_70",
+            "desc": "METHYLATED SPIRIT 70% 100ML",
+            "cost": 317.39,
+            "product_id": 1205,
+            "variation_id": 1205,
+            "name": "METHYLATED SPIRIT 70% 100ML",
+            "old_dpp": 317.4,
+            "old_dpp_inc": 317.4,
+            "tax_id": null
+        },
+        {
+            "code": "METHYL_95",
+            "desc": "METHYLATED SPIRIT 70%  1 litre",
+            "cost": 2000,
+            "product_id": 1206,
+            "variation_id": 1206,
+            "name": "METHYLATED SPIRIT 70% 1 litre",
+            "old_dpp": 2172.45,
+            "old_dpp_inc": 2172.45,
+            "tax_id": null
+        },
+        {
+            "code": "METHYL_PREDNISOLON",
+            "desc": "METHYL PREDNISOLONE 125MG INJ ( SOLUMEDROL)",
+            "cost": 1950,
+            "product_id": 1207,
+            "variation_id": 1207,
+            "name": "METHYL PREDNISOLONE 125MG INJ ( SOLUME",
+            "old_dpp": 1550,
+            "old_dpp_inc": 1550,
+            "tax_id": null
+        },
+        {
+            "code": "METO",
+            "desc": "METOCLOPRAMIDE 10MG\/2ML INJECTION",
+            "cost": 72.6,
+            "product_id": 1208,
+            "variation_id": 1208,
+            "name": "METOCLOPRAMIDE 10MG\/2ML INJECTION",
+            "old_dpp": 64.37,
+            "old_dpp_inc": 64.37,
+            "tax_id": null
+        },
+        {
+            "code": "METO_T",
+            "desc": "METOCLOPRAMIDE 10MG TABLETS",
+            "cost": 13.2,
+            "product_id": 1209,
+            "variation_id": 1209,
+            "name": "METOCLOPRAMIDE 10MG TABLETS",
+            "old_dpp": 12.78,
+            "old_dpp_inc": 12.78,
+            "tax_id": null
+        },
+        {
+            "code": "METRO_250",
+            "desc": "METRONIDAZOLE 250MG TABLETS",
+            "cost": 9.24,
+            "product_id": 1210,
+            "variation_id": 1210,
+            "name": "METRONIDAZOLE 250MG TABLETS",
+            "old_dpp": 9.24,
+            "old_dpp_inc": 9.24,
+            "tax_id": null
+        },
+        {
+            "code": "METRO_500",
+            "desc": "METRONIDAZOLE 500MG TABLETS",
+            "cost": 13.2,
+            "product_id": 1211,
+            "variation_id": 1211,
+            "name": "METRONIDAZOLE 500MG TABLETS",
+            "old_dpp": 13.2,
+            "old_dpp_inc": 13.2,
+            "tax_id": null
+        },
+        {
+            "code": "METRO_INF",
+            "desc": "METRONIDAZOLE  500MG\/100ML INFUSION",
+            "cost": 462,
+            "product_id": 1212,
+            "variation_id": 1212,
+            "name": "METRONIDAZOLE 500MG\/100ML INFUSION",
+            "old_dpp": 393.49,
+            "old_dpp_inc": 393.49,
+            "tax_id": null
+        },
+        {
+            "code": "METRO_S",
+            "desc": "METRONIDAZOLE 125MG\/5ML SYRUP 100ML",
+            "cost": 528,
+            "product_id": 1213,
+            "variation_id": 1213,
+            "name": "METRONIDAZOLE 125MG\/5ML SYRUP 100ML",
+            "old_dpp": 527.61,
+            "old_dpp_inc": 527.61,
+            "tax_id": null
+        },
+        {
+            "code": "MICO",
+            "desc": "MICONAZOLE 2% CREAM",
+            "cost": 462,
+            "product_id": 1214,
+            "variation_id": 1214,
+            "name": "MICONAZOLE 2% CREAM",
+            "old_dpp": 451.94,
+            "old_dpp_inc": 451.94,
+            "tax_id": null
+        },
+        {
+            "code": "MIGRET",
+            "desc": "MIGRETIL CP B\/20",
+            "cost": 1817,
+            "product_id": 1215,
+            "variation_id": 1215,
+            "name": "MIGRETIL CP B\/20",
+            "old_dpp": 732.89,
+            "old_dpp_inc": 732.89,
+            "tax_id": null
+        },
+        {
+            "code": "MINERAL_WATER_",
+            "desc": "MINERAL WATER",
+            "cost": 233.33,
+            "product_id": 1216,
+            "variation_id": 1216,
+            "name": "MINERAL WATER",
+            "old_dpp": 229.5,
+            "old_dpp_inc": 229.5,
+            "tax_id": null
+        },
+        {
+            "code": "MIOR",
+            "desc": "MIOREL B\/12",
+            "cost": 2010,
+            "product_id": 1217,
+            "variation_id": 1217,
+            "name": "MIOREL B\/12",
+            "old_dpp": 1161.95,
+            "old_dpp_inc": 1161.95,
+            "tax_id": null
+        },
+        {
+            "code": "MISOP",
+            "desc": "MISOPROSTOL 200microG TABLET",
+            "cost": 198,
+            "product_id": 1218,
+            "variation_id": 1218,
+            "name": "MISOPROSTOL 200microG TABLET",
+            "old_dpp": 26.46,
+            "old_dpp_inc": 26.46,
+            "tax_id": null
+        },
+        {
+            "code": "MORPHINE_INJ",
+            "desc": "MORPHINE 10MG INJ",
+            "cost": 2000,
+            "product_id": 1219,
+            "variation_id": 1219,
+            "name": "MORPHINE 10MG INJ",
+            "old_dpp": 2000,
+            "old_dpp_inc": 2000,
+            "tax_id": null
+        },
+        {
+            "code": "MOXIFLOXAXINE_EYE_",
+            "desc": "MO FLOREN  (MOXIFLOXACINE) EYE DROP",
+            "cost": 2150,
+            "product_id": 1220,
+            "variation_id": 1220,
+            "name": "MO FLOREN (MOXIFLOXACINE) EYE DROP",
+            "old_dpp": 2053,
+            "old_dpp_inc": 2053,
+            "tax_id": null
+        },
+        {
+            "code": "MS",
+            "desc": "MSM",
+            "cost": 83.33,
+            "product_id": 1221,
+            "variation_id": 1221,
+            "name": "MSM",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "MULTIVIT_S",
+            "desc": "MULTIVITAMINE SIROP",
+            "cost": 607,
+            "product_id": 1222,
+            "variation_id": 1222,
+            "name": "MULTIVITAMINE SIROP",
+            "old_dpp": 623.81,
+            "old_dpp_inc": 623.81,
+            "tax_id": null
+        },
+        {
+            "code": "MULTI_VIT_TABS",
+            "desc": "MULTIVITAMIN TABLETS",
+            "cost": 10.56,
+            "product_id": 1223,
+            "variation_id": 1223,
+            "name": "MULTIVITAMIN TABLETS",
+            "old_dpp": 10.19,
+            "old_dpp_inc": 10.19,
+            "tax_id": null
+        },
+        {
+            "code": "MYONIT_NITROGLYCE_",
+            "desc": "MYONIT 2.6MG ( NITROGLYCERINE)",
+            "cost": 4200,
+            "product_id": 1224,
+            "variation_id": 1224,
+            "name": "MYONIT 2.6MG ( NITROGLYCERINE)",
+            "old_dpp": 4900,
+            "old_dpp_inc": 4900,
+            "tax_id": null
+        },
+        {
+            "code": "NASO1",
+            "desc": "NASOGASTRIC TUBE SIZE N= 18",
+            "cost": 950,
+            "product_id": 1225,
+            "variation_id": 1225,
+            "name": "NASOGASTRIC TUBE SIZE N=",
+            "old_dpp": 633.42,
+            "old_dpp_inc": 633.42,
+            "tax_id": null
+        },
+        {
+            "code": "NASO_16",
+            "desc": "NASOGASTRIC TUBE SIZE N= 16",
+            "cost": 350,
+            "product_id": 1226,
+            "variation_id": 1226,
+            "name": "NASOGASTRIC TUBE SIZE N=",
+            "old_dpp": 350,
+            "old_dpp_inc": 350,
+            "tax_id": null
+        },
+        {
+            "code": "NATISPRAY_NITROGLY",
+            "desc": "NATISPRAY ( NITROGLYCERINE SPRAY)",
+            "cost": 5500,
+            "product_id": 1227,
+            "variation_id": 1227,
+            "name": "NATISPRAY ( NITROGLYCERINE SPRAY)",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "NATIVA_PROSTATE",
+            "desc": "NATIVA PROSTRATE",
+            "cost": 200,
+            "product_id": 1228,
+            "variation_id": 1228,
+            "name": "NATIVA PROSTRATE",
+            "old_dpp": 200,
+            "old_dpp_inc": 200,
+            "tax_id": null
+        },
+        {
+            "code": "NEOMA",
+            "desc": "NEOMYCIN CREAM  T 15G",
+            "cost": 462,
+            "product_id": 1229,
+            "variation_id": 1229,
+            "name": "NEOMYCIN CREAM T 15G",
+            "old_dpp": 462,
+            "old_dpp_inc": 462,
+            "tax_id": null
+        },
+        {
+            "code": "NICARDIP",
+            "desc": "NICARDIPINE ( LOXEN ) INJ 10MG\/10ML",
+            "cost": 1389.44,
+            "product_id": 1230,
+            "variation_id": 1230,
+            "name": "NICARDIPINE ( LOXEN ) INJ 10MG\/10ML",
+            "old_dpp": 1352.64,
+            "old_dpp_inc": 1352.64,
+            "tax_id": null
+        },
+        {
+            "code": "NIFED",
+            "desc": "NIFEDIPINE DENK 10MG CAPSULES",
+            "cost": 43.2,
+            "product_id": 1231,
+            "variation_id": 1231,
+            "name": "NIFEDIPINE DENK 10MG CAPSULES",
+            "old_dpp": 43.2,
+            "old_dpp_inc": 43.2,
+            "tax_id": null
+        },
+        {
+            "code": "NIFEDI",
+            "desc": "NIFEDIPINE 20MG TABLETS",
+            "cost": 13.2,
+            "product_id": 1232,
+            "variation_id": 1232,
+            "name": "NIFEDIPINE 20MG TABLETS",
+            "old_dpp": 10.91,
+            "old_dpp_inc": 10.91,
+            "tax_id": null
+        },
+        {
+            "code": "NITROFURANTOIN_TAB",
+            "desc": "NITROFURANTOIN_TABLET",
+            "cost": 25,
+            "product_id": 1233,
+            "variation_id": 1233,
+            "name": "NITROFURANTOIN_TABLET",
+            "old_dpp": 25,
+            "old_dpp_inc": 25,
+            "tax_id": null
+        },
+        {
+            "code": "NORADRENALIN_2MG\/M",
+            "desc": "NORADRENALINE_2MG\/MOL INJ",
+            "cost": 1650,
+            "product_id": 1234,
+            "variation_id": 1234,
+            "name": "NORADRENALINE_2MG\/MOL INJ",
+            "old_dpp": 1650,
+            "old_dpp_inc": 1650,
+            "tax_id": null
+        },
+        {
+            "code": "NOSIC_TABLETS",
+            "desc": "NOSIC TABLETS",
+            "cost": 1150,
+            "product_id": 1235,
+            "variation_id": 1235,
+            "name": "NOSIC TABLETS",
+            "old_dpp": 1150,
+            "old_dpp_inc": 1150,
+            "tax_id": null
+        },
+        {
+            "code": "NOVAL",
+            "desc": "NOVALGIN INJECTION",
+            "cost": 517.6,
+            "product_id": 1236,
+            "variation_id": 1236,
+            "name": "NOVALGIN INJECTION",
+            "old_dpp": 517.33,
+            "old_dpp_inc": 517.33,
+            "tax_id": null
+        },
+        {
+            "code": "NUCLE",
+            "desc": "NUCLEO CMP FORTE TABLETS B\/30",
+            "cost": 3991,
+            "product_id": 1237,
+            "variation_id": 1237,
+            "name": "NUCLEO CMP FORTE TABLETS B\/30",
+            "old_dpp": 3991,
+            "old_dpp_inc": 3991,
+            "tax_id": null
+        },
+        {
+            "code": "NYL_1",
+            "desc": "NYLON 1",
+            "cost": 345,
+            "product_id": 1238,
+            "variation_id": 1238,
+            "name": "NYLON",
+            "old_dpp": 278.15,
+            "old_dpp_inc": 278.15,
+            "tax_id": null
+        },
+        {
+            "code": "NYL_2",
+            "desc": "NYLON 2",
+            "cost": 291,
+            "product_id": 1239,
+            "variation_id": 1239,
+            "name": "NYLON",
+            "old_dpp": 83.33,
+            "old_dpp_inc": 83.33,
+            "tax_id": null
+        },
+        {
+            "code": "NYL_20",
+            "desc": "NYLON 2\/0",
+            "cost": 245.83,
+            "product_id": 1240,
+            "variation_id": 1240,
+            "name": "NYLON 2\/0",
+            "old_dpp": 227.54,
+            "old_dpp_inc": 227.54,
+            "tax_id": null
+        },
+        {
+            "code": "NYL_30",
+            "desc": "NYLON 3\/0",
+            "cost": 274.99,
+            "product_id": 1241,
+            "variation_id": 1241,
+            "name": "NYLON 3\/0",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "NYST_O",
+            "desc": "NYSTATINE 1.00.000IU OVULE",
+            "cost": 650,
+            "product_id": 1242,
+            "variation_id": 1242,
+            "name": "NYSTATINE 1.00.000IU OVULE",
+            "old_dpp": 650,
+            "old_dpp_inc": 650,
+            "tax_id": null
+        },
+        {
+            "code": "NYST_S",
+            "desc": "NYSTATINE 100.000UI\/ML  SUSPENSION",
+            "cost": 594,
+            "product_id": 1243,
+            "variation_id": 1243,
+            "name": "NYSTATINE 100.000UI\/ML SUSPENSION",
+            "old_dpp": 594,
+            "old_dpp_inc": 594,
+            "tax_id": null
+        },
+        {
+            "code": "NYST_T",
+            "desc": "NYSTATIN TABLETS",
+            "cost": 52.8,
+            "product_id": 1244,
+            "variation_id": 1244,
+            "name": "NYSTATIN TABLETS",
+            "old_dpp": 52.14,
+            "old_dpp_inc": 52.14,
+            "tax_id": null
+        },
+        {
+            "code": "OFLO",
+            "desc": "OFLOXACINE 200MG TABLETS",
+            "cost": 750,
+            "product_id": 1245,
+            "variation_id": 1245,
+            "name": "OFLOXACINE 200MG TABLETS",
+            "old_dpp": 750,
+            "old_dpp_inc": 750,
+            "tax_id": null
+        },
+        {
+            "code": "OFLOTR",
+            "desc": "OFLOXACINE\/ORNIDAZOLE 500MG\/200MG (OFLOTRUST)  B\/10 TABLETS",
+            "cost": 1500,
+            "product_id": 1246,
+            "variation_id": 1246,
+            "name": "OFLOXACINE\/ORNIDAZOLE 500MG\/200MG (OF",
+            "old_dpp": 1500,
+            "old_dpp_inc": 1500,
+            "tax_id": null
+        },
+        {
+            "code": "OFLOX",
+            "desc": "OFLOXACINE 200MG TABLETS",
+            "cost": 1500,
+            "product_id": 1247,
+            "variation_id": 1247,
+            "name": "OFLOXACINE 200MG TABLETS",
+            "old_dpp": 963.08,
+            "old_dpp_inc": 963.08,
+            "tax_id": null
+        },
+        {
+            "code": "OMEP_I",
+            "desc": "OMEPRAZOLE 40MG INJECTION",
+            "cost": 1056,
+            "product_id": 1248,
+            "variation_id": 1248,
+            "name": "OMEPRAZOLE 40MG INJECTION",
+            "old_dpp": 1056,
+            "old_dpp_inc": 1056,
+            "tax_id": null
+        },
+        {
+            "code": "OMEP_T",
+            "desc": "OMEPRAZOLE 20MG CAPSULES",
+            "cost": 21.12,
+            "product_id": 1249,
+            "variation_id": 1249,
+            "name": "OMEPRAZOLE 20MG CAPSULES",
+            "old_dpp": 21.11,
+            "old_dpp_inc": 21.11,
+            "tax_id": null
+        },
+        {
+            "code": "OMO_SACHETS",
+            "desc": "OMO SACHETS",
+            "cost": 41.66,
+            "product_id": 1250,
+            "variation_id": 1250,
+            "name": "OMO SACHETS",
+            "old_dpp": 41.66,
+            "old_dpp_inc": 41.66,
+            "tax_id": null
+        },
+        {
+            "code": "ORS",
+            "desc": "ORS\/ZINC SACHET",
+            "cost": 495,
+            "product_id": 1251,
+            "variation_id": 1251,
+            "name": "ORS\/ZINC SACHET",
+            "old_dpp": 495.84,
+            "old_dpp_inc": 495.84,
+            "tax_id": null
+        },
+        {
+            "code": "OSTEOEZE_GOLD_B\/90",
+            "desc": "OSTEOEZE GOLD RETAIL B\/90",
+            "cost": 144,
+            "product_id": 1252,
+            "variation_id": 1252,
+            "name": "OSTEOEZE GOLD B\/90",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "OSTEOEZE_MSM",
+            "desc": "OSTEOEZE MSM",
+            "cost": 4000,
+            "product_id": 1253,
+            "variation_id": 1253,
+            "name": "OSTEOEZE MSM",
+            "old_dpp": 4000,
+            "old_dpp_inc": 4000,
+            "tax_id": null
+        },
+        {
+            "code": "OTIPAX",
+            "desc": "OTIPAX SOL AUR COMPTE GTTE 10G",
+            "cost": 1385,
+            "product_id": 1254,
+            "variation_id": 1254,
+            "name": "OTIPAX SOL AUR COMPTE GTTE 10G",
+            "old_dpp": 4155,
+            "old_dpp_inc": 4155,
+            "tax_id": null
+        },
+        {
+            "code": "OXY",
+            "desc": "OXYTOCIN 10IU\/ML INJECTION",
+            "cost": 132,
+            "product_id": 1255,
+            "variation_id": 1255,
+            "name": "OXYTOCIN 10IU\/ML INJECTION",
+            "old_dpp": 131.48,
+            "old_dpp_inc": 131.48,
+            "tax_id": null
+        },
+        {
+            "code": "PANAL",
+            "desc": "PANALGIC TABLET EFFERVESCENT B\/16",
+            "cost": 835,
+            "product_id": 1256,
+            "variation_id": 1256,
+            "name": "PANALGIC TABLET EFFERVESCENT B\/16",
+            "old_dpp": 835,
+            "old_dpp_inc": 835,
+            "tax_id": null
+        },
+        {
+            "code": "PANDOM",
+            "desc": "PAMDOM D (PANTOPRAZOLE\/DOMPERIDONE) 40MG\/30MG B\/30",
+            "cost": 3596,
+            "product_id": 1257,
+            "variation_id": 1257,
+            "name": "PAMDOM D (PANTOPRAZOLE\/DOMPERIDONE)",
+            "old_dpp": 3603,
+            "old_dpp_inc": 3603,
+            "tax_id": null
+        },
+        {
+            "code": "PANTO",
+            "desc": "PANTOPRAZOLE 40MG (CIELPRAZ) B\/30",
+            "cost": 3000,
+            "product_id": 1258,
+            "variation_id": 1258,
+            "name": "PANTOPRAZOLE 40MG (CIELPRAZ) B\/30",
+            "old_dpp": 272.73,
+            "old_dpp_inc": 272.73,
+            "tax_id": null
+        },
+        {
+            "code": "PARACECLO",
+            "desc": "PARACETAMOL\/ACECLOFENAC 500MG\/100MG  (GMOL) TABLETS",
+            "cost": 800,
+            "product_id": 1259,
+            "variation_id": 1259,
+            "name": "PARACETAMOL\/ACECLOFENAC 500MG\/100MG",
+            "old_dpp": 799.72,
+            "old_dpp_inc": 799.72,
+            "tax_id": null
+        },
+        {
+            "code": "PARA_I",
+            "desc": "PARACETAMOL 300MG INJECTION",
+            "cost": 99,
+            "product_id": 1260,
+            "variation_id": 1260,
+            "name": "PARACETAMOL 300MG INJECTION",
+            "old_dpp": 82.87,
+            "old_dpp_inc": 82.87,
+            "tax_id": null
+        },
+        {
+            "code": "PARA_INF",
+            "desc": "PARACETAMOL 1G INFUSION F\/100ML",
+            "cost": 990,
+            "product_id": 1261,
+            "variation_id": 1261,
+            "name": "PARACETAMOL 1G INFUSION F\/100ML",
+            "old_dpp": 869.49,
+            "old_dpp_inc": 869.49,
+            "tax_id": null
+        },
+        {
+            "code": "PARA_S",
+            "desc": "PARACETAMOL 120MG\/5ML SYRUP 100ML",
+            "cost": 495,
+            "product_id": 1262,
+            "variation_id": 1262,
+            "name": "PARACETAMOL 120MG\/5ML SYRUP 100ML",
+            "old_dpp": 345.41,
+            "old_dpp_inc": 345.41,
+            "tax_id": null
+        },
+        {
+            "code": "PARA_SU",
+            "desc": "PARACETAMOL 150MG SUPPOSITORIES",
+            "cost": 81.3,
+            "product_id": 1263,
+            "variation_id": 1263,
+            "name": "PARACETAMOL 150MG SUPPOSITORIES",
+            "old_dpp": 84.46,
+            "old_dpp_inc": 84.46,
+            "tax_id": null
+        },
+        {
+            "code": "PARA_SUP",
+            "desc": "PARACETAMOL 80MG SUPPOSITORIES",
+            "cost": 76.8,
+            "product_id": 1264,
+            "variation_id": 1264,
+            "name": "PARACETAMOL 80MG SUPPOSITORIES",
+            "old_dpp": 76.71,
+            "old_dpp_inc": 76.71,
+            "tax_id": null
+        },
+        {
+            "code": "PARA_T",
+            "desc": "PARACETAMOL 500MG TABLETS",
+            "cost": 5.25,
+            "product_id": 1265,
+            "variation_id": 1265,
+            "name": "PARACETAMOL 500MG TABLETS",
+            "old_dpp": 5.33,
+            "old_dpp_inc": 5.33,
+            "tax_id": null
+        },
+        {
+            "code": "PASSED",
+            "desc": "PASSEDYLE SIROP",
+            "cost": 2072,
+            "product_id": 1266,
+            "variation_id": 1266,
+            "name": "PASSEDYLE SIROP",
+            "old_dpp": 4834.25,
+            "old_dpp_inc": 4834.25,
+            "tax_id": null
+        },
+        {
+            "code": "PENI",
+            "desc": "PENICILLINE V 500,000IU TABLETS",
+            "cost": 66,
+            "product_id": 1267,
+            "variation_id": 1267,
+            "name": "PENICILLINE V 500,000IU TABLETS",
+            "old_dpp": 60.76,
+            "old_dpp_inc": 60.76,
+            "tax_id": null
+        },
+        {
+            "code": "PEVAG",
+            "desc": "PEVAGINE CREAM",
+            "cost": 1761,
+            "product_id": 1268,
+            "variation_id": 1268,
+            "name": "PEVAGINE CREAM",
+            "old_dpp": 1761,
+            "old_dpp_inc": 1761,
+            "tax_id": null
+        },
+        {
+            "code": "PEVA_O",
+            "desc": "PEVAGINE OVULE B\/3",
+            "cost": 2358,
+            "product_id": 1269,
+            "variation_id": 1269,
+            "name": "PEVAGINE OVULE B\/3",
+            "old_dpp": 2358,
+            "old_dpp_inc": 2358,
+            "tax_id": null
+        },
+        {
+            "code": "PHENOBAR",
+            "desc": "PHENOBARBITAL 100MG\/1ML INJECTION",
+            "cost": 792,
+            "product_id": 1270,
+            "variation_id": 1270,
+            "name": "PHENOBARBITAL 100MG\/1ML INJECTION",
+            "old_dpp": 715.54,
+            "old_dpp_inc": 715.54,
+            "tax_id": null
+        },
+        {
+            "code": "PHENOBAR_T",
+            "desc": "PHENOBARTITAL 100MG TABLETS",
+            "cost": 59.4,
+            "product_id": 1271,
+            "variation_id": 1271,
+            "name": "PHENOBARTITAL 100MG TABLETS",
+            "old_dpp": 54.75,
+            "old_dpp_inc": 54.75,
+            "tax_id": null
+        },
+        {
+            "code": "PHOSPHA",
+            "desc": "PHOSPHALUGEL SACHET RETAIL",
+            "cost": 154.85,
+            "product_id": 1272,
+            "variation_id": 1272,
+            "name": "PHOSPHALUGEL SACHET RETAIL",
+            "old_dpp": 155,
+            "old_dpp_inc": 155,
+            "tax_id": null
+        },
+        {
+            "code": "PLAST",
+            "desc": "PERFORATED PLASTER ROLLS",
+            "cost": 2900,
+            "product_id": 1273,
+            "variation_id": 1273,
+            "name": "PERFORATED PLASTER ROLLS",
+            "old_dpp": 2578.44,
+            "old_dpp_inc": 2578.44,
+            "tax_id": null
+        },
+        {
+            "code": "PLASTER",
+            "desc": "PERFORATED PLASTER PIECES",
+            "cost": 50,
+            "product_id": 1274,
+            "variation_id": 1274,
+            "name": "PERFORATED PLASTER PIECES",
+            "old_dpp": 50,
+            "old_dpp_inc": 50,
+            "tax_id": null
+        },
+        {
+            "code": "POP_10CM",
+            "desc": "POP PLASTER OF PARIS 10CM",
+            "cost": 1000,
+            "product_id": 1275,
+            "variation_id": 1275,
+            "name": "POP PLASTER OF PARIS 10CM",
+            "old_dpp": 1000,
+            "old_dpp_inc": 1000,
+            "tax_id": null
+        },
+        {
+            "code": "POP_15CM",
+            "desc": "POP PLASTER OF PARIS 15CM",
+            "cost": 1000,
+            "product_id": 1276,
+            "variation_id": 1276,
+            "name": "POP PLASTER OF PARIS 15CM",
+            "old_dpp": 1000,
+            "old_dpp_inc": 1000,
+            "tax_id": null
+        },
+        {
+            "code": "POP_20CM",
+            "desc": "POP PLASTER OF PARIS",
+            "cost": 1000,
+            "product_id": 1277,
+            "variation_id": 1277,
+            "name": "POP PLASTER OF PARIS",
+            "old_dpp": 1000,
+            "old_dpp_inc": 1000,
+            "tax_id": null
+        },
+        {
+            "code": "POSIT",
+            "desc": "POSITON CREAM",
+            "cost": 2014,
+            "product_id": 1278,
+            "variation_id": 1278,
+            "name": "POSITON CREAM",
+            "old_dpp": 1715.63,
+            "old_dpp_inc": 1715.63,
+            "tax_id": null
+        },
+        {
+            "code": "POTASSIUM_CHLOR_TA",
+            "desc": "POTASSIUM CHLORIDE TABLETS ( DIFFU K) 600MG",
+            "cost": 37.7,
+            "product_id": 1279,
+            "variation_id": 1279,
+            "name": "POTASSIUM CHLORIDE TABLETS ( DIFFU K)",
+            "old_dpp": 37.7,
+            "old_dpp_inc": 37.7,
+            "tax_id": null
+        },
+        {
+            "code": "POTASSIUM_CHLO_INJ",
+            "desc": "POTASSIUM CHLORIDE INJECTION 10%",
+            "cost": 198,
+            "product_id": 1280,
+            "variation_id": 1280,
+            "name": "POTASSIUM CHLORIDE INJECTION 10%",
+            "old_dpp": 201,
+            "old_dpp_inc": 201,
+            "tax_id": null
+        },
+        {
+            "code": "POTA_T",
+            "desc": "CHLORURE DE POTASSIUM 600MG TABLETS (DIFFU K)",
+            "cost": 33.9,
+            "product_id": 1281,
+            "variation_id": 1281,
+            "name": "CHLORURE DE POTASSIUM 600MG TABLETS (D",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "POVI",
+            "desc": "POVIDONE IODINE 10% YELLOW 125ML",
+            "cost": 1056,
+            "product_id": 1282,
+            "variation_id": 1282,
+            "name": "POVIDONE IODINE 10% YELLOW 125ML",
+            "old_dpp": 1043.74,
+            "old_dpp_inc": 1043.74,
+            "tax_id": null
+        },
+        {
+            "code": "POVI_R",
+            "desc": "POVIDONE IODINE 4% RED 125ML",
+            "cost": 1000,
+            "product_id": 1283,
+            "variation_id": 1283,
+            "name": "POVIDONE IODINE 4% RED 125ML",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "PREDNI",
+            "desc": "PREDNISOLONE 5MG TABLETS",
+            "cost": 11.88,
+            "product_id": 1284,
+            "variation_id": 1284,
+            "name": "PREDNISOLONE 5MG TABLETS",
+            "old_dpp": 10.62,
+            "old_dpp_inc": 10.62,
+            "tax_id": null
+        },
+        {
+            "code": "PREGABA",
+            "desc": "PREGABALENE 75MG",
+            "cost": 1500,
+            "product_id": 1285,
+            "variation_id": 1285,
+            "name": "PREGABALENE 75MG",
+            "old_dpp": 1200,
+            "old_dpp_inc": 1200,
+            "tax_id": null
+        },
+        {
+            "code": "PREGABALIN_50MG_",
+            "desc": "PREGABALIN_50MG_(LIRAPYN 50MG ) B\/25",
+            "cost": 4847,
+            "product_id": 1286,
+            "variation_id": 1286,
+            "name": "PREGABALIN_50MG_(LIRAPYN 50MG ) B\/25",
+            "old_dpp": 27466.5,
+            "old_dpp_inc": 27466.5,
+            "tax_id": null
+        },
+        {
+            "code": "PRENA",
+            "desc": "PRENATAL DENK TABLETS B\/30",
+            "cost": 3471.4,
+            "product_id": 1287,
+            "variation_id": 1287,
+            "name": "PRENATAL DENK TABLETS B\/30",
+            "old_dpp": 8099.5,
+            "old_dpp_inc": 8099.5,
+            "tax_id": null
+        },
+        {
+            "code": "PRENATAL_RETAIL",
+            "desc": "PRENATAL RETAIL  B\/30",
+            "cost": 0,
+            "product_id": 1288,
+            "variation_id": 1288,
+            "name": "PRENATAL RETAIL B\/30",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "PRIMO",
+            "desc": "PRIMOLUT NOR 10MG B\/30",
+            "cost": 1558,
+            "product_id": 1289,
+            "variation_id": 1289,
+            "name": "PRIMOLUT NOR 10MG B\/30",
+            "old_dpp": 692.45,
+            "old_dpp_inc": 692.45,
+            "tax_id": null
+        },
+        {
+            "code": "PROFEN",
+            "desc": "PROFENID (KETOPROFEN) 100MG TABLETS",
+            "cost": 81.56,
+            "product_id": 1290,
+            "variation_id": 1290,
+            "name": "PROFENID (KETOPROFEN) 100MG TABLETS",
+            "old_dpp": 81.53,
+            "old_dpp_inc": 81.53,
+            "tax_id": null
+        },
+        {
+            "code": "PROF_I",
+            "desc": "PROFENID 100MG\/2ML INJECTION B\/2",
+            "cost": 627,
+            "product_id": 1291,
+            "variation_id": 1291,
+            "name": "PROFENID 100MG\/2ML INJECTION B\/2",
+            "old_dpp": 627,
+            "old_dpp_inc": 627,
+            "tax_id": null
+        },
+        {
+            "code": "PROGEST",
+            "desc": "PROGESTERONE RETARD 500MG\/2ML INJECTION  RETAIL",
+            "cost": 4600,
+            "product_id": 1292,
+            "variation_id": 1292,
+            "name": "PROGESTERONE RETARD 500MG\/2ML INJECTI",
+            "old_dpp": 4306.56,
+            "old_dpp_inc": 4306.56,
+            "tax_id": null
+        },
+        {
+            "code": "PROME",
+            "desc": "PROMETHAZINE 50MG INJECTION",
+            "cost": 8,
+            "product_id": 1293,
+            "variation_id": 1293,
+            "name": "PROMETHAZINE 50MG INJECTION",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "PROPO",
+            "desc": "PROPOFOL 1% INJECTION",
+            "cost": 2640,
+            "product_id": 1294,
+            "variation_id": 1294,
+            "name": "PROPOFOL 1% INJECTION",
+            "old_dpp": 2640,
+            "old_dpp_inc": 2640,
+            "tax_id": null
+        },
+        {
+            "code": "PROPRA",
+            "desc": "PROPRANOLOL 40MG TABLET",
+            "cost": 13.2,
+            "product_id": 1295,
+            "variation_id": 1295,
+            "name": "PROPRANOLOL 40MG TABLET",
+            "old_dpp": 13.21,
+            "old_dpp_inc": 13.21,
+            "tax_id": null
+        },
+        {
+            "code": "PYGE",
+            "desc": "PYGEUM AFRICANA",
+            "cost": 83.33,
+            "product_id": 1296,
+            "variation_id": 1296,
+            "name": "PYGEUM AFRICANA",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "QUIN",
+            "desc": "QUININE 600MG\/2ML INJECTION",
+            "cost": 221.75,
+            "product_id": 1297,
+            "variation_id": 1297,
+            "name": "QUININE 600MG\/2ML INJECTION",
+            "old_dpp": 214.5,
+            "old_dpp_inc": 214.5,
+            "tax_id": null
+        },
+        {
+            "code": "RANF",
+            "desc": "RANFERON SYRUP",
+            "cost": 2605,
+            "product_id": 1298,
+            "variation_id": 1298,
+            "name": "RANFERON SYRUP",
+            "old_dpp": 22403,
+            "old_dpp_inc": 22403,
+            "tax_id": null
+        },
+        {
+            "code": "RANFERON-12_CAPS_B",
+            "desc": "RANFERON-12 CAPS B\/30",
+            "cost": 1857,
+            "product_id": 1299,
+            "variation_id": 1299,
+            "name": "RANFERON-12 CAPS B\/30",
+            "old_dpp": 206.33,
+            "old_dpp_inc": 206.33,
+            "tax_id": null
+        },
+        {
+            "code": "RANI",
+            "desc": "RANITIDINE HCL 150MG TABLETS",
+            "cost": 29.04,
+            "product_id": 1300,
+            "variation_id": 1300,
+            "name": "RANITIDINE HCL 150MG TABLETS",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "RANITI_INJECT",
+            "desc": "RANITIDINE INJECTION",
+            "cost": 170,
+            "product_id": 1301,
+            "variation_id": 1301,
+            "name": "RANITIDINE INJECTION",
+            "old_dpp": 170,
+            "old_dpp_inc": 170,
+            "tax_id": null
+        },
+        {
+            "code": "RENERVE",
+            "desc": "RENERVE PLUS B\/30",
+            "cost": 4311,
+            "product_id": 1302,
+            "variation_id": 1302,
+            "name": "RENERVE PLUS B\/30",
+            "old_dpp": 4311,
+            "old_dpp_inc": 4311,
+            "tax_id": null
+        },
+        {
+            "code": "REVIT",
+            "desc": "REVITAL CAPSULES B\/30",
+            "cost": 3027,
+            "product_id": 1303,
+            "variation_id": 1303,
+            "name": "REVITAL CAPSULES B\/30",
+            "old_dpp": 1791.5,
+            "old_dpp_inc": 1791.5,
+            "tax_id": null
+        },
+        {
+            "code": "REVITALO",
+            "desc": "REVITALOSE DRINKABLE AMPOULE",
+            "cost": 3485,
+            "product_id": 1304,
+            "variation_id": 1304,
+            "name": "REVITALOSE DRINKABLE AMPOULE",
+            "old_dpp": 3485,
+            "old_dpp_inc": 3485,
+            "tax_id": null
+        },
+        {
+            "code": "RICHFER",
+            "desc": "RICHFER 200MG FL\/200ML",
+            "cost": 2496,
+            "product_id": 1305,
+            "variation_id": 1305,
+            "name": "RICHFER 200MG FL\/200ML",
+            "old_dpp": 2496,
+            "old_dpp_inc": 2496,
+            "tax_id": null
+        },
+        {
+            "code": "RINGER",
+            "desc": "RINGER LACTATE INFUSION 500ML",
+            "cost": 528,
+            "product_id": 1306,
+            "variation_id": 1306,
+            "name": "RINGER LACTATE INFUSION 500ML",
+            "old_dpp": 528,
+            "old_dpp_inc": 528,
+            "tax_id": null
+        },
+        {
+            "code": "SALBU",
+            "desc": "SALBUTAMOL INHALER",
+            "cost": 1980,
+            "product_id": 1307,
+            "variation_id": 1307,
+            "name": "SALBUTAMOL INHALER",
+            "old_dpp": 1980,
+            "old_dpp_inc": 1980,
+            "tax_id": null
+        },
+        {
+            "code": "SALBUTAMOL_NEBULIS",
+            "desc": "SALBUTAMOL NEBULISER 2.5MG",
+            "cost": 175,
+            "product_id": 1308,
+            "variation_id": 1308,
+            "name": "SALBUTAMOL NEBULISER 2.5MG",
+            "old_dpp": 165.81,
+            "old_dpp_inc": 165.81,
+            "tax_id": null
+        },
+        {
+            "code": "SALBUTAMOL_TABS_",
+            "desc": "SALBUTAMOL TABLETS",
+            "cost": 15.84,
+            "product_id": 1309,
+            "variation_id": 1309,
+            "name": "SALBUTAMOL TABLETS",
+            "old_dpp": 15.85,
+            "old_dpp_inc": 15.85,
+            "tax_id": null
+        },
+        {
+            "code": "SALBU_I",
+            "desc": "SALBUTAMOL 0.4MG\/ML INJECTION",
+            "cost": 330,
+            "product_id": 1310,
+            "variation_id": 1310,
+            "name": "SALBUTAMOL 0.4MG\/ML INJECTION",
+            "old_dpp": 316.03,
+            "old_dpp_inc": 316.03,
+            "tax_id": null
+        },
+        {
+            "code": "SALINE",
+            "desc": "NORMAL SALINE 0.9%  SOLUTION 500ML",
+            "cost": 495,
+            "product_id": 1311,
+            "variation_id": 1311,
+            "name": "NORMAL SALINE 0.9% SOLUTION 500ML",
+            "old_dpp": 495.02,
+            "old_dpp_inc": 495.02,
+            "tax_id": null
+        },
+        {
+            "code": "SAVON",
+            "desc": "SAVON",
+            "cost": 250,
+            "product_id": 1312,
+            "variation_id": 1312,
+            "name": "SAVON",
+            "old_dpp": 277.71,
+            "old_dpp_inc": 277.71,
+            "tax_id": null
+        },
+        {
+            "code": "SEKROL_ADULT_",
+            "desc": "SEKROL ADULT 30MG\/5ML 150ML",
+            "cost": 2067,
+            "product_id": 1313,
+            "variation_id": 1313,
+            "name": "SEKROL ADULT 30MG\/5ML 150ML",
+            "old_dpp": 2067,
+            "old_dpp_inc": 2067,
+            "tax_id": null
+        },
+        {
+            "code": "SMEC",
+            "desc": "SMECTA SACHET RETAIL  B\/30",
+            "cost": 127.75,
+            "product_id": 1314,
+            "variation_id": 1314,
+            "name": "SMECTA SACHET RETAIL B\/30",
+            "old_dpp": 1090.81,
+            "old_dpp_inc": 1090.81,
+            "tax_id": null
+        },
+        {
+            "code": "SOAP",
+            "desc": "ANTISEPTIC SOAP",
+            "cost": 350,
+            "product_id": 1315,
+            "variation_id": 1315,
+            "name": "ANTISEPTIC SOAP",
+            "old_dpp": 401.87,
+            "old_dpp_inc": 401.87,
+            "tax_id": null
+        },
+        {
+            "code": "SOFT_BAND_10CM",
+            "desc": "SOFT BAND 10CM",
+            "cost": 625,
+            "product_id": 1316,
+            "variation_id": 1316,
+            "name": "SOFT BAND 10CM",
+            "old_dpp": 625,
+            "old_dpp_inc": 625,
+            "tax_id": null
+        },
+        {
+            "code": "SOFT_BAND_15CM",
+            "desc": "SOFT BAND 15CM",
+            "cost": 710,
+            "product_id": 1317,
+            "variation_id": 1317,
+            "name": "SOFT BAND 15CM",
+            "old_dpp": 710,
+            "old_dpp_inc": 710,
+            "tax_id": null
+        },
+        {
+            "code": "SPASF",
+            "desc": "SPASFON LYOC 80MG TABLET B\/10",
+            "cost": 1663,
+            "product_id": 1318,
+            "variation_id": 1318,
+            "name": "SPASFON LYOC 80MG TABLET B\/10",
+            "old_dpp": 1380.09,
+            "old_dpp_inc": 1380.09,
+            "tax_id": null
+        },
+        {
+            "code": "SPASMO",
+            "desc": "SPASMO APOTEL 500MG\/10MG  B\/20",
+            "cost": 2898,
+            "product_id": 1319,
+            "variation_id": 1319,
+            "name": "SPASMO APOTEL 500MG\/10MG B\/20",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "SPAS_I",
+            "desc": "SPASFON 40MG\/4ML INJECTION B\/6 RETAIL",
+            "cost": 400,
+            "product_id": 1320,
+            "variation_id": 1320,
+            "name": "SPASFON 40MG\/4ML INJECTION B\/6 RETAIL",
+            "old_dpp": 324.17,
+            "old_dpp_inc": 324.17,
+            "tax_id": null
+        },
+        {
+            "code": "SPAS_T",
+            "desc": "SPASFON TABLET B\/10",
+            "cost": 1800,
+            "product_id": 1321,
+            "variation_id": 1321,
+            "name": "SPASFON TABLET B\/10",
+            "old_dpp": 1800,
+            "old_dpp_inc": 1800,
+            "tax_id": null
+        },
+        {
+            "code": "SPECU",
+            "desc": "DISPOSABLE SPECULUM",
+            "cost": 500,
+            "product_id": 1322,
+            "variation_id": 1322,
+            "name": "DISPOSABLE SPECULUM",
+            "old_dpp": 499.5,
+            "old_dpp_inc": 499.5,
+            "tax_id": null
+        },
+        {
+            "code": "SPIN_18",
+            "desc": "SPINAL NEEDLE 18G",
+            "cost": 1800,
+            "product_id": 1323,
+            "variation_id": 1323,
+            "name": "SPINAL NEEDLE 18G",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "SPIN_22",
+            "desc": "SPINAL NEEDLE 22G",
+            "cost": 1000,
+            "product_id": 1324,
+            "variation_id": 1324,
+            "name": "SPINAL NEEDLE 22G",
+            "old_dpp": 500,
+            "old_dpp_inc": 500,
+            "tax_id": null
+        },
+        {
+            "code": "SPIN_25",
+            "desc": "SPINAL NEEDLE 25G",
+            "cost": 2000,
+            "product_id": 1325,
+            "variation_id": 1325,
+            "name": "SPINAL NEEDLE 25G",
+            "old_dpp": 1250,
+            "old_dpp_inc": 1250,
+            "tax_id": null
+        },
+        {
+            "code": "SPIRONOLACTONE_25",
+            "desc": "SPIRONOLACTONE 25MG",
+            "cost": 30,
+            "product_id": 1326,
+            "variation_id": 1326,
+            "name": "SPIRONOLACTONE 25MG",
+            "old_dpp": 29.93,
+            "old_dpp_inc": 29.93,
+            "tax_id": null
+        },
+        {
+            "code": "STERI",
+            "desc": "STERIMAR BEBE",
+            "cost": 1993,
+            "product_id": 1327,
+            "variation_id": 1327,
+            "name": "STERIMAR BEBE",
+            "old_dpp": 8636,
+            "old_dpp_inc": 8636,
+            "tax_id": null
+        },
+        {
+            "code": "STERITAX_1G\/500_IN",
+            "desc": "STERITAX 1G \/500 INJ + SOL",
+            "cost": 1615,
+            "product_id": 1328,
+            "variation_id": 1328,
+            "name": "STERITAX 1G \/500 INJ + SOL",
+            "old_dpp": 1615,
+            "old_dpp_inc": 1615,
+            "tax_id": null
+        },
+        {
+            "code": "STIN",
+            "desc": "STINTON 9 SYRUP FL\/200 ML",
+            "cost": 2073,
+            "product_id": 1329,
+            "variation_id": 1329,
+            "name": "STINTON 9 SYRUP FL\/200 ML",
+            "old_dpp": 2073,
+            "old_dpp_inc": 2073,
+            "tax_id": null
+        },
+        {
+            "code": "STOKINETTE_10CM",
+            "desc": "STOKINETTE 10CM *10M",
+            "cost": 1800,
+            "product_id": 1330,
+            "variation_id": 1330,
+            "name": "STOKINETTE 10CM *10M",
+            "old_dpp": 1800,
+            "old_dpp_inc": 1800,
+            "tax_id": null
+        },
+        {
+            "code": "SUC",
+            "desc": "SUCTION PUMP",
+            "cost": 500,
+            "product_id": 1331,
+            "variation_id": 1331,
+            "name": "SUCTION PUMP",
+            "old_dpp": 241.5,
+            "old_dpp_inc": 241.5,
+            "tax_id": null
+        },
+        {
+            "code": "SURG",
+            "desc": "SURGICAL BLADE 23",
+            "cost": 33,
+            "product_id": 1332,
+            "variation_id": 1332,
+            "name": "SURGICAL BLADE",
+            "old_dpp": 32.85,
+            "old_dpp_inc": 32.85,
+            "tax_id": null
+        },
+        {
+            "code": "SURGI",
+            "desc": "SURGICAL GLOVE SIZE 7.5",
+            "cost": 195,
+            "product_id": 1333,
+            "variation_id": 1333,
+            "name": "SURGICAL GLOVE SIZE 7.5",
+            "old_dpp": 190.89,
+            "old_dpp_inc": 190.89,
+            "tax_id": null
+        },
+        {
+            "code": "SURGICAL_B",
+            "desc": "SURGICAL BLADE",
+            "cost": 73,
+            "product_id": 1334,
+            "variation_id": 1334,
+            "name": "SURGICAL BLADE",
+            "old_dpp": 73,
+            "old_dpp_inc": 73,
+            "tax_id": null
+        },
+        {
+            "code": "SURGI_CAP",
+            "desc": "SURGICAL CAP",
+            "cost": 75,
+            "product_id": 1335,
+            "variation_id": 1335,
+            "name": "SURGICAL CAP",
+            "old_dpp": 65.29,
+            "old_dpp_inc": 65.29,
+            "tax_id": null
+        },
+        {
+            "code": "SYRIN_10",
+            "desc": "DISPOSABLE SYRINGE 10 ML",
+            "cost": 42,
+            "product_id": 1336,
+            "variation_id": 1336,
+            "name": "DISPOSABLE SYRINGE 10 ML",
+            "old_dpp": 42,
+            "old_dpp_inc": 42,
+            "tax_id": null
+        },
+        {
+            "code": "SYRIN_2",
+            "desc": "DISPOSABLE SYRINGE 2ML",
+            "cost": 35,
+            "product_id": 1337,
+            "variation_id": 1337,
+            "name": "DISPOSABLE SYRINGE 2ML",
+            "old_dpp": 35,
+            "old_dpp_inc": 35,
+            "tax_id": null
+        },
+        {
+            "code": "SYRIN_5",
+            "desc": "DISPOSABLE SYRINGE 5ML",
+            "cost": 38,
+            "product_id": 1338,
+            "variation_id": 1338,
+            "name": "DISPOSABLE SYRINGE 5ML",
+            "old_dpp": 31.88,
+            "old_dpp_inc": 31.88,
+            "tax_id": null
+        },
+        {
+            "code": "TADYFERON_TABS",
+            "desc": "TADYFERON TABLETS",
+            "cost": 1840,
+            "product_id": 1339,
+            "variation_id": 1339,
+            "name": "TADYFERON TABLETS",
+            "old_dpp": 1840,
+            "old_dpp_inc": 1840,
+            "tax_id": null
+        },
+        {
+            "code": "TANGA",
+            "desc": "TANGANIL (ACETYLLEUCINE) 500MG TABLET",
+            "cost": 2678,
+            "product_id": 1340,
+            "variation_id": 1340,
+            "name": "TANGANIL (ACETYLLEUCINE) 500MG TABLET",
+            "old_dpp": 912.3,
+            "old_dpp_inc": 912.3,
+            "tax_id": null
+        },
+        {
+            "code": "TARDYFER",
+            "desc": "TARDYFERON TABLETS",
+            "cost": 1925,
+            "product_id": 1341,
+            "variation_id": 1341,
+            "name": "TARDYFERON TABLETS",
+            "old_dpp": 1925,
+            "old_dpp_inc": 1925,
+            "tax_id": null
+        },
+        {
+            "code": "TEMERIT_5MG_CPB\/30",
+            "desc": "TEMERIT 5MG CP B\/30",
+            "cost": 6432,
+            "product_id": 1342,
+            "variation_id": 1342,
+            "name": "TEMERIT 5MG CP B\/30",
+            "old_dpp": 4069.22,
+            "old_dpp_inc": 4069.22,
+            "tax_id": null
+        },
+        {
+            "code": "TERBI_C",
+            "desc": "TERBINAFINE CREAM",
+            "cost": 1958,
+            "product_id": 1343,
+            "variation_id": 1343,
+            "name": "TERBINAFINE CREAM",
+            "old_dpp": 1195.15,
+            "old_dpp_inc": 1195.15,
+            "tax_id": null
+        },
+        {
+            "code": "TETRA",
+            "desc": "TETRACYCLINE EYE OINTMENT",
+            "cost": 297,
+            "product_id": 1344,
+            "variation_id": 1344,
+            "name": "TETRACYCLINE EYE OINTMENT",
+            "old_dpp": 296.86,
+            "old_dpp_inc": 296.86,
+            "tax_id": null
+        },
+        {
+            "code": "THERMO",
+            "desc": "CLINICAL THERMOMETER",
+            "cost": 660,
+            "product_id": 1345,
+            "variation_id": 1345,
+            "name": "CLINICAL THERMOMETER",
+            "old_dpp": 660,
+            "old_dpp_inc": 660,
+            "tax_id": null
+        },
+        {
+            "code": "TIMO",
+            "desc": "TIMOSOL EYE DROP",
+            "cost": 773,
+            "product_id": 1346,
+            "variation_id": 1346,
+            "name": "TIMOSOL EYE DROP",
+            "old_dpp": 773,
+            "old_dpp_inc": 773,
+            "tax_id": null
+        },
+        {
+            "code": "TINI",
+            "desc": "TINIDAZOLE 500MG (AMTIBA) TABLETS",
+            "cost": 886,
+            "product_id": 1347,
+            "variation_id": 1347,
+            "name": "TINIDAZOLE 500MG (AMTIBA) TABLETS",
+            "old_dpp": 447.39,
+            "old_dpp_inc": 447.39,
+            "tax_id": null
+        },
+        {
+            "code": "TISSU",
+            "desc": "TOILET TISSUE",
+            "cost": 250,
+            "product_id": 1348,
+            "variation_id": 1348,
+            "name": "TOILET TISSUE",
+            "old_dpp": 251.23,
+            "old_dpp_inc": 251.23,
+            "tax_id": null
+        },
+        {
+            "code": "TORSINEX",
+            "desc": "TORSINEX 20MG B\/20",
+            "cost": 3790,
+            "product_id": 1349,
+            "variation_id": 1349,
+            "name": "TORSINEX 20MG B\/20",
+            "old_dpp": 3790,
+            "old_dpp_inc": 3790,
+            "tax_id": null
+        },
+        {
+            "code": "TORSINEX_10MG_B\/30",
+            "desc": "TORSINEX 10MG B\/30",
+            "cost": 3312,
+            "product_id": 1350,
+            "variation_id": 1350,
+            "name": "TORSINEX 10MG B\/30",
+            "old_dpp": 3312,
+            "old_dpp_inc": 3312,
+            "tax_id": null
+        },
+        {
+            "code": "TOTHE",
+            "desc": "TOTHEMA DRINKABLE AMPOULE 10ML B\/20",
+            "cost": 182.05,
+            "product_id": 1351,
+            "variation_id": 1351,
+            "name": "TOTHEMA DRINKABLE AMPOULE 10ML B\/20",
+            "old_dpp": 239.4,
+            "old_dpp_inc": 239.4,
+            "tax_id": null
+        },
+        {
+            "code": "TRAMA",
+            "desc": "TRAMADOL 50MG TABLET",
+            "cost": 60,
+            "product_id": 1352,
+            "variation_id": 1352,
+            "name": "TRAMADOL 50MG TABLET",
+            "old_dpp": 531.39,
+            "old_dpp_inc": 531.39,
+            "tax_id": null
+        },
+        {
+            "code": "TRAM_I",
+            "desc": "TRAMADOL 100MG  INJECTION",
+            "cost": 514.8,
+            "product_id": 1353,
+            "variation_id": 1353,
+            "name": "TRAMADOL 100MG INJECTION",
+            "old_dpp": 514.98,
+            "old_dpp_inc": 514.98,
+            "tax_id": null
+        },
+        {
+            "code": "TRANEXAMIC_ACID_TA",
+            "desc": "TRANEXAMIC ACID 500MG TABLETS",
+            "cost": 1584,
+            "product_id": 1354,
+            "variation_id": 1354,
+            "name": "TRANEXAMIC ACID 500MG TABLETS",
+            "old_dpp": 1584,
+            "old_dpp_inc": 1584,
+            "tax_id": null
+        },
+        {
+            "code": "TRANX",
+            "desc": "TRANXENAMIC ACID 0.5G\/5ML INJECTION",
+            "cost": 500,
+            "product_id": 1355,
+            "variation_id": 1355,
+            "name": "TRANXENAMIC ACID 0.5G\/5ML INJECTION",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "TRIAM",
+            "desc": "TRIAMCINOLONE (TRIAM DENK) 40MG INJECTION",
+            "cost": 766.1,
+            "product_id": 1356,
+            "variation_id": 1356,
+            "name": "TRIAMCINOLONE (TRIAM DENK) 40MG INJECTI",
+            "old_dpp": 116.91,
+            "old_dpp_inc": 116.91,
+            "tax_id": null
+        },
+        {
+            "code": "TRIBU",
+            "desc": "TRIBUTINE SYRUP 250ML",
+            "cost": 2065,
+            "product_id": 1357,
+            "variation_id": 1357,
+            "name": "TRIBUTINE SYRUP 250ML",
+            "old_dpp": 28910,
+            "old_dpp_inc": 28910,
+            "tax_id": null
+        },
+        {
+            "code": "ULCE",
+            "desc": "ULCERIX 40MG TABLETS B\/15",
+            "cost": 2747,
+            "product_id": 1358,
+            "variation_id": 1358,
+            "name": "ULCERIX 40MG TABLETS B\/15",
+            "old_dpp": 2747,
+            "old_dpp_inc": 2747,
+            "tax_id": null
+        },
+        {
+            "code": "ULTRAS",
+            "desc": "ULTRASKIN CREAM",
+            "cost": 700,
+            "product_id": 1359,
+            "variation_id": 1359,
+            "name": "ULTRASKIN CREAM",
+            "old_dpp": 617.25,
+            "old_dpp_inc": 617.25,
+            "tax_id": null
+        },
+        {
+            "code": "UMBI",
+            "desc": "UMBILICAL CLAMP",
+            "cost": 100,
+            "product_id": 1360,
+            "variation_id": 1360,
+            "name": "UMBILICAL CLAMP",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "URINE",
+            "desc": "URINE BAG",
+            "cost": 354,
+            "product_id": 1361,
+            "variation_id": 1361,
+            "name": "URINE BAG",
+            "old_dpp": 354,
+            "old_dpp_inc": 354,
+            "tax_id": null
+        },
+        {
+            "code": "URINE_BAG_PEDIATRI",
+            "desc": "URINE BAG PEDIATRIC",
+            "cost": 500,
+            "product_id": 1362,
+            "variation_id": 1362,
+            "name": "URINE BAG PEDIATRIC",
+            "old_dpp": 500,
+            "old_dpp_inc": 500,
+            "tax_id": null
+        },
+        {
+            "code": "UTROGES",
+            "desc": "UTROGESTAN (PROGESTERONE) 200MG CAPSULE B\/15",
+            "cost": 4129,
+            "product_id": 1363,
+            "variation_id": 1363,
+            "name": "UTROGESTAN (PROGESTERONE) 200MG CAPS",
+            "old_dpp": 1548.42,
+            "old_dpp_inc": 1548.42,
+            "tax_id": null
+        },
+        {
+            "code": "UVES",
+            "desc": "UVESTEROL DROPS VIT ADEC",
+            "cost": 1245,
+            "product_id": 1364,
+            "variation_id": 1364,
+            "name": "UVESTEROL DROPS VIT ADEC",
+            "old_dpp": 861.74,
+            "old_dpp_inc": 861.74,
+            "tax_id": null
+        },
+        {
+            "code": "VANCOMYCINE_500MG_",
+            "desc": "VANCOMYCINE 500MG INJ",
+            "cost": 4650,
+            "product_id": 1365,
+            "variation_id": 1365,
+            "name": "VANCOMYCINE 500MG INJ",
+            "old_dpp": 4345.63,
+            "old_dpp_inc": 4345.63,
+            "tax_id": null
+        },
+        {
+            "code": "VASELINE",
+            "desc": "VASELINE 100ML",
+            "cost": 1300,
+            "product_id": 1366,
+            "variation_id": 1366,
+            "name": "VASELINE 100ML",
+            "old_dpp": 1300,
+            "old_dpp_inc": 1300,
+            "tax_id": null
+        },
+        {
+            "code": "VERCU",
+            "desc": "VERCURONIUM BROMIDE INJECTION",
+            "cost": 2360,
+            "product_id": 1367,
+            "variation_id": 1367,
+            "name": "VERCURONIUM BROMIDE INJECTION",
+            "old_dpp": 1573.33,
+            "old_dpp_inc": 1573.33,
+            "tax_id": null
+        },
+        {
+            "code": "VICR_1",
+            "desc": "SUTURE VICRYL 1",
+            "cost": 833.3,
+            "product_id": 1368,
+            "variation_id": 1368,
+            "name": "SUTURE VICRYL",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        },
+        {
+            "code": "VICR_2",
+            "desc": "SUTURE VICRYL 2",
+            "cost": 750,
+            "product_id": 1369,
+            "variation_id": 1369,
+            "name": "SUTURE VICRYL",
+            "old_dpp": 504.51,
+            "old_dpp_inc": 504.51,
+            "tax_id": null
+        },
+        {
+            "code": "VICR_20",
+            "desc": "SUTURE VICRYL 2\/0",
+            "cost": 750,
+            "product_id": 1370,
+            "variation_id": 1370,
+            "name": "SUTURE VICRYL 2\/0",
+            "old_dpp": 434.49,
+            "old_dpp_inc": 434.49,
+            "tax_id": null
+        },
+        {
+            "code": "VICR_30",
+            "desc": "SUTURE VICRYL 3\/0",
+            "cost": 833.33,
+            "product_id": 1371,
+            "variation_id": 1371,
+            "name": "SUTURE VICRYL 3\/0",
+            "old_dpp": 666.67,
+            "old_dpp_inc": 666.67,
+            "tax_id": null
+        },
+        {
+            "code": "VIF",
+            "desc": "VIFEX SYRUP F\/100ML",
+            "cost": 1314,
+            "product_id": 1372,
+            "variation_id": 1372,
+            "name": "VIFEX SYRUP F\/100ML",
+            "old_dpp": 3066,
+            "old_dpp_inc": 3066,
+            "tax_id": null
+        },
+        {
+            "code": "VISCID_200ML_SIROP",
+            "desc": "VISCID 200ML SIROP",
+            "cost": 1975,
+            "product_id": 1373,
+            "variation_id": 1373,
+            "name": "VISCID 200ML SIROP",
+            "old_dpp": 1429.43,
+            "old_dpp_inc": 1429.43,
+            "tax_id": null
+        },
+        {
+            "code": "VITAMI_T",
+            "desc": "MULTIVITAMIN TABLETS",
+            "cost": 10.56,
+            "product_id": 1374,
+            "variation_id": 1374,
+            "name": "MULTIVITAMIN TABLETS",
+            "old_dpp": 10.56,
+            "old_dpp_inc": 10.56,
+            "tax_id": null
+        },
+        {
+            "code": "VITA_B_I",
+            "desc": "VITAMINE B COMPLEX INJECTION",
+            "cost": 59.4,
+            "product_id": 1375,
+            "variation_id": 1375,
+            "name": "VITAMINE B COMPLEX INJECTION",
+            "old_dpp": 56.36,
+            "old_dpp_inc": 56.36,
+            "tax_id": null
+        },
+        {
+            "code": "VITA_C",
+            "desc": "VITAMINE C 500MG TABLETS",
+            "cost": 59.4,
+            "product_id": 1376,
+            "variation_id": 1376,
+            "name": "VITAMINE C 500MG TABLETS",
+            "old_dpp": 59.4,
+            "old_dpp_inc": 59.4,
+            "tax_id": null
+        },
+        {
+            "code": "VIT_B_T",
+            "desc": "VITAMINE B COMPLEX TABLETS",
+            "cost": 10.56,
+            "product_id": 1377,
+            "variation_id": 1377,
+            "name": "VITAMINE B COMPLEX TABLETS",
+            "old_dpp": 10.57,
+            "old_dpp_inc": 10.57,
+            "tax_id": null
+        },
+        {
+            "code": "VIT_K",
+            "desc": "VITAMINE K INJECTION",
+            "cost": 264,
+            "product_id": 1378,
+            "variation_id": 1378,
+            "name": "VITAMINE K INJECTION",
+            "old_dpp": 263.87,
+            "old_dpp_inc": 263.87,
+            "tax_id": null
+        },
+        {
+            "code": "VOGA",
+            "desc": "METOPIMAZINE (VOGALENE) 10MG\/L  INJECTION",
+            "cost": 218.7,
+            "product_id": 1379,
+            "variation_id": 1379,
+            "name": "METOPIMAZINE (VOGALENE) 10MG\/L INJECTION",
+            "old_dpp": 1968.3,
+            "old_dpp_inc": 1968.3,
+            "tax_id": null
+        },
+        {
+            "code": "WATER",
+            "desc": "STERILE WATER 10 ML",
+            "cost": 46.2,
+            "product_id": 1380,
+            "variation_id": 1380,
+            "name": "STERILE WATER 10 ML",
+            "old_dpp": 46.24,
+            "old_dpp_inc": 46.24,
+            "tax_id": null
+        },
+        {
+            "code": "ZINC",
+            "desc": "ZINC 20MG TABLETS",
+            "cost": 350,
+            "product_id": 1381,
+            "variation_id": 1381,
+            "name": "ZINC 20MG TABLETS",
+            "old_dpp": 0,
+            "old_dpp_inc": 0,
+            "tax_id": null
+        }
+    ],
+    "multi": [],
+    "missing": [
+        {
+            "code": "ALMASIN_SIROP",
+            "desc": "ALMASIN SIROP",
+            "cost": 1600
+        },
+        {
+            "code": "ANGINOVAG_AER_F\/10",
+            "desc": "ANGINOVAG AER F\/10",
+            "cost": 1781
+        },
+        {
+            "code": "ANTIHAEMOR_C",
+            "desc": "ANTIHAEMORRHOIDAL CREAM",
+            "cost": 460
+        },
+        {
+            "code": "ARTEM\/LUM_S",
+            "desc": "ARTEMETHER\/LUMEFANTRINE SIROP",
+            "cost": 1023
+        },
+        {
+            "code": "ASCABIOL",
+            "desc": "ASCABIOL SOLUTION",
+            "cost": 2781
+        },
+        {
+            "code": "ASPI",
+            "desc": "ASPIRIN 500MG TABLET",
+            "cost": 8.58
+        },
+        {
+            "code": "BENZYL_PEN",
+            "desc": "BENZYL PENICILLIN 5UI",
+            "cost": 371.45
+        },
+        {
+            "code": "BETAME",
+            "desc": "BETAMETHASONE 0.1%  CREAM T 15G",
+            "cost": 528
+        },
+        {
+            "code": "BETAS",
+            "desc": "BETASTENE 0.05% DROPS",
+            "cost": 2044
+        },
+        {
+            "code": "BLOOD",
+            "desc": "BLOOD BAG",
+            "cost": 800
+        },
+        {
+            "code": "BLOOD_TRANS",
+            "desc": "BLOOD TRANSFUSION SET",
+            "cost": 1000
+        },
+        {
+            "code": "BRONCHO_T",
+            "desc": "SALBUTAMOL 4MG TABLETS",
+            "cost": 21.93
+        },
+        {
+            "code": "BROX",
+            "desc": "BROXOL SYRUP  FL\/100L",
+            "cost": 1656
+        },
+        {
+            "code": "CALCI",
+            "desc": "CALCIUM 500MG + VIT D (IDEOS) TABLETS",
+            "cost": 3638
+        },
+        {
+            "code": "CANDI_150_FLUCONAZ",
+            "desc": "CANDIDERM CREAM T\/15G",
+            "cost": 1537
+        },
+        {
+            "code": "CARDIOVAL_H",
+            "desc": "CARDIOVALAM H",
+            "cost": 8050
+        },
+        {
+            "code": "CARDUI",
+            "desc": "CARDIURINE (CAPTOPRIL\/HCT) 50MG\/25MG TABLETS B\/30",
+            "cost": 2571
+        },
+        {
+            "code": "CELEST",
+            "desc": "CELESTENE 2MG TABLETS",
+            "cost": 2113
+        },
+        {
+            "code": "CETIS",
+            "desc": "CETISLOY",
+            "cost": 2300
+        },
+        {
+            "code": "CHLORAM",
+            "desc": "CHLORAMPHENICOL 1G INJECTION",
+            "cost": 500
+        },
+        {
+            "code": "CIELNAC",
+            "desc": "CIELNAC TABLETS",
+            "cost": 1732
+        },
+        {
+            "code": "CODEI",
+            "desc": "CODEINE PHOSPHATE 30MG TABLETS",
+            "cost": 66
+        },
+        {
+            "code": "COLIS",
+            "desc": "COLISLOY SIROP",
+            "cost": 1008
+        },
+        {
+            "code": "CROIX",
+            "desc": "LA CROIX SOLUTION",
+            "cost": 700
+        },
+        {
+            "code": "CROMSOL_2%_",
+            "desc": "CROMSOL EYE DROP",
+            "cost": 773
+        },
+        {
+            "code": "DEEP",
+            "desc": "DEEP HEAT SPRAY",
+            "cost": 2804
+        },
+        {
+            "code": "DESLOR",
+            "desc": "DESLORATADINE SIROP",
+            "cost": 1577
+        },
+        {
+            "code": "DESLOR_T",
+            "desc": "DESLORATADINE 5MG TABLETS B\/15",
+            "cost": 1729
+        },
+        {
+            "code": "DOXA",
+            "desc": "DOXAZOCINE 4MG TABLETS",
+            "cost": 1800
+        },
+        {
+            "code": "EFECOD",
+            "desc": "EFFERALGAN CODEINE EFFERVESCENT B\/16",
+            "cost": 1581
+        },
+        {
+            "code": "ELUD",
+            "desc": "ELUDRIL (CHLORHEXIDINE) MOUTHWASH",
+            "cost": 1192
+        },
+        {
+            "code": "ESIDREX_25MG",
+            "desc": "ESIDREX 25MG TABLETS",
+            "cost": 1453
+        },
+        {
+            "code": "FEBRILEX_SIR",
+            "desc": "FEBRILEX JUNIOR SIROP",
+            "cost": 1325
+        },
+        {
+            "code": "FUICIDINE_2%",
+            "desc": "FUICIDINE 2% CREAM T\/15G",
+            "cost": 1588
+        },
+        {
+            "code": "GALVUS_MET",
+            "desc": "GALVUS MET 50\/1000",
+            "cost": 6342
+        },
+        {
+            "code": "GEST",
+            "desc": "GESTID TABLETS  B\/20",
+            "cost": 631
+        },
+        {
+            "code": "GLOXIM-O",
+            "desc": "GLOXIM- O ( CEFIXIM\/OFLOXACIN) B\/10",
+            "cost": 1500
+        },
+        {
+            "code": "HAEM_UP_20MG\/ML_SO",
+            "desc": "HAEM UP 20MG\/ML INJ B\/5",
+            "cost": 1040
+        },
+        {
+            "code": "HAND_SA1",
+            "desc": "HAND SANITIZER 500ML",
+            "cost": 1213
+        },
+        {
+            "code": "HAND_SA2",
+            "desc": "HAND SANITIZER 100ML",
+            "cost": 500
+        },
+        {
+            "code": "HEPAT",
+            "desc": "HEPATITIS VACCIN 0.5ML PEDIATRIC",
+            "cost": 3650
+        },
+        {
+            "code": "HEPATIS",
+            "desc": "HEPATITIS VACCIN DOSE ADULT",
+            "cost": 3712
+        },
+        {
+            "code": "IMPLA",
+            "desc": "IMPLANON",
+            "cost": 650
+        },
+        {
+            "code": "INDOCOLLYRE_0.1%",
+            "desc": "INDOCOLLYRE_0.1% CY FL\/5ML",
+            "cost": 2107
+        },
+        {
+            "code": "INSULATAD",
+            "desc": "INSULIN INSULATARD",
+            "cost": 6888.88
+        },
+        {
+            "code": "KETOPROFEN_INJ",
+            "desc": "KETOPROFEN INJECTION",
+            "cost": 575
+        },
+        {
+            "code": "KET_B",
+            "desc": "KETUM 2.5% GEL T\/120G BIG",
+            "cost": 3112
+        },
+        {
+            "code": "KOLICU",
+            "desc": "KOLICURE DROPS",
+            "cost": 1112
+        },
+        {
+            "code": "LEVOFEM_COC",
+            "desc": "LEVOFEM COC B\/28",
+            "cost": 358
+        },
+        {
+            "code": "LEVONOR+ETHNYLESTR",
+            "desc": "LEVONORGESTREL 0.15 + ETHNYLESTRADIOL",
+            "cost": 19.8
+        },
+        {
+            "code": "LEVOPHTA_0.05%_CY",
+            "desc": "LEVOPHTA_0.05%_COLLYRE",
+            "cost": 3542
+        },
+        {
+            "code": "LORAT_T",
+            "desc": "LORATADINE 10MG (LORHIST) TABLETS",
+            "cost": 1900
+        },
+        {
+            "code": "LUMI_S",
+            "desc": "LUMIFORT 180\/1080 SIROP",
+            "cost": 1622
+        },
+        {
+            "code": "LUMI_T",
+            "desc": "LUMIFORT 80\/480MG B\/6",
+            "cost": 1562
+        },
+        {
+            "code": "MANIX_GEL",
+            "desc": "MANIX GEL CAPS B\/20",
+            "cost": 4350
+        },
+        {
+            "code": "MEBEN_T",
+            "desc": "MEBENDAZOL 100MG TABLET",
+            "cost": 48
+        },
+        {
+            "code": "MECLON",
+            "desc": "MECLON OVULE B\/10( METRO\/CLOTRI)",
+            "cost": 3036
+        },
+        {
+            "code": "META",
+            "desc": "METAMIZOLE\/ NOVALGIN INJECTION 500MG\/5ML",
+            "cost": 517.6
+        },
+        {
+            "code": "MICROGY",
+            "desc": "MICROGYNON",
+            "cost": 26.4
+        },
+        {
+            "code": "MIXTARD_RET",
+            "desc": "MIXTARD RETAIL",
+            "cost": 45
+        },
+        {
+            "code": "MYOX",
+            "desc": "MYOXERIL TABLETS B\/30",
+            "cost": 2499
+        },
+        {
+            "code": "OFLOXORNI",
+            "desc": "ORNILOX 500MG\/200MG   B\/10 TABLETS",
+            "cost": 3470
+        },
+        {
+            "code": "OROX",
+            "desc": "OROXINE 500MG\/200MG  B\/10 TABLETS",
+            "cost": 3022
+        },
+        {
+            "code": "PAIDO",
+            "desc": "PAIDOTERIN SYRUP F\/100ML",
+            "cost": 1910
+        },
+        {
+            "code": "PATH",
+            "desc": "RIGHT PATH",
+            "cost": 72.6
+        },
+        {
+            "code": "PENIF",
+            "desc": "PENIFLOW LARGE",
+            "cost": 1650
+        },
+        {
+            "code": "PENIF_M",
+            "desc": "PENIFLOW MEDIUM",
+            "cost": 1650
+        },
+        {
+            "code": "PHYT",
+            "desc": "KETOCONAZOL 2%  (PHYTORAL) POMMADE  T\/15G",
+            "cost": 1402
+        },
+        {
+            "code": "PLASTER_OF_PARIS",
+            "desc": "PLASTER OF PARIS",
+            "cost": 1452
+        },
+        {
+            "code": "PPH",
+            "desc": "PPHPP-NVD (3 TABLETS)",
+            "cost": 0
+        },
+        {
+            "code": "PPHP",
+            "desc": "PPHPP-CS (4TABLETS)",
+            "cost": 0
+        },
+        {
+            "code": "PREGABANUEURINE_75",
+            "desc": "PREGABANUEURINE_75MG B\/30",
+            "cost": 5425
+        },
+        {
+            "code": "PRIMA",
+            "desc": "PRIMALAN SIROP",
+            "cost": 1378
+        },
+        {
+            "code": "PULMOSERUM_AD_200M",
+            "desc": "PULMOSERUM AD S BUV 200ML",
+            "cost": 1661
+        },
+        {
+            "code": "PYRIDOXIN_50MG",
+            "desc": "PYRIDOXIN 50MG TABLETS",
+            "cost": 25
+        },
+        {
+            "code": "QUIN_T",
+            "desc": "QUININE SULPHATE 300MG TABLETS",
+            "cost": 50.15
+        },
+        {
+            "code": "RBC_100MG\/5ML_INJ",
+            "desc": "RBC 100MG\/5ML INJ",
+            "cost": 1706
+        },
+        {
+            "code": "RENE_P",
+            "desc": "RENERVE P B\/30",
+            "cost": 6454
+        },
+        {
+            "code": "SALINE_250ML",
+            "desc": "SODIUM CHLORIDE 0.9% 250ML SOLUTION",
+            "cost": 300
+        },
+        {
+            "code": "SEKROL_15MG_",
+            "desc": "SEKROL 15MG CHILD SIROP",
+            "cost": 2072
+        },
+        {
+            "code": "SETRO",
+            "desc": "SETRONAX INJECTION RETAIL",
+            "cost": 2900
+        },
+        {
+            "code": "SODIUM_CHLORIDE_IJ",
+            "desc": "SODIUM CHLORIDE 10ML  INJEC",
+            "cost": 150
+        },
+        {
+            "code": "SOLCER__OMEPRAZOLE",
+            "desc": "SOLCER ( OMEPRAZOLE 40MG  INJECTION)",
+            "cost": 2492
+        },
+        {
+            "code": "SPASFON_SUPPO",
+            "desc": "SPASFON SUPPOSITORY",
+            "cost": 1625
+        },
+        {
+            "code": "SPIRAMYCIN",
+            "desc": "SPIRALIDE 3MUICP B\/10",
+            "cost": 2631
+        },
+        {
+            "code": "STOKINETTE_15CM",
+            "desc": "STOKINETTE 15CM * 15M",
+            "cost": 2000
+        },
+        {
+            "code": "SULFAPYRI",
+            "desc": "SULFADOXINE\/PYRIMETHAMINE 500 MG\/25MG (MALOXINE)  TABLETS",
+            "cost": 500
+        },
+        {
+            "code": "SUPRA",
+            "desc": "SUPRALOX SYRUP  FL\/200ML",
+            "cost": 2807
+        },
+        {
+            "code": "SUXA",
+            "desc": "SUXAMETHONIUM INJECTION",
+            "cost": 1652
+        },
+        {
+            "code": "SYNRI",
+            "desc": "SYNRIAM (ARTEROLANE\/PIPERAQUINE) 150MG\/750MG TABLETS B\/3",
+            "cost": 2217
+        },
+        {
+            "code": "SYRINGE",
+            "desc": "SYRINGE 60ML",
+            "cost": 0
+        },
+        {
+            "code": "TEGU",
+            "desc": "TEGUMA 250 MG TABLETS",
+            "cost": 8833
+        },
+        {
+            "code": "TERBI",
+            "desc": "TERBINAFINE 250MG (TERBINOL)  TABLETS B\/14",
+            "cost": 6344
+        },
+        {
+            "code": "TEST",
+            "desc": "SMALL GUINESS",
+            "cost": 0
+        },
+        {
+            "code": "THIOCOL",
+            "desc": "THIOCOLCHICOSIDE 4MG B\/12 (MIOREL) TABLETS",
+            "cost": 2007
+        },
+        {
+            "code": "TITANOREINE_CREME_",
+            "desc": "TITANORENE CREAM T\/20G",
+            "cost": 3590
+        },
+        {
+            "code": "TRES",
+            "desc": "TRES ORIX FORTE SYRUP F\/100ML",
+            "cost": 1686
+        },
+        {
+            "code": "VITAMI",
+            "desc": "MULTIVIATMIN SYRUP 125ML",
+            "cost": 607.2
+        },
+        {
+            "code": "VITA_B9",
+            "desc": "FOLIC ACID",
+            "cost": 7.92
+        },
+        {
+            "code": "VIT_D",
+            "desc": "VITAMINE D 50 microG CAPULDES",
+            "cost": 75
+        },
+        {
+            "code": "VOGALENE_SIROP",
+            "desc": "VOGALENE SIROP",
+            "cost": 2033
+        },
+        {
+            "code": "VOGA_S",
+            "desc": "METOPIMAZINE (VOGALENE) 5MG SUPPOSITORY B\/10 RETAIL",
+            "cost": 71.7
+        },
+        {
+            "code": "VOGA_T",
+            "desc": "VOGALENE 15MG CAPSULES",
+            "cost": 162.85
+        },
+        {
+            "code": "WOM",
+            "desc": "WOMEN 50+ TABLETS",
+            "cost": 100
+        }
+    ]
+}

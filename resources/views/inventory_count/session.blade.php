@@ -182,25 +182,6 @@
         @endif
     @endcomponent
 
-    {{-- ============ FILTERS ============ --}}
-    @component('components.widget', ['class' => 'box-default', 'title' => __('report.filters')])
-        <div class="row">
-            <div class="col-md-4 form-group">
-                <label>@lang('lang_v1.search_product')</label>
-                <input type="text" class="form-control" id="ic_search_term" placeholder="@lang('lang_v1.search')...">
-            </div>
-            <div class="col-md-4 form-group">
-                <label>@lang('inventory_count.status')</label>
-                <select id="ic_filter" class="form-control">
-                    <option value="">@lang('inventory_count.all')</option>
-                    <option value="uncounted">@lang('inventory_count.uncounted')</option>
-                    <option value="counted">@lang('inventory_count.counted')</option>
-                    <option value="variance">@lang('inventory_count.variances')</option>
-                </select>
-            </div>
-        </div>
-    @endcomponent
-
     {{-- ============ PHASE 4 FAST DATA ENTRY ============ --}}
     @if($is_editable)
     @component('components.widget', ['class' => 'box-info', 'title' => __('inventory_count.fast_entry')])
@@ -246,6 +227,25 @@
     @endcomponent
     @endif
 
+    {{-- ============ FILTERS ============ --}}
+    @component('components.widget', ['class' => 'box-default', 'title' => __('report.filters')])
+        <div class="row">
+            <div class="col-md-4 form-group">
+                <label>@lang('lang_v1.search_product')</label>
+                <input type="text" class="form-control" id="ic_search_term" placeholder="@lang('lang_v1.search')...">
+            </div>
+            <div class="col-md-4 form-group">
+                <label>@lang('inventory_count.status')</label>
+                <select id="ic_filter" class="form-control">
+                    <option value="">@lang('inventory_count.all')</option>
+                    <option value="uncounted">@lang('inventory_count.uncounted')</option>
+                    <option value="counted">@lang('inventory_count.counted')</option>
+                    <option value="variance">@lang('inventory_count.variances')</option>
+                </select>
+            </div>
+        </div>
+    @endcomponent
+
     {{-- ============ TABLE ============ --}}
     @component('components.widget', ['class' => 'box-primary', 'title' => __('inventory_count.count_sheet')])
         @slot('tool')
@@ -257,6 +257,12 @@
             @if($is_editable && $can_post)
                 <button type="button" id="ic_btn_post" class="btn btn-success btn-sm">
                     <i class="fa fa-paper-plane"></i> @lang('inventory_count.submit_for_approval')
+                </button>
+            @endif
+            @if($is_editable)
+                <button type="button" id="ic_btn_add_lot" class="btn btn-warning btn-sm"
+                        title="@lang('inventory_count.add_lot_help')">
+                    <i class="fa fa-calendar-plus-o"></i> @lang('inventory_count.add_lot')
                 </button>
             @endif
             @if(in_array($session->status, ['draft', 'pending_approval']) && $can_cancel)
@@ -279,7 +285,9 @@
                         @endif
                         <th class="text-right">@lang('inventory_count.unit_cost')</th>
                         <th class="text-right">@lang('inventory_count.unit_sell')</th>
+                        <th class="text-right">@lang('lang_v1.profit_margin')</th>
                         <th class="text-right">@lang('inventory_count.theoretical_stock')</th>
+                        <th class="text-right" style="width:160px;">@lang('product.alert_quantity')</th>
                         <th class="text-right" style="width:120px;">@lang('inventory_count.actual_stock')</th>
                         <th class="text-right">@lang('inventory_count.variance')</th>
                     </tr>
@@ -435,6 +443,99 @@
 </div>
 @endif
 
+{{-- ============ ADD LOT MODAL ============ --}}
+@if($is_editable)
+<div class="modal fade" id="ic_add_lot_modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">
+                    <i class="fa fa-calendar-plus-o"></i> @lang('inventory_count.add_lot')
+                </h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="padding:6px 10px;">
+                    <small><i class="fa fa-info-circle"></i> @lang('inventory_count.add_lot_help')</small>
+                </div>
+                <div class="form-group">
+                    <label>@lang('inventory_count.add_lot_product') *</label>
+                    <select id="ic_add_lot_variation" class="form-control" style="width:100%;"></select>
+                </div>
+                <div class="row">
+                    <div class="col-sm-6 form-group">
+                        <label>@lang('inventory_count.add_lot_qty') *</label>
+                        <input type="number" id="ic_add_lot_qty" class="form-control" step="any" min="0">
+                    </div>
+                    <div class="col-sm-6 form-group">
+                        <label>@lang('inventory_count.add_lot_unit') *</label>
+                        <select id="ic_add_lot_unit" class="form-control"></select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-6 form-group">
+                        <label>@lang('inventory_count.add_lot_exp_date')</label>
+                        <input type="date" id="ic_add_lot_exp" class="form-control">
+                    </div>
+                    <div class="col-sm-6 form-group">
+                        <label>@lang('inventory_count.add_lot_lot_number')</label>
+                        <input type="text" id="ic_add_lot_lot_no" class="form-control" maxlength="191">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>@lang('inventory_count.add_lot_unit_cost')</label>
+                    <input type="number" id="ic_add_lot_cost" class="form-control" step="any" min="0">
+                    <small class="text-muted">@lang('inventory_count.add_lot_unit_cost_help')</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">@lang('messages.close')</button>
+                <button type="button" id="ic_add_lot_save" class="btn btn-warning">
+                    <i class="fa fa-plus"></i> @lang('inventory_count.add_lot_save')
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+{{-- ============ EDIT LOT/EXPIRY MODAL ============ --}}
+@if($is_editable)
+<div class="modal fade" id="ic_edit_lot_modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">
+                    <i class="fa fa-pencil"></i> @lang('inventory_count.edit_lot_exp_title')
+                </h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="padding:6px 10px;">
+                    <small><i class="fa fa-info-circle"></i> @lang('inventory_count.edit_lot_exp_help')</small>
+                </div>
+                <input type="hidden" id="ic_edit_lot_line_id">
+                <div class="form-group">
+                    <label>@lang('inventory_count.add_lot_lot_number')</label>
+                    <input type="text" id="ic_edit_lot_lot_no" class="form-control" maxlength="191">
+                </div>
+                <div class="form-group" id="ic_edit_lot_exp_group">
+                    <label>@lang('inventory_count.add_lot_exp_date')</label>
+                    <input type="date" id="ic_edit_lot_exp" class="form-control">
+                    <span class="help-block" id="ic_edit_lot_exp_err" style="display:none;color:#a94442;"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">@lang('messages.close')</button>
+                <button type="button" id="ic_edit_lot_save" class="btn btn-primary">
+                    <i class="fa fa-check"></i> @lang('messages.save')
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 @endsection
 
 @section('javascript')
@@ -456,16 +557,18 @@ $(function () {
             }
         },
         columns: [
-            { data: 'sku', name: 'v.sub_sku' },
+            { data: 'sku', name: 'v.sub_sku', visible: false },
             { data: 'product', name: 'p.name' },
-            { data: 'category', name: 'cat.name', defaultContent: '' },
+            { data: 'category', name: 'cat.name', defaultContent: '', visible: false },
             { data: 'unit', orderable: false },
             @if(session('business.enable_lot_number') == 1 || session('business.enable_product_expiry') == 1)
             { data: 'lot_exp', orderable: false, searchable: false },
             @endif
             { data: 'unit_cost', name: 'l.unit_cost', className: 'text-right' },
             { data: 'unit_sell', name: 'v.sell_price_inc_tax', className: 'text-right' },
+            { data: 'margin', orderable: false, searchable: false, className: 'text-right' },
             { data: 'theoretical_at_start', name: 'l.theoretical_at_start', className: 'text-right' },
+            { data: 'alert_quantity', name: 'p.alert_quantity', className: 'text-right' },
             { data: 'counted', orderable: false, searchable: false, className: 'text-right' },
             { data: 'variance', orderable: false, searchable: false, className: 'text-right' }
         ],
@@ -477,6 +580,17 @@ $(function () {
         // server-side handler only honors our custom search_term param).
         initComplete: function () {
             $('#ic_session_table_wrapper .dataTables_filter').hide();
+        },
+        drawCallback: function () {
+            // Cells that came back with existing mix-rows must lock the
+            // primary input/unit so it doesn't desync with the breakdown.
+            $('#ic_session_table .counted-cell').each(function () {
+                var $cell = $(this);
+                if ($cell.find('.ic-mix-row').length > 0) {
+                    $cell.find('.actual-qty').prop('readonly', true).addClass('ic-mix-display');
+                    $cell.find('.counted-unit').prop('disabled', true);
+                }
+            });
         }
     });
 
@@ -540,14 +654,17 @@ $(function () {
         lineIds.forEach(function (lineId) {
             inflight++;
             var payload = pending[lineId];
-            // payload may be {qty, unit_id} or a scalar (legacy / scan path)
-            var counted_qty, unit_id;
+            // payload may be {qty, unit_id} or {breakdown:[...]} or a scalar
+            // (legacy / scan path).
+            var counted_qty, unit_id, breakdown;
             if (payload !== null && typeof payload === 'object') {
                 counted_qty = payload.qty;
                 unit_id = payload.unit_id;
+                breakdown = payload.breakdown || null;
             } else {
                 counted_qty = payload;
                 unit_id = null;
+                breakdown = null;
             }
             $.ajax({
                 url: BASE_URL + '/' + SESSION_ID + '/save-line',
@@ -556,7 +673,8 @@ $(function () {
                     _token: '{{ csrf_token() }}',
                     line_id: lineId,
                     counted_qty: counted_qty,
-                    unit_id: unit_id
+                    unit_id: unit_id,
+                    breakdown: breakdown
                 },
                 dataType: 'json'
             }).done(function (resp) {
@@ -623,6 +741,12 @@ $(function () {
 
         $(document).on('input', '#ic_session_table .actual-qty', function () {
             var $input = $(this);
+            var $cell = $input.closest('.counted-cell');
+            // If the user is in mixed-unit mode, the primary input is just
+            // a read-only display of the total — ignore manual edits here.
+            if ($cell.find('.ic-mix-row').length > 0) {
+                return;
+            }
             var lineId = $input.data('line-id');
             var raw = $input.val();
             saveQueue[lineId] = {
@@ -656,6 +780,354 @@ $(function () {
                 clearTimeout(saveTimer);
                 saveTimer = setTimeout(flushSaves, 200);
             }
+        });
+
+        // ---------- Mixed-unit count ----------
+        // Builds <option> HTML from the embedded JSON for the current cell.
+        function mixUnitOptionsHtml($cell, selectedId) {
+            var opts = [];
+            try {
+                opts = JSON.parse($cell.find('script.ic-unit-opts').text() || '[]');
+            } catch (e) { opts = []; }
+            return opts.map(function (o) {
+                var sel = (parseInt(selectedId, 10) === parseInt(o.id, 10)) ? ' selected' : '';
+                return '<option value="' + o.id + '" data-multiplier="' + o.multiplier + '"' + sel + '>'
+                    + $('<div>').text(o.label).html() + '</option>';
+            }).join('');
+        }
+
+        function newMixRowHtml($cell, defaultUnitId) {
+            return '<div class="ic-mix-row input-group input-group-sm" style="margin-top:3px;">'
+                + '<input type="number" step="any" min="0" class="form-control input-sm ic-mix-qty" placeholder="qty" />'
+                + '<select class="form-control input-sm ic-mix-unit" style="max-width:90px;">'
+                + mixUnitOptionsHtml($cell, defaultUnitId)
+                + '</select>'
+                + '<span class="input-group-btn">'
+                + '<button type="button" class="btn btn-default btn-sm ic-mix-remove" title="Remove"><i class="fa fa-times"></i></button>'
+                + '</span></div>';
+        }
+
+        // Read all qty+unit parts (primary input + mix rows) and submit them
+        // as a breakdown, recomputing the live total.
+        function flushMixToQueue($cell) {
+            var lineId = $cell.data('line-id');
+            var $input = $cell.find('.actual-qty');
+            var theo = parseFloat($input.data('theoretical')) || 0;
+            var parts = [];
+            var total = 0;
+
+            $cell.find('.ic-mix-row').each(function () {
+                var q = parseFloat($(this).find('.ic-mix-qty').val());
+                if (isNaN(q) || q <= 0) return;
+                var $u = $(this).find('.ic-mix-unit');
+                var uid = parseInt($u.val(), 10);
+                var m = parseFloat($u.find('option:selected').data('multiplier')) || 1;
+                parts.push({ qty: q, unit_id: uid });
+                total += q * m;
+            });
+
+            var $totalEl = $cell.find('.ic-mix-total');
+            if (parts.length === 0) {
+                $totalEl.text('');
+                // Nothing in mix area: revert to single-input path so the
+                // user can still type directly in the primary input.
+                return;
+            }
+
+            // Show running total in base unit; mirror in primary input as
+            // a read-only display.
+            $input.val(+total.toFixed(4));
+            refreshVariance($input);
+            $totalEl.text('= ' + (+total.toFixed(4)) + ' (base unit)');
+
+            saveQueue[lineId] = {
+                breakdown: parts
+            };
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(flushSaves, 400);
+        }
+
+        // Toggle / add a mix row.
+        $(document).on('click', '#ic_session_table .ic-mix-toggle', function () {
+            var $cell = $(this).closest('.counted-cell');
+            var $parts = $cell.find('.ic-mix-parts');
+            var $rows = $parts.find('.ic-mix-row');
+
+            if ($parts.is(':hidden')) {
+                $parts.show();
+            }
+
+            // First open: seed one row from the primary input (so the user
+            // doesn't lose what they already typed). If there was no value,
+            // start with one empty row. Subsequent clicks add empty rows.
+            if ($rows.length === 0) {
+                if ($parts.find('.ic-mix-total').length === 0) {
+                    $parts.append('<div class="ic-mix-total small text-muted" style="margin-top:2px;"></div>');
+                }
+                var $primaryInput = $cell.find('.actual-qty');
+                var $primaryUnit = $cell.find('.counted-unit');
+                var primaryQty = parseFloat($primaryInput.val());
+                var primaryUnitId = $primaryUnit.length ? $primaryUnit.val() : $cell.data('base-unit-id');
+
+                $parts.find('.ic-mix-total').before(newMixRowHtml($cell, primaryUnitId));
+                if (!isNaN(primaryQty) && primaryQty > 0) {
+                    $parts.find('.ic-mix-row:first .ic-mix-qty').val(primaryQty);
+                }
+            } else {
+                // Subsequent clicks just add another empty row.
+                $parts.find('.ic-mix-total').before(newMixRowHtml($cell, $cell.data('base-unit-id')));
+            }
+
+            // Primary input becomes a read-only running total while mix is active.
+            $cell.find('.actual-qty').prop('readonly', true).addClass('ic-mix-display');
+            $cell.find('.counted-unit').prop('disabled', true);
+
+            flushMixToQueue($cell);
+        });
+
+        $(document).on('input change', '#ic_session_table .ic-mix-qty, #ic_session_table .ic-mix-unit', function () {
+            flushMixToQueue($(this).closest('.counted-cell'));
+        });
+
+        $(document).on('click', '#ic_session_table .ic-mix-remove', function () {
+            var $cell = $(this).closest('.counted-cell');
+            $(this).closest('.ic-mix-row').remove();
+            // If no rows left, hide and clear so user can type single-unit again.
+            if ($cell.find('.ic-mix-row').length === 0) {
+                $cell.find('.ic-mix-parts').hide().find('.ic-mix-total').text('');
+                // Re-enable primary input/unit for direct single-unit edits.
+                $cell.find('.actual-qty').prop('readonly', false).removeClass('ic-mix-display');
+                $cell.find('.counted-unit').prop('disabled', false);
+                // Push a NULL save to clear the line (user removed everything).
+                saveQueue[$cell.data('line-id')] = { qty: null, unit_id: null };
+                $cell.find('.actual-qty').val('');
+                refreshVariance($cell.find('.actual-qty'));
+                clearTimeout(saveTimer);
+                saveTimer = setTimeout(flushSaves, 200);
+            } else {
+                flushMixToQueue($cell);
+            }
+        });
+    }
+
+    // ---------- Add Lot ----------
+    if (IS_EDITABLE) {
+        var lotUnitOptions = []; // cached units for currently picked variation
+
+        function renderLotUnitOptions(units) {
+            lotUnitOptions = units || [];
+            var html = lotUnitOptions.map(function (u) {
+                return '<option value="' + u.id + '" data-multiplier="' + u.multiplier + '">'
+                    + $('<div>').text(u.label).html() + '</option>';
+            }).join('');
+            $('#ic_add_lot_unit').html(html);
+        }
+
+        function resetAddLotForm() {
+            $('#ic_add_lot_variation').val(null).trigger('change');
+            $('#ic_add_lot_qty').val('');
+            $('#ic_add_lot_exp').val('');
+            $('#ic_add_lot_lot_no').val('');
+            $('#ic_add_lot_cost').val('').attr('placeholder', '');
+            renderLotUnitOptions([]);
+        }
+
+        // Initialise Select2 once on page load so the row-button flow can
+        // programmatically pre-select a variation without a race condition.
+        $('#ic_add_lot_variation').select2({
+            dropdownParent: $('#ic_add_lot_modal'),
+            placeholder: @json(__('inventory_count.add_lot_product_placeholder')),
+            allowClear: true,
+            ajax: {
+                url: BASE_URL + '/' + SESSION_ID + '/variation-search',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) { return { q: params.term || '' }; },
+                processResults: function (data) { return { results: data.results || [] }; }
+            },
+            minimumInputLength: 0,
+            width: '100%'
+        }).on('select2:select', function (e) {
+            var d = e.params.data || {};
+            renderLotUnitOptions(d.units || []);
+            if (d.unit_cost > 0 && !$('#ic_add_lot_cost').val()) {
+                $('#ic_add_lot_cost').attr('placeholder', d.unit_cost);
+            } else {
+                $('#ic_add_lot_cost').attr('placeholder', '');
+            }
+        }).on('select2:clear', function () {
+            renderLotUnitOptions([]);
+            $('#ic_add_lot_cost').attr('placeholder', '');
+        });
+
+        // Generic top-right button: blank form.
+        $('#ic_btn_add_lot').on('click', function () {
+            resetAddLotForm();
+            $('#ic_add_lot_modal').modal('show');
+        });
+
+        // Per-row button: pre-select the variation and reuse the row's
+        // embedded unit options (no extra round trip).
+        $(document).on('click', '#ic_session_table .ic-row-add-lot', function () {
+            var $btn = $(this);
+            var vid = parseInt($btn.data('variation-id'), 10);
+            var label = $btn.data('label') || '';
+            var $row = $btn.closest('tr');
+            var $cell = $row.find('.counted-cell');
+            var units = [];
+            try {
+                units = JSON.parse($cell.find('script.ic-unit-opts').text() || '[]');
+            } catch (e) { units = []; }
+            // Fallback: build a single base-unit option from the row.
+            if (units.length === 0) {
+                var baseUnitId = parseInt($cell.data('base-unit-id'), 10);
+                var $unitLabel = $row.find('td').eq(3); // unit column
+                units = [{ id: baseUnitId, label: $unitLabel.text().trim(), multiplier: 1 }];
+            }
+            // Hint cost from the row's data-unit-cost.
+            var rowCost = parseFloat($cell.find('.actual-qty').data('unit-cost'));
+
+            resetAddLotForm();
+            // Pre-create the option in Select2 so it can show the label.
+            var $sel = $('#ic_add_lot_variation');
+            // Remove any old pre-seeded option for this id.
+            $sel.find('option[value="' + vid + '"]').remove();
+            var opt = new Option(label, vid, true, true);
+            $sel.append(opt).trigger('change');
+            renderLotUnitOptions(units);
+            if (!isNaN(rowCost) && rowCost > 0) {
+                $('#ic_add_lot_cost').attr('placeholder', rowCost);
+            }
+            $('#ic_add_lot_modal').modal('show');
+        });
+
+        $('#ic_add_lot_save').on('click', function () {
+            var $btn = $(this);
+            var variation_id = $('#ic_add_lot_variation').val();
+            var qty = $('#ic_add_lot_qty').val();
+            var unit_id = $('#ic_add_lot_unit').val();
+            var exp_date = $('#ic_add_lot_exp').val();
+            var lot_number = $('#ic_add_lot_lot_no').val();
+            var unit_cost = $('#ic_add_lot_cost').val();
+
+            if (!variation_id) { toastr.error(@json(__('inventory_count.add_lot_product')) + ' *'); return; }
+            if (!qty || parseFloat(qty) <= 0) { toastr.error(@json(__('inventory_count.add_lot_qty')) + ' *'); return; }
+            if (!unit_id) { toastr.error(@json(__('inventory_count.add_lot_unit')) + ' *'); return; }
+
+            $btn.prop('disabled', true);
+            $.ajax({
+                url: BASE_URL + '/' + SESSION_ID + '/add-lot',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    variation_id: variation_id,
+                    counted_qty: qty,
+                    unit_id: unit_id,
+                    exp_date: exp_date,
+                    lot_number: lot_number,
+                    unit_cost: unit_cost
+                },
+                dataType: 'json'
+            }).done(function (resp) {
+                $btn.prop('disabled', false);
+                if (resp.success) {
+                    toastr.success(resp.msg);
+                    $('#ic_total').text(resp.lines_total);
+                    $('#ic_counted').text(resp.lines_counted);
+                    var pct = resp.lines_total > 0 ? Math.round((resp.lines_counted / resp.lines_total) * 100) : 0;
+                    $('#ic_progress_bar').css('width', pct + '%');
+                    $('#ic_add_lot_modal').modal('hide');
+                    dt.ajax.reload(null, false);
+                } else {
+                    toastr.error(resp.msg || 'Error');
+                }
+            }).fail(function (xhr) {
+                $btn.prop('disabled', false);
+                var msg = (xhr.responseJSON && (xhr.responseJSON.msg || (xhr.responseJSON.errors && Object.values(xhr.responseJSON.errors)[0][0]))) || 'Error';
+                toastr.error(msg);
+            });
+        });
+    }
+
+    // ---------- Edit Lot/Expiry ----------
+    if (IS_EDITABLE) {
+        $(document).on('click', '#ic_session_table .ic-lot-edit', function () {
+            var $btn = $(this);
+            $('#ic_edit_lot_line_id').val($btn.data('line-id'));
+            $('#ic_edit_lot_lot_no').val($btn.data('lot') || '');
+            $('#ic_edit_lot_exp').val($btn.data('exp') || '');
+            $('#ic_edit_lot_modal').modal('show');
+        });
+
+        // Validate a YYYY-MM-DD string represents a real calendar date (e.g. rejects 2026-02-31).
+        // Returns true for empty string (expiry is optional).
+        function icIsValidExpDate(s) {
+            if (!s) return true;
+            var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+            if (!m) return false;
+            var y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+            if (y < 1900 || y > 9999 || mo < 1 || mo > 12 || d < 1 || d > 31) return false;
+            var dt = new Date(y, mo - 1, d);
+            return dt.getFullYear() === y && (dt.getMonth() + 1) === mo && dt.getDate() === d;
+        }
+
+        function icShowExpError(msg) {
+            $('#ic_edit_lot_exp_group').addClass('has-error');
+            $('#ic_edit_lot_exp_err').text(msg).show();
+        }
+        function icClearExpError() {
+            $('#ic_edit_lot_exp_group').removeClass('has-error');
+            $('#ic_edit_lot_exp_err').hide().text('');
+        }
+
+        $(document).on('input change blur', '#ic_edit_lot_exp', function () {
+            var v = $(this).val();
+            // Read raw typed text on Chrome when invalid: the input returns '' but the
+            // bad-input flag is set on the DOM element.
+            var nativeInvalid = this.validity && this.validity.badInput;
+            if (nativeInvalid || !icIsValidExpDate(v)) {
+                icShowExpError(@json(__('inventory_count.invalid_exp_date')));
+            } else {
+                icClearExpError();
+            }
+        });
+
+        $('#ic_edit_lot_modal').on('hidden.bs.modal', function () { icClearExpError(); });
+
+        $('#ic_edit_lot_save').on('click', function () {
+            var expVal = $('#ic_edit_lot_exp').val();
+            var expEl = document.getElementById('ic_edit_lot_exp');
+            var nativeInvalid = expEl && expEl.validity && expEl.validity.badInput;
+            if (nativeInvalid || !icIsValidExpDate(expVal)) {
+                icShowExpError(@json(__('inventory_count.invalid_exp_date')));
+                $('#ic_edit_lot_exp').focus();
+                return;
+            }
+            var $btn = $(this).prop('disabled', true);
+            $.ajax({
+                url: BASE_URL + '/' + SESSION_ID + '/update-lot',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    line_id: $('#ic_edit_lot_line_id').val(),
+                    lot_number: $('#ic_edit_lot_lot_no').val(),
+                    exp_date: expVal
+                },
+                dataType: 'json'
+            }).done(function (resp) {
+                $btn.prop('disabled', false);
+                if (resp.success) {
+                    toastr.success(resp.msg);
+                    $('#ic_edit_lot_modal').modal('hide');
+                    dt.ajax.reload(null, false);
+                } else {
+                    toastr.error(resp.msg || 'Error');
+                }
+            }).fail(function (xhr) {
+                $btn.prop('disabled', false);
+                var msg = (xhr.responseJSON && (xhr.responseJSON.msg || (xhr.responseJSON.errors && Object.values(xhr.responseJSON.errors)[0][0]))) || 'Error';
+                toastr.error(msg);
+            });
         });
     }
 
@@ -955,6 +1427,129 @@ $(function () {
     // Enter key on sell-price input = save
     $(document).on('keydown', '.ic-sell-input', function (e) {
         if (e.which === 13) { e.preventDefault(); $(this).closest('.ic-sell-edit').find('.ic-sell-save').click(); }
+    });
+
+    // Save unit_cost on a single session line (scoped to this count session only —
+    // does not modify the linked PurchaseLine or product master cost).
+    $(document).on('click', '.ic-cost-save', function () {
+        var $btn = $(this);
+        var $cell = $btn.closest('.ic-cost-edit');
+        var $input = $cell.find('.ic-cost-input');
+        var line_id = $input.data('line-id');
+        var unit_cost = ($input.val() || '').toString().trim();
+        if (unit_cost === '') { toastr.warning(@json(__('validation.required', ['attribute' => 'unit cost']))); return; }
+
+        $btn.prop('disabled', true).find('i').removeClass('fa-check').addClass('fa-spinner fa-spin');
+        $.ajax({
+            url: BASE_URL + '/' + SESSION_ID + '/update-unit-cost',
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                line_id: line_id,
+                unit_cost: unit_cost
+            },
+            dataType: 'json'
+        }).done(function (resp) {
+            if (resp.success) {
+                toastr.success(resp.msg);
+                $input.data('orig', resp.unit_cost);
+                $cell.addClass('has-success');
+                setTimeout(function () { $cell.removeClass('has-success'); }, 1500);
+                if (typeof dt !== 'undefined' && dt) {
+                    dt.ajax.reload(null, false);
+                }
+            } else {
+                toastr.error(resp.msg || 'Error');
+                $input.val($input.data('orig'));
+            }
+        }).fail(function (xhr) {
+            toastr.error((xhr.responseJSON && xhr.responseJSON.msg) || 'Error');
+            $input.val($input.data('orig'));
+        }).always(function () {
+            $btn.prop('disabled', false).find('i').removeClass('fa-spinner fa-spin').addClass('fa-check');
+        });
+    });
+
+    $(document).on('keydown', '.ic-cost-input', function (e) {
+        if (e.which === 13) { e.preventDefault(); $(this).closest('.ic-cost-edit').find('.ic-cost-save').click(); }
+    });
+
+    // Save product.alert_quantity (stored in the product's base unit, same as
+    // the product edit page). Updates the product master, not just this line.
+    $(document).on('click', '.ic-alert-save', function () {
+        var $btn = $(this);
+        var $cell = $btn.closest('.ic-alert-edit');
+        var $input = $cell.find('.ic-alert-input');
+        var product_id = $input.data('product-id');
+        var alert_quantity = ($input.val() || '').toString().trim();
+
+        $btn.prop('disabled', true).find('i').removeClass('fa-check').addClass('fa-spinner fa-spin');
+        $.ajax({
+            url: BASE_URL + '/' + SESSION_ID + '/update-alert-quantity',
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                product_id: product_id,
+                alert_quantity: alert_quantity
+            },
+            dataType: 'json'
+        }).done(function (resp) {
+            if (resp.success) {
+                toastr.success(resp.msg);
+                $input.data('orig', resp.alert_quantity == null ? '' : resp.alert_quantity);
+                $cell.addClass('has-success');
+                setTimeout(function () { $cell.removeClass('has-success'); }, 1500);
+            } else {
+                toastr.error(resp.msg || 'Error');
+                $input.val($input.data('orig'));
+            }
+        }).fail(function (xhr) {
+            toastr.error((xhr.responseJSON && xhr.responseJSON.msg) || 'Error');
+            $input.val($input.data('orig'));
+        }).always(function () {
+            $btn.prop('disabled', false).find('i').removeClass('fa-spinner fa-spin').addClass('fa-check');
+        });
+    });
+
+    $(document).on('keydown', '.ic-alert-input', function (e) {
+        if (e.which === 13) { e.preventDefault(); $(this).closest('.ic-alert-edit').find('.ic-alert-save').click(); }
+    });
+
+    // Change base unit (only rendered for single-unit products)
+    $(document).on('change', '.ic-unit-edit', function () {
+        var $sel = $(this);
+        var product_id = $sel.data('product-id');
+        var unit_id = $sel.val();
+        var orig = $sel.data('orig');
+        if (parseInt(unit_id, 10) === parseInt(orig, 10)) { return; }
+
+        $sel.prop('disabled', true);
+        $.ajax({
+            url: BASE_URL + '/' + SESSION_ID + '/update-product-unit',
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                product_id: product_id,
+                unit_id: unit_id
+            },
+            dataType: 'json'
+        }).done(function (resp) {
+            if (resp.success) {
+                toastr.success(resp.msg);
+                $sel.data('orig', resp.unit_id);
+                if (typeof dt !== 'undefined' && dt) {
+                    dt.ajax.reload(null, false);
+                }
+            } else {
+                toastr.error(resp.msg || 'Error');
+                $sel.val(orig);
+            }
+        }).fail(function (xhr) {
+            toastr.error((xhr.responseJSON && xhr.responseJSON.msg) || 'Error');
+            $sel.val(orig);
+        }).always(function () {
+            $sel.prop('disabled', false);
+        });
     });
 
     // Toggle exc/inc columns in per-unit prices modal based on checkbox

@@ -128,6 +128,20 @@
                 <div class="checkbox">
                 <br>
                   <label>
+                    {!! Form::checkbox('pos_settings[disable_auto_add_product]', 1,
+                        !empty($pos_settings['disable_auto_add_product']),
+                    [ 'class' => 'input-icheck']); !!} @lang('lang_v1.disable_auto_add_product')
+                    <i class="fa fa-info-circle text-info" data-toggle="tooltip" title="@lang('lang_v1.disable_auto_add_product_help')"></i>
+                  </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-4">
+            <div class="form-group">
+                <div class="checkbox">
+                <br>
+                  <label>
                     {!! Form::checkbox('pos_settings[disable_draft]', 1,  
                         $pos_settings['disable_draft'] , 
                     [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.disable_draft' ) }}

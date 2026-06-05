@@ -2057,11 +2057,11 @@ class SellPosController extends Controller
             $business = $request->session()->get('business');
             $pos_settings = empty($business->pos_settings) ? $this->businessUtil->defaultPosSettings() : json_decode($business->pos_settings, true);
 
-            //Multi-location sale: ignore location filter so products from all permitted locations show up.
+            // Multi-location sale: products mapped to other locations must still appear in
+            // search, but the tile / autocomplete should show stock for the register's
+            // session location only (not a sum across all locations). The per-line
+            // location picker takes over once the product is added.
             $is_multi_loc_sale = !empty($pos_settings['enable_multi_location_sale']);
-            if ($is_multi_loc_sale) {
-                $location_id = null;
-            }
 
             $products = Variation::join('products as p', 'variations.product_id', '=', 'p.id')
                 ->join('units as u', 'p.unit_id', '=', 'u.id')
@@ -2086,12 +2086,12 @@ class SellPosController extends Controller
                 ->where('p.is_inactive', 0)
                 ->where('p.not_for_selling', 0);
 
-            if (!empty($location_id)) {
+            if (!empty($location_id) && !$is_multi_loc_sale) {
                 //Hide products not available in the selected location
                 $products = $products->join('product_locations as pl', 'pl.product_id', '=', 'p.id')
                     ->where('pl.location_id', $location_id);
             } else {
-                //Multi-location: include only products mapped to at least one location
+                //Multi-location (or no specific location): include only products mapped to at least one location
                 $products = $products->whereExists(function ($q) {
                     $q->select(\DB::raw(1))
                         ->from('product_locations as pl')
@@ -2144,17 +2144,13 @@ class SellPosController extends Controller
                 'p.image as product_image',
                 'variations.id',
                 'variations.name as variation',
-                \DB::raw($is_multi_loc_sale ? 'SUM(VLD.qty_available) as qty_available' : 'VLD.qty_available'),
+                \DB::raw('VLD.qty_available as qty_available'),
                 'variations.default_sell_price as selling_price',
                 'variations.sub_sku',
                 'u.short_name as unit'
             )
                 ->with(['media', 'group_prices'])
                 ->orderBy('p.name', 'asc');
-
-            if ($is_multi_loc_sale) {
-                $products = $products->groupBy('variations.id');
-            }
 
             $products = $products->paginate(50);
 

@@ -14,7 +14,8 @@
         table.sheet th, table.sheet td { border: 1px solid #999; padding: 3px 4px; vertical-align: top; }
         table.sheet thead th { background: #eee; font-size: 8pt; text-align: left; }
         .sku { width: 70px; font-family: monospace; font-size: 8pt; }
-        .product { width: 240px; }
+        .product { width: 220px; }
+        .category { width: 90px; font-size: 8pt; color: #444; }
         .unit { width: 70px; }
         .unit small { color: #555; font-size: 7pt; display: block; }
         .theoretical { width: 60px; text-align: right; }
@@ -41,6 +42,9 @@
     {{ $location->name }} —
     @lang('inventory_count.date'): {{ $generated_at->format('Y-m-d H:i') }}
     @if($hide_theoretical) — <strong>BLIND COUNT</strong> @endif
+    @if(!empty($active_filter)) — Filter: <strong>{{ ucfirst($active_filter) }}</strong> @endif
+    @if(!empty($active_search)) — Search: <strong>{{ $active_search }}</strong> @endif
+    @if(!empty($active_order)) — Sorted by: <strong>{{ $active_order }}</strong> @endif
 </div>
 
 <table class="header-fields">
@@ -73,8 +77,8 @@
 <table class="sheet">
     <thead>
         <tr>
-            <th class="sku">@lang('product.sku')</th>
             <th class="product">@lang('product.product')</th>
+            <th class="category">@lang('product.category')</th>
             <th class="unit">@lang('product.unit')</th>
             @if(!empty($lot_tracking))
                 <th>@lang('lang_v1.lot')</th>
@@ -88,13 +92,13 @@
     <tbody>
         @foreach($rows as $r)
             <tr>
-                <td class="sku">{{ $r->sku }}</td>
                 <td class="product">
                     {{ $r->product }}
                     @if($r->product_type === 'variable')
                         <br><small>{{ $r->product_variation }} / {{ $r->variation_name }}</small>
                     @endif
                 </td>
+                <td class="category">{{ $r->category ?? '—' }}</td>
                 <td class="unit">
                     <strong>{{ $r->unit }}</strong>
                     @if(!empty($r->unit_alternatives))

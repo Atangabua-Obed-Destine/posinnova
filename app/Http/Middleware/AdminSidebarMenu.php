@@ -669,6 +669,11 @@ class AdminSidebarMenu
                                 __('report.stock_report'),
                                 ['icon' => '', 'active' => request()->segment(2) == 'stock-report']
                             );
+                            $sub->url(
+                                action([\App\Http\Controllers\ReportController::class, 'getProductsPriceList']),
+                                __('lang_v1.products_price_list'),
+                                ['icon' => '', 'active' => request()->segment(2) == 'products-price-list']
+                            );
                             if (session('business.enable_product_expiry') == 1) {
                                 $sub->url(
                                     action([\App\Http\Controllers\ReportController::class, 'getStockExpiryReport']),

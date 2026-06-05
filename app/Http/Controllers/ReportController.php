@@ -4102,4 +4102,232 @@ class ReportController extends Controller
 
         return view('report.gst_purchase_report')->with(compact('suppliers', 'taxes'));
     }
+
+    /**
+     * PosInnova: Products Price List
+     *
+     * Shows a printable / exportable price list for all sellable products and
+     * their variations. Optional filter by selling price group lets the
+     * business print custom tariffs (e.g. wholesale, distributor).
+     */
+    public function getProductsPriceList(Request $request)
+    {
+        if (! auth()->user()->can('stock_report.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = $request->session()->get('user.business_id');
+
+        if ($request->ajax()) {
+            $category_id     = $request->input('category_id');
+            $sub_category_id = $request->input('sub_category_id');
+            $brand_id        = $request->input('brand_id');
+            $unit_id         = $request->input('unit_id');
+            $price_group_id  = $request->input('price_group_id');
+            $active_state    = $request->input('active_state', 'active');
+            $not_for_selling = $request->input('not_for_selling') == 'true' ? 1 : 0;
+
+            $query = Product::leftjoin('units as u', 'u.id', '=', 'products.unit_id')
+                ->leftjoin('categories as c', 'c.id', '=', 'products.category_id')
+                ->leftjoin('categories as sc', 'sc.id', '=', 'products.sub_category_id')
+                ->leftjoin('brands as b', 'b.id', '=', 'products.brand_id')
+                ->leftjoin('tax_rates as tr', 'tr.id', '=', 'products.tax')
+                ->join('variations as v', function ($join) {
+                    $join->on('v.product_id', '=', 'products.id')
+                         ->whereNull('v.deleted_at');
+                })
+                ->where('products.business_id', $business_id)
+                ->where('products.type', '!=', 'modifier')
+                ->where('products.not_for_selling', $not_for_selling);
+
+            if ($active_state === 'active') {
+                $query->where('products.is_inactive', 0);
+            } elseif ($active_state === 'inactive') {
+                $query->where('products.is_inactive', 1);
+            }
+
+            if (! empty($category_id))     { $query->where('products.category_id', $category_id); }
+            if (! empty($sub_category_id)) { $query->where('products.sub_category_id', $sub_category_id); }
+            if (! empty($brand_id))        { $query->where('products.brand_id', $brand_id); }
+            if (! empty($unit_id))         { $query->where('products.unit_id', $unit_id); }
+
+            if (! empty($price_group_id)) {
+                $query->leftjoin('variation_group_prices as vgp', function ($join) use ($price_group_id) {
+                    $join->on('vgp.variation_id', '=', 'v.id')
+                         ->where('vgp.price_group_id', '=', $price_group_id);
+                });
+            }
+
+            $query->select(
+                'products.id as product_id',
+                'products.name as product',
+                'products.type',
+                'products.sku',
+                'products.unit_id as base_unit_id',
+                'products.sub_unit_ids as sub_unit_ids_json',
+                'v.id as variation_id',
+                'v.name as variation_name',
+                'v.sub_sku',
+                'v.default_purchase_price',
+                'v.sell_price_inc_tax',
+                'u.short_name as unit',
+                'c.name as category',
+                'sc.name as sub_category',
+                'b.name as brand',
+                'tr.name as tax_name',
+                'tr.amount as tax_amount'
+            );
+
+            if (! empty($price_group_id)) {
+                $query->addSelect(DB::raw('IF (vgp.price_type = "fixed", vgp.price_inc_tax, vgp.price_inc_tax * v.sell_price_inc_tax / 100) as group_price'));
+            } else {
+                $query->addSelect(DB::raw('NULL as group_price'));
+            }
+
+            //PosInnova: preload per-unit price helpers once so the addColumn() closure
+            //below stays O(1) per row (no N+1 lookups across the page).
+            $all_units = DB::table('units')
+                ->where('business_id', $business_id)
+                ->select('id', 'actual_name', 'short_name', 'base_unit_id', 'base_unit_multiplier')
+                ->get();
+            $sub_units_by_base = $all_units
+                ->filter(function ($u) { return ! is_null($u->base_unit_id); })
+                ->groupBy('base_unit_id');
+
+            $vup_rows = DB::table('variation_unit_prices as vup')
+                ->join('variations as v2', 'v2.id', '=', 'vup.variation_id')
+                ->join('products as p2', 'p2.id', '=', 'v2.product_id')
+                ->where('p2.business_id', $business_id)
+                ->select('vup.variation_id', 'vup.unit_id', 'vup.price_exc_tax', 'vup.price_inc_tax')
+                ->get();
+            $vup_by_var = [];
+            foreach ($vup_rows as $vr) {
+                $price = (float) $vr->price_inc_tax > 0
+                    ? (float) $vr->price_inc_tax
+                    : (float) $vr->price_exc_tax;
+                $vup_by_var[$vr->variation_id][$vr->unit_id] = $price;
+            }
+
+            $transactionUtil = $this->transactionUtil;
+            $override_label  = __('lang_v1.custom_override_price');
+
+            return Datatables::of($query)
+                ->editColumn('product', function ($row) {
+                    $name = e($row->product);
+                    if ($row->type === 'variable' && ! empty($row->variation_name) && $row->variation_name !== 'DUMMY') {
+                        $name .= ' - '.e($row->variation_name);
+                    }
+                    return $name;
+                })
+                ->editColumn('sub_sku', function ($row) {
+                    return e($row->sub_sku ?: $row->sku);
+                })
+                ->editColumn('default_purchase_price', function ($row) {
+                    return '<span class="display_currency" data-currency_symbol="true">'
+                        .$this->transactionUtil->num_f((float) $row->default_purchase_price).'</span>';
+                })
+                ->editColumn('sell_price_inc_tax', function ($row) {
+                    return '<span class="display_currency" data-currency_symbol="true">'
+                        .$this->transactionUtil->num_f((float) $row->sell_price_inc_tax).'</span>';
+                })
+                ->editColumn('group_price', function ($row) {
+                    if (is_null($row->group_price)) {
+                        return '';
+                    }
+                    return '<span class="display_currency" data-currency_symbol="true">'
+                        .$this->transactionUtil->num_f((float) $row->group_price).'</span>';
+                })
+                ->editColumn('tax_name', function ($row) {
+                    if (empty($row->tax_name)) {
+                        return '';
+                    }
+                    return e($row->tax_name).' ('.(float) $row->tax_amount.'%)';
+                })
+                ->addColumn('other_units', function ($row) use ($sub_units_by_base, $vup_by_var, $transactionUtil, $override_label) {
+                    if (empty($row->base_unit_id)) {
+                        return '<span class="text-muted">&mdash;</span>';
+                    }
+                    $base_id = (int) $row->base_unit_id;
+
+                    //Only list sub-units the merchant has explicitly mapped via
+                    //products.sub_unit_ids, OR units that already have a saved
+                    //per-unit price override. This matches what shows on the product
+                    //edit page (and avoids surfacing FCFA 0.00 placeholders for
+                    //units that aren't actually assigned to the product).
+                    $allowed = [];
+                    if (! empty($row->sub_unit_ids_json)) {
+                        $decoded = json_decode($row->sub_unit_ids_json, true);
+                        if (is_array($decoded)) {
+                            $allowed = array_map('intval', $decoded);
+                        }
+                    }
+
+                    $overrides = $vup_by_var[$row->variation_id] ?? [];
+
+                    if (empty($allowed) && empty($overrides)) {
+                        return '<span class="text-muted">&mdash;</span>';
+                    }
+
+                    $children = $sub_units_by_base->get($base_id, collect());
+                    if ($children->isEmpty()) {
+                        return '<span class="text-muted">&mdash;</span>';
+                    }
+
+                    $base_price = (float) $row->sell_price_inc_tax;
+                    $parts      = [];
+
+                    foreach ($children as $cu) {
+                        $uid = (int) $cu->id;
+                        $is_mapped   = in_array($uid, $allowed, true);
+                        $has_override = array_key_exists($uid, $overrides) && $overrides[$uid] > 0;
+                        if (! $is_mapped && ! $has_override) {
+                            continue;
+                        }
+                        $mult        = (float) $cu->base_unit_multiplier;
+                        $is_override = array_key_exists($uid, $overrides) && $overrides[$uid] > 0;
+                        $price       = $is_override ? $overrides[$uid] : $base_price * $mult;
+                        $name        = e($cu->short_name ?: $cu->actual_name);
+                        $star        = $is_override
+                            ? ' <span class="label label-warning" title="'.e($override_label).'" style="padding:1px 4px;">&#9733;</span>'
+                            : '';
+                        $parts[] = '<span class="text-nowrap" style="display:inline-block;margin-right:8px;">'
+                                 . '<strong>'.$name.':</strong> '
+                                 . '<span class="display_currency" data-currency_symbol="true">'
+                                 . $transactionUtil->num_f($price)
+                                 . '</span>'.$star
+                                 . '</span>';
+                    }
+
+                    return count($parts) ? implode(' ', $parts) : '<span class="text-muted">&mdash;</span>';
+                })
+                ->filterColumn('product', function ($q, $kw) {
+                    $q->where(function ($qq) use ($kw) {
+                        $qq->where('products.name', 'like', "%{$kw}%")
+                           ->orWhere('v.name', 'like', "%{$kw}%");
+                    });
+                })
+                ->filterColumn('sub_sku', function ($q, $kw) {
+                    $q->where(function ($qq) use ($kw) {
+                        $qq->where('v.sub_sku', 'like', "%{$kw}%")
+                           ->orWhere('products.sku', 'like', "%{$kw}%");
+                    });
+                })
+                ->rawColumns(['default_purchase_price', 'sell_price_inc_tax', 'group_price', 'other_units'])
+                ->make(true);
+        }
+
+        $categories = Category::forDropdown($business_id, 'product');
+        $brands     = Brands::forDropdown($business_id);
+        $units      = Unit::where('business_id', $business_id)->pluck('short_name', 'id');
+
+        //Only show price groups the user is permitted to view
+        $price_groups_query = SellingPriceGroup::where('business_id', $business_id)
+            ->where('is_active', 1);
+        $price_groups = $price_groups_query->get()->filter(function ($g) {
+            return auth()->user()->can('selling_price_group.'.$g->id);
+        })->pluck('name', 'id');
+
+        return view('report.products_price_list')
+            ->with(compact('categories', 'brands', 'units', 'price_groups'));
+    }
 }

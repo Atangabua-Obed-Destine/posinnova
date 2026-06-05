@@ -83,22 +83,40 @@
 
 @php
     // PosInnova: build initial per-unit prices payload from saved overrides.
+    // Source of truth = products.sub_unit_ids (the Related Sub Units picker).
+    // We additionally include any unit that already has a saved override row,
+    // so historical data is never silently hidden on edit.
     $unit_prices_data = [];
     $tax_type = optional($product_deatails->variations->first())->product->tax_type ?? 'exclusive';
     $first_variation = $product_deatails->variations->first();
     if (!empty($first_variation)) {
-        $business_id = session('user.business_id');
         $product = $first_variation->product;
-        $sub_units = app(\App\Utils\ProductUtil::class)->getSubUnits($business_id, $product->unit_id, true, $product->id);
+        $related_ids = is_array($product->sub_unit_ids) ? array_map('intval', $product->sub_unit_ids) : [];
         $saved = \App\VariationUnitPrice::where('variation_id', $first_variation->id)->get()->keyBy('unit_id');
-        foreach ($sub_units as $uid => $u) {
-            $row = $saved->get($uid);
-            $unit_prices_data[$uid] = [
-                'name' => $u['name'],
-                'multiplier' => $u['multiplier'],
-                'exc' => $row->price_exc_tax ?? null,
-                'inc' => $row->price_inc_tax ?? null,
-            ];
+
+        $base_unit = \App\Unit::with(['sub_units'])->find($product->unit_id);
+        if (!empty($base_unit)) {
+            //Base unit row only if explicitly mapped or has a saved override.
+            if (in_array($base_unit->id, $related_ids, true) || $saved->has($base_unit->id)) {
+                $row = $saved->get($base_unit->id);
+                $unit_prices_data[$base_unit->id] = [
+                    'name' => $base_unit->actual_name,
+                    'multiplier' => 1,
+                    'exc' => $row->price_exc_tax ?? null,
+                    'inc' => $row->price_inc_tax ?? null,
+                ];
+            }
+            foreach ($base_unit->sub_units as $sub) {
+                if (in_array($sub->id, $related_ids, true) || $saved->has($sub->id)) {
+                    $row = $saved->get($sub->id);
+                    $unit_prices_data[$sub->id] = [
+                        'name' => $sub->actual_name,
+                        'multiplier' => $sub->base_unit_multiplier,
+                        'exc' => $row->price_exc_tax ?? null,
+                        'inc' => $row->price_inc_tax ?? null,
+                    ];
+                }
+            }
         }
     }
 @endphp

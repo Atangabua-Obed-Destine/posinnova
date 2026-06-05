@@ -77,6 +77,13 @@
 	@component('components.widget', ['class' => 'box-solid'])
 		<div class="row">
 			<div class="col-md-12">
+				<div class="form-group">
+					{!! Form::label('pr_search_product', __('lang_v1.search_product') . ':') !!}
+					@show_tooltip(__('lang_v1.pr_search_product_tooltip'))
+					{!! Form::text('pr_search_product', null, ['class' => 'form-control mousetrap', 'id' => 'pr_search_product', 'placeholder' => __('lang_v1.search_product_placeholder')]); !!}
+				</div>
+			</div>
+			<div class="col-md-12">
 				<table class="table" id="products_list">
 					<thead>
 						<tr>
@@ -145,6 +152,59 @@
                         
                     },
                 });
+            });
+
+            //PosInnova: manual product picker (any active stock-tracked product).
+            //Wires a jQuery UI autocomplete on #pr_search_product. On select we
+            //fetch the same row partial used for the auto low-stock list and
+            //dedupe by variation_id so the form structure stays identical.
+            $('#pr_search_product').autocomplete({
+                source: function(request, response) {
+                    if ($('#location_id').val() == '') {
+                        return response([]);
+                    }
+                    $.getJSON(
+                        '{{ url('/purchases/get_products') }}',
+                        { location_id: $('#location_id').val(), term: request.term },
+                        response
+                    );
+                },
+                minLength: 2,
+                select: function(event, ui) {
+                    var $input = $(this);
+                    $input.val('');
+                    if ($('#location_id').val() == '') {
+                        alert('{{__("lang_v1.select_location")}}');
+                        return false;
+                    }
+                    if ($('#products_list tbody tr[data-variation_id="' + ui.item.variation_id + '"]').length > 0) {
+                        toastr.info('{{__("lang_v1.product_already_added")}}');
+                        return false;
+                    }
+                    $.ajax({
+                        method: 'get',
+                        url: '{{ url('/get-purchase-requisition-product-row') }}/' + ui.item.variation_id,
+                        data: { location_id: $('#location_id').val() },
+                        dataType: 'html',
+                        success: function(result) {
+                            $(result).find('tr').each(function(){
+                                $('#products_list tbody').append($(this));
+                            });
+                        },
+                    });
+                    return false;
+                },
+            })
+            .autocomplete('instance')._renderItem = function(ul, item) {
+                return $('<li>')
+                    .append('<div>' + escapeHtml(item.text) + '</div>')
+                    .appendTo(ul);
+            };
+
+            $('#pr_search_product').on('focus', function(){
+                if ($('#location_id').val() == '') {
+                    toastr.warning('{{__("lang_v1.select_location")}}');
+                }
             });
     	});
 
