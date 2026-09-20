@@ -40,4 +40,7 @@ return [
     'total_sale_paid' => 'Total Sale Payment',
     'total_sale_due' => 'Total Sale Due',
     'customer' => 'Customer',
+
+    // Report export strings (auto-added)
+    'supplier' => 'Supplier',
 ];

@@ -211,6 +211,16 @@
             <div class="form-group">
                 <div class="checkbox">
                   <label>
+                    {!! Form::checkbox('common_settings[enable_editable_product_sku]', 1, !empty($common_settings['enable_editable_product_sku']) ? true : false, ['class' => 'input-icheck']); !!} {{ __('lang_v1.enable_editable_product_sku') }}
+                    @show_tooltip(__('lang_v1.enable_editable_product_sku_help'))
+                  </label>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="form-group">
+                <div class="checkbox">
+                  <label>
                     {!! Form::checkbox('common_settings[show_not_for_selling]', 1, !empty($common_settings['show_not_for_selling']) ? true : false, ['class' => 'input-icheck']); !!} {{ __('lang_v1.show_not_for_selling') }}
                   </label>
                 </div>

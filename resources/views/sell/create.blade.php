@@ -134,6 +134,9 @@
 							</span>
 							<input type="hidden" id="default_customer_id" 
 							value="{{ $walk_in_customer['id']}}" >
+							<input type="hidden" id="walk_in_customer_contact_id" 
+							value="{{ $walk_in_customer['id']}}" >
+							<input type="hidden" id="is_custom_customer_name_required" value="{{ !empty($pos_settings['is_custom_customer_name_required']) ? 1 : 0 }}">
 							<input type="hidden" id="default_customer_name" 
 							value="{{ $walk_in_customer['name']}}" >
 							<input type="hidden" id="default_customer_balance" value="{{ $walk_in_customer['balance'] ?? ''}}" >
@@ -149,6 +152,15 @@
 							</span>
 						</div>
 						<small class="text-danger hide contact_due_text"><strong>@lang('account.customer_due'):</strong> <span></span></small>
+					</div>
+					<div class="form-group walk_in_customer_name_wrap" @if(empty($walk_in_customer['id'])) style="display:none;" @endif>
+						<div class="input-group">
+							<span class="input-group-addon" title="@lang('lang_v1.walk_in_customer_name_help')">
+								<i class="fa fa-id-badge"></i>
+							</span>
+							{!! Form::text('walk_in_customer_name', null, ['class' => 'form-control', 'id' => 'walk_in_customer_name', 'placeholder' => __('lang_v1.walk_in_customer_name_placeholder'), 'maxlength' => 191, 'autocomplete' => 'off', 'required' => !empty($pos_settings['is_custom_customer_name_required'])]) !!}
+						</div>
+						<small class="text-muted">@lang('lang_v1.walk_in_customer_name_help')</small>
 					</div>
 					<small>
 					<strong>
@@ -195,10 +207,18 @@
 				<div class="col-sm-3">
 					<div class="form-group">
 					{!! Form::label('commission_agent', __('lang_v1.commission_agent') . ':') !!}
-					{!! Form::select('commission_agent', 
+					{!! Form::select('commission_agent',
 								$commission_agent, null, ['class' => 'form-control select2', 'id' => 'commission_agent', 'required' => $is_commission_agent_required]); !!}
 					</div>
 				</div>
+				@if(!empty($pos_settings['enable_invoice_commission']))
+					<div class="col-sm-3">
+						<div class="form-group">
+						{!! Form::label('commission_amount', __('lang_v1.commission_amount') . ':') !!} @show_tooltip(__('lang_v1.invoice_commission_help'))
+						{!! Form::text('commission_amount', null, ['class' => 'form-control input_number', 'id' => 'commission_amount', 'placeholder' => __('lang_v1.commission_amount')]) !!}
+						</div>
+					</div>
+				@endif
 				@endif
 				<div class="@if(!empty($commission_agent)) col-sm-3 @else col-sm-4 @endif">
 					<div class="form-group">

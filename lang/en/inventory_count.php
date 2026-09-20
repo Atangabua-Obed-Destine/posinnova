@@ -203,4 +203,23 @@ return [
     'col_shortage_help' => 'Units missing from physical count, number of SKU lines short, and monetary impact at recorded unit cost.',
     'col_surplus_help' => 'Extra units found in physical count, number of SKU lines over, and monetary impact at recorded unit cost.',
     'zero_cost_warning' => ':count variance line(s) had a zero unit cost on file, so they contribute 0 to the monetary totals above (but the stock quantities WERE adjusted). Consider setting a default purchase price on those products.',
+
+    // Count purpose (profit impact of shortages)
+    'count_purpose' => 'Count purpose',
+    'count_purpose_routine' => 'Routine count',
+    'count_purpose_routine_help' => 'Shortages are real shrinkage (theft, damage, expiry) and will reduce Net Profit.',
+    'count_purpose_migration' => 'Migration / opening correction',
+    'count_purpose_migration_help' => 'Shortages correct wrong opening balances and will NOT affect Net Profit.',
+    'count_purpose_col_help' => 'Whether this count\'s shortages reduce Net Profit (routine) or are excluded as opening-balance corrections (migration).',
+    'profit_impact' => 'Profit impact',
+    'toggle_purpose_help' => 'Switch between routine (affects profit) and migration (no profit impact)',
+    'toggle_purpose_confirm' => 'Switch this count\'s profit treatment? The linked stock adjustment will be reclassified and the Profit & Loss report will update.',
+    'purpose_updated' => 'Count reclassified as: :purpose',
+    'purpose_toggle_only_posted' => 'Only approved (posted) counts can be reclassified.',
+
+    // Product name / SKU inline edit (migration cleanup)
+    'edit_product_info' => 'Edit product name / SKU',
+    'edit_product_info_help' => 'Changes the product master record — the new name and SKU apply everywhere (POS, reports, stock), not just this count.',
+    'product_info_updated' => 'Product updated successfully',
+    'sku_already_exists' => 'SKU ":sku" is already used by another product.',
 ];

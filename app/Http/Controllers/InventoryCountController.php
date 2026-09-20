@@ -453,17 +453,18 @@ class InventoryCountController extends Controller
             ->keyBy('id');
 
         return DataTables::of($query)
-            ->editColumn('product', function ($row) use ($editable) {
-                $name = e($row->product);
+            ->editColumn('product', function ($row) use ($editable, $can_edit_price) {
+                $suffix = '';
                 if ($row->product_type === 'variable') {
-                    $name .= ' — <small class="text-muted">' . e($row->product_variation . ' / ' . $row->variation_name) . '</small>';
+                    $suffix = ' — <small class="text-muted">' . e($row->product_variation . ' / ' . $row->variation_name) . '</small>';
                 }
+                $add_lot_btn = '';
                 if ($editable) {
                     $label = $row->product;
                     if ($row->product_type === 'variable' && $row->variation_name) {
                         $label .= ' — ' . $row->variation_name;
                     }
-                    $name .= ' <button type="button" class="btn btn-xs btn-link ic-row-add-lot" '
+                    $add_lot_btn = ' <button type="button" class="btn btn-xs btn-link ic-row-add-lot" '
                         . 'data-variation-id="' . (int) $row->variation_id . '" '
                         . 'data-product-id="' . (int) $row->product_id . '" '
                         . 'data-label="' . e($label . ' [' . $row->sku . ']') . '" '
@@ -471,7 +472,43 @@ class InventoryCountController extends Controller
                         . 'style="padding:0 4px;">'
                         . '<i class="fa fa-calendar-plus-o text-warning"></i></button>';
                 }
-                return $name;
+
+                if (! $editable || ! $can_edit_price) {
+                    return e($row->product) . $suffix . $add_lot_btn;
+                }
+
+                // Inline name editor (updates the product master), matching the
+                // other editable cells (cost / sell / alert qty) on this table.
+                return '<div class="input-group input-group-sm ic-name-edit" style="min-width:220px;" '
+                    . 'title="' . e(__('inventory_count.edit_product_info_help')) . '">'
+                    . '<input type="text" class="form-control input-sm ic-name-input" maxlength="191" '
+                    . 'data-product-id="' . (int) $row->product_id . '" '
+                    . 'data-variation-id="' . (int) $row->variation_id . '" '
+                    . 'data-orig="' . e($row->product) . '" '
+                    . 'value="' . e($row->product) . '" />'
+                    . '<span class="input-group-btn">'
+                    . '<button type="button" class="btn btn-primary btn-sm ic-name-save" '
+                    . 'title="' . e(__('messages.save')) . '">'
+                    . '<i class="fa fa-check"></i></button>'
+                    . '</span></div>'
+                    . $suffix . $add_lot_btn;
+            })
+            ->editColumn('sku', function ($row) use ($editable, $can_edit_price) {
+                if (! $editable || ! $can_edit_price) {
+                    return e($row->sku);
+                }
+                // Inline SKU editor (updates the variation sub_sku on the master)
+                return '<div class="input-group input-group-sm ic-sku-edit" style="min-width:140px;">'
+                    . '<input type="text" class="form-control input-sm ic-sku-input" maxlength="191" '
+                    . 'data-product-id="' . (int) $row->product_id . '" '
+                    . 'data-variation-id="' . (int) $row->variation_id . '" '
+                    . 'data-orig="' . e($row->sku) . '" '
+                    . 'value="' . e($row->sku) . '" />'
+                    . '<span class="input-group-btn">'
+                    . '<button type="button" class="btn btn-primary btn-sm ic-sku-save" '
+                    . 'title="' . e(__('messages.save')) . '">'
+                    . '<i class="fa fa-check"></i></button>'
+                    . '</span></div>';
             })
             ->addColumn('lot_exp', function ($row) use ($editable) {
                 $lot = $row->lot_number !== null && $row->lot_number !== '' ? e($row->lot_number) : '—';
@@ -750,7 +787,7 @@ class InventoryCountController extends Controller
                 return '<span class="variance-cell ' . $cls . '">' . $sign
                     . $this->productUtil->num_f($diff, false, null, true) . '</span>';
             })
-            ->rawColumns(['product', 'theoretical_at_start', 'counted', 'variance', 'lot_exp', 'unit', 'unit_cost', 'unit_sell', 'margin', 'alert_quantity'])
+            ->rawColumns(['product', 'sku', 'theoretical_at_start', 'counted', 'variance', 'lot_exp', 'unit', 'unit_cost', 'unit_sell', 'margin', 'alert_quantity'])
             ->make(true);
     }
 
@@ -1316,10 +1353,15 @@ class InventoryCountController extends Controller
 
         $request->validate([
             'approval_notes' => 'nullable|string|max:2000',
+            'count_purpose' => 'nullable|in:routine,migration',
         ]);
 
         $business_id = $request->session()->get('user.business_id');
         $user_id = $request->session()->get('user.id');
+
+        // 'routine'  : shortages are real shrinkage — reduce Net Profit
+        // 'migration': opening-balance correction — excluded from Net Profit
+        $count_purpose = $request->input('count_purpose', 'routine');
 
         $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
         if ($session->status !== 'pending_approval') {
@@ -1417,7 +1459,7 @@ class InventoryCountController extends Controller
 
             if (! empty($shortages)) {
                 [$shortage_txn_id, $shortage_value] = $this->createShortageTransaction(
-                    $business_id, $user_id, $location_id, $shortages, $notes_block, $business
+                    $business_id, $user_id, $location_id, $shortages, $notes_block, $business, $count_purpose
                 );
             }
 
@@ -1496,6 +1538,7 @@ class InventoryCountController extends Controller
             $session->approved_by = $user_id;
             $session->approved_at = Carbon::now();
             $session->approval_notes = $request->input('approval_notes');
+            $session->count_purpose = $count_purpose;
             $session->shortage_transaction_id = $shortage_txn_id;
             $session->surplus_transaction_id = $surplus_txn_id;
             $session->shortage_value = $shortage_value;
@@ -1531,6 +1574,61 @@ class InventoryCountController extends Controller
                 $msg = $e->getMessage();
             }
             return response()->json(['success' => 0, 'msg' => $msg], 500);
+        }
+    }
+
+    /**
+     * Flip an approved session between 'routine' and 'migration' purpose and
+     * restamp its shortage transaction's adjustment_type to match, so the
+     * P&L includes/excludes the shortage from Net Profit accordingly.
+     * Used to reclassify counts after the fact (e.g. data-migration counts
+     * approved before the purpose flag existed).
+     */
+    public function toggleCountPurpose(Request $request, $id)
+    {
+        if (! auth()->user()->can('inventory_count.approve')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = $request->session()->get('user.business_id');
+        $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
+
+        if ($session->status !== 'posted') {
+            return response()->json(['success' => 0, 'msg' => __('inventory_count.purpose_toggle_only_posted')], 422);
+        }
+
+        $new_purpose = ($session->count_purpose ?? 'routine') === 'migration' ? 'routine' : 'migration';
+
+        DB::beginTransaction();
+        try {
+            $session->count_purpose = $new_purpose;
+            $session->save();
+
+            if (! empty($session->shortage_transaction_id)) {
+                Transaction::where('business_id', $business_id)
+                    ->where('id', $session->shortage_transaction_id)
+                    ->where('type', 'stock_adjustment')
+                    ->update([
+                        'adjustment_type' => $new_purpose === 'migration' ? 'recount_migration' : 'recount_shortage',
+                    ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => 1,
+                'msg' => __('inventory_count.purpose_updated', [
+                    'purpose' => $new_purpose === 'migration'
+                        ? __('inventory_count.count_purpose_migration')
+                        : __('inventory_count.count_purpose_routine'),
+                ]),
+                'count_purpose' => $new_purpose,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('InventoryCount@toggleCountPurpose '.$e->getMessage().' at '.$e->getFile().':'.$e->getLine());
+
+            return response()->json(['success' => 0, 'msg' => trans('messages.something_went_wrong')], 500);
         }
     }
 
@@ -1843,7 +1941,7 @@ class InventoryCountController extends Controller
      * in stock_adjustment_lines.lot_no_line_id so mapPurchaseSell decrements
      * that specific batch — matching how the Stock Adjustment form behaves.
      */
-    protected function createShortageTransaction($business_id, $user_id, $location_id, array $lines, $notes, array $business)
+    protected function createShortageTransaction($business_id, $user_id, $location_id, array $lines, $notes, array $business, $count_purpose = 'routine')
     {
         $ref_count = $this->productUtil->setAndGetReferenceCount('stock_adjustment');
         $ref_no = $this->productUtil->generateReferenceNumber('stock_adjustment', $ref_count);
@@ -1879,7 +1977,9 @@ class InventoryCountController extends Controller
             'location_id' => $location_id,
             'type' => 'stock_adjustment',
             'status' => 'received',
-            'adjustment_type' => 'recount_shortage',
+            // 'recount_migration' is excluded from the P&L Net Profit subtraction
+            // (opening-balance correction); 'recount_shortage' counts as real shrinkage.
+            'adjustment_type' => $count_purpose === 'migration' ? 'recount_migration' : 'recount_shortage',
             'ref_no' => $ref_no,
             'transaction_date' => Carbon::now(),
             'total_amount_recovered' => 0,
@@ -3129,6 +3229,95 @@ class InventoryCountController extends Controller
             'unit_id' => $unit->id,
             'unit_short_name' => $unit->short_name,
         ]);
+    }
+
+    /**
+     * AJAX: edit a product's name and SKU directly from a draft count session
+     * (migration cleanup convenience — same spirit as updateProductUnit above).
+     * Updates the product master: products.name, and the line's variation
+     * sub_sku (plus products.sku kept in sync for single products).
+     */
+    public function updateProductInfo(Request $request, $id)
+    {
+        if (! auth()->user()->can('inventory_count.create') || ! auth()->user()->can('product.update')) {
+            return response()->json(['success' => 0, 'msg' => 'Forbidden'], 403);
+        }
+
+        $request->validate([
+            'product_id' => 'required|integer',
+            'variation_id' => 'required|integer',
+            'name' => 'required|string|max:191',
+            'sku' => 'nullable|string|max:191',
+        ]);
+
+        $business_id = $request->session()->get('user.business_id');
+        $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
+        if ($session->status !== 'draft') {
+            return response()->json([
+                'success' => 0,
+                'msg' => __('inventory_count.session_not_editable'),
+            ], 422);
+        }
+
+        $product = \App\Product::where('business_id', $business_id)
+            ->where('id', (int) $request->input('product_id'))
+            ->first();
+        if (! $product) {
+            return response()->json(['success' => 0, 'msg' => 'Product not found'], 404);
+        }
+
+        $variation = \App\Variation::where('product_id', $product->id)
+            ->where('id', (int) $request->input('variation_id'))
+            ->first();
+        if (! $variation) {
+            return response()->json(['success' => 0, 'msg' => 'Variation not found'], 404);
+        }
+
+        $new_sku = trim((string) $request->input('sku'));
+
+        if ($new_sku !== '' && $new_sku !== $variation->sub_sku) {
+            $sku_taken = \App\Variation::join('products as p', 'p.id', '=', 'variations.product_id')
+                ->where('p.business_id', $business_id)
+                ->where('variations.sub_sku', $new_sku)
+                ->where('variations.id', '!=', $variation->id)
+                ->exists();
+            if ($sku_taken) {
+                return response()->json([
+                    'success' => 0,
+                    'msg' => __('inventory_count.sku_already_exists', ['sku' => $new_sku]),
+                ], 422);
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            $product->name = trim($request->input('name'));
+
+            if ($new_sku !== '') {
+                $variation->sub_sku = $new_sku;
+                $variation->save();
+                // For single products the parent SKU mirrors the variation SKU.
+                if ($product->type === 'single') {
+                    $product->sku = $new_sku;
+                }
+            }
+            $product->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => 1,
+                'msg' => __('inventory_count.product_info_updated'),
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'sku' => $variation->sub_sku,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('InventoryCount@updateProductInfo '.$e->getMessage().' at '.$e->getFile().':'.$e->getLine());
+
+            return response()->json(['success' => 0, 'msg' => trans('messages.something_went_wrong')], 500);
+        }
     }
 
     /**

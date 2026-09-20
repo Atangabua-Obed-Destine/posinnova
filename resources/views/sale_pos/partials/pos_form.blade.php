@@ -7,6 +7,8 @@
 				</span>
 				<input type="hidden" id="default_customer_id" 
 				value="{{ $walk_in_customer['id'] ?? ''}}" >
+				<input type="hidden" id="walk_in_customer_contact_id" 
+				value="{{ $walk_in_customer['id'] ?? ''}}" >
 				<input type="hidden" id="default_customer_name" 
 				value="{{ $walk_in_customer['name'] ?? ''}}" >
 				<input type="hidden" id="default_customer_balance" 
@@ -46,6 +48,7 @@
 				</div>
                 {{-- Removed mousetrap class as it was causing issue with barcode scanning --}}
 				<input type="hidden" id="pos_disable_auto_add" value="{{ !empty($pos_settings['disable_auto_add_product']) ? 1 : 0 }}">
+				<input type="hidden" id="is_custom_customer_name_required" value="{{ !empty($pos_settings['is_custom_customer_name_required']) ? 1 : 0 }}">
 				{!! Form::text('search_product', null, ['class' => 'form-control', 'id' => 'search_product', 'placeholder' => __('lang_v1.search_product_placeholder'),
 				'disabled' => is_null($default_location)? true : false,
 				'autofocus' => is_null($default_location)? false : true,

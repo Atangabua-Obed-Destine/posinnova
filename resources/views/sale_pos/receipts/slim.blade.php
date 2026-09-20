@@ -234,7 +234,7 @@
 	        <div class="flex-box" style="font-size: 10px; padding-top: 2px;">
 	        	<p class="width-50" style="text-align: left;">
 	        		<strong>{{$receipt_details->customer_label ?? ''}}</strong>
-	        		{{$receipt_details->customer_name ?? ''}}
+	        		<strong>{{$receipt_details->customer_name ?? ''}}</strong>
 	        	</p>
 	        	@if(!empty($receipt_details->customer_mobile))
 	        	<p class="width-50" style="text-align: right;">
@@ -357,8 +357,7 @@
             <table style="margin-top: 25px !important" class="border-bottom width-100 table-f-12 mb-10 slim-products-compact">
                 <thead class="border-bottom-dotted">
                     <tr>
-                        <th class="serial_number">#</th>
-                        <th class="description" width="30%">
+                        <th class="description">
                         	{{$receipt_details->table_product_label}}
                         </th>
                         <th class="quantity text-right">
@@ -383,9 +382,6 @@
                 <tbody>
                 	@forelse($receipt_details->lines as $line)
 	                    <tr>
-	                        <td class="serial_number" style="vertical-align: top;">
-	                        	{{$loop->iteration}}
-	                        </td>
 	                        <td class="description">
 	                        	{{$line['name']}} {{$line['product_variation']}} {{$line['variation']}} 
 	                        	@if(!empty($line['sub_sku'])), {{$line['sub_sku']}} @endif @if(!empty($line['brand'])), {{$line['brand']}} @endif @if(!empty($line['cat_code'])), {{$line['cat_code']}}@endif
@@ -752,33 +748,28 @@ body {
 	border-bottom: 1px dotted darkgray;
 }
 
-td.serial_number, th.serial_number{
-	width: 5%;
-    max-width: 5%;
-}
-
 td.description,
 th.description {
-    width: 35%;
-    max-width: 35%;
+    width: 40%;
+    max-width: 40%;
 }
 
 td.quantity,
 th.quantity {
-    width: 15%;
-    max-width: 15%;
+    width: 18%;
+    max-width: 18%;
     word-break: break-all;
 }
 td.unit_price, th.unit_price{
-	width: 25%;
-    max-width: 25%;
+	width: 20%;
+    max-width: 20%;
     word-break: break-all;
 }
 
 td.price,
 th.price {
-    width: 20%;
-    max-width: 20%;
+    width: 22%;
+    max-width: 22%;
     word-break: break-all;
 }
 
@@ -861,10 +852,23 @@ img {
 /* PosInnova: compact product table on slim receipt so more items fit on 80mm paper */
 .slim-products-compact th,
 .slim-products-compact td {
-	font-size: 9px !important;
+	font-size: 11px !important;
 	line-height: 1.15 !important;
 	padding: 1px 2px !important;
 	word-break: break-word;
+}
+/* PosInnova: bold + wider Product column on slim receipt */
+.slim-products-compact th.description,
+.slim-products-compact td.description,
+.slim-products-compact th.quantity,
+.slim-products-compact td.quantity,
+.slim-products-compact th.unit_price,
+.slim-products-compact td.unit_price,
+.slim-products-compact th.price,
+.slim-products-compact td.price {
+	font-weight: bold !important;
+	word-break: normal;
+	overflow-wrap: break-word;
 }
 .slim-products-compact .f-8 {
 	font-size: 8px !important;
@@ -878,7 +882,7 @@ img {
 	.slim-products-compact td,
 	.slim-products-compact th *,
 	.slim-products-compact td * {
-		font-size: 9px !important;
+		font-size: 11px !important;
 		line-height: 1.15 !important;
 	}
 	.slim-products-compact th,

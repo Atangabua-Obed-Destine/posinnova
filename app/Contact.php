@@ -36,9 +36,25 @@ class Contact extends Authenticatable
         return $this->belongsTo(\App\Business::class);
     }
 
+    /**
+     * Clinical extension for contacts flagged as patients (hospital module).
+     */
+    public function patientDetails()
+    {
+        return $this->hasOne(\App\PatientDetail::class, 'contact_id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('contacts.contact_status', 'active');
+    }
+
+    /**
+     * Filters only contacts flagged as patients (hospital module).
+     */
+    public function scopeOnlyPatients($query)
+    {
+        return $query->where('contacts.is_patient', 1);
     }
 
     /**

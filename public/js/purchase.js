@@ -307,6 +307,7 @@ $(document).ready(function() {
             __currency_trans_from_en(sub_total_after_tax, false, true)
         );
         __write_number(row.find('input.row_subtotal_after_tax_hidden'), sub_total_after_tax, true);
+        if(!row.find('.row_subtotal_after_tax_input').is(':focus')) { __write_number(row.find('.row_subtotal_after_tax_input'), sub_total_after_tax, true); }
 
         update_table_total();
         update_grand_total();
@@ -324,7 +325,7 @@ $(document).ready(function() {
             parseFloat(purchase_before_discount) -
             __calculate_amount('percentage', discount_percent, purchase_before_discount);
 
-        __write_number(row.find('input.purchase_unit_cost'), purchase_before_tax, true);
+        __write_number(row.find('input.purchase_unit_cost'), purchase_before_tax, true, 6);
 
         var sub_total_before_tax = quantity * purchase_before_tax;
 
@@ -349,11 +350,12 @@ $(document).ready(function() {
             true
         );
 
-        __write_number(row.find('input.purchase_unit_cost_after_tax'), purchase_after_tax, true);
+        __write_number(row.find('input.purchase_unit_cost_after_tax'), purchase_after_tax, true, 6);
         row.find('.row_subtotal_after_tax').text(
             __currency_trans_from_en(sub_total_after_tax, false, true)
         );
         __write_number(row.find('input.row_subtotal_after_tax_hidden'), sub_total_after_tax, true);
+        if(!row.find('.row_subtotal_after_tax_input').is(':focus')) { __write_number(row.find('.row_subtotal_after_tax_input'), sub_total_after_tax, true); }
 
         row.find('.purchase_product_unit_tax_text').text(
             __currency_trans_from_en(tax, false, true)
@@ -381,7 +383,7 @@ $(document).ready(function() {
             parseFloat(purchase_before_discount) -
             __calculate_amount('percentage', discount_percent, purchase_before_discount);
 
-        __write_number(row.find('input.purchase_unit_cost'), purchase_before_tax, true);
+        __write_number(row.find('input.purchase_unit_cost'), purchase_before_tax, true, 6);
 
         var sub_total_before_tax = quantity * purchase_before_tax;
 
@@ -406,11 +408,12 @@ $(document).ready(function() {
             true
         );
 
-        __write_number(row.find('input.purchase_unit_cost_after_tax'), purchase_after_tax, true);
+        __write_number(row.find('input.purchase_unit_cost_after_tax'), purchase_after_tax, true, 6);
         row.find('.row_subtotal_after_tax').text(
             __currency_trans_from_en(sub_total_after_tax, false, true)
         );
         __write_number(row.find('input.row_subtotal_after_tax_hidden'), sub_total_after_tax, true);
+        if(!row.find('.row_subtotal_after_tax_input').is(':focus')) { __write_number(row.find('.row_subtotal_after_tax_input'), sub_total_after_tax, true); }
         row.find('.purchase_product_unit_tax_text').text(
             __currency_trans_from_en(tax, false, true)
         );
@@ -464,11 +467,12 @@ $(document).ready(function() {
         __write_number(row.find('input.purchase_product_unit_tax'), tax, true);
 
         //row.find('.purchase_product_unit_tax_text').text( tax );
-        __write_number(row.find('input.purchase_unit_cost_after_tax'), purchase_after_tax, true);
+        __write_number(row.find('input.purchase_unit_cost_after_tax'), purchase_after_tax, true, 6);
         row.find('.row_subtotal_after_tax').text(
             __currency_trans_from_en(sub_total_after_tax, false, true)
         );
         __write_number(row.find('input.row_subtotal_after_tax_hidden'), sub_total_after_tax, true);
+        if(!row.find('.row_subtotal_after_tax_input').is(':focus')) { __write_number(row.find('.row_subtotal_after_tax_input'), sub_total_after_tax, true); }
 
         update_inline_profit_percentage(row);
         update_table_total();
@@ -497,15 +501,53 @@ $(document).ready(function() {
         );
         __write_number(row.find('input.purchase_product_unit_tax'), tax, true);
 
-        __write_number(row.find('input.purchase_unit_cost_after_tax'), purchase_after_tax, true);
+        __write_number(row.find('input.purchase_unit_cost_after_tax'), purchase_after_tax, true, 6);
 
         row.find('.row_subtotal_after_tax').text(
             __currency_trans_from_en(sub_total_after_tax, false, true)
         );
         __write_number(row.find('input.row_subtotal_after_tax_hidden'), sub_total_after_tax, true);
+        if(!row.find('.row_subtotal_after_tax_input').is(':focus')) { __write_number(row.find('.row_subtotal_after_tax_input'), sub_total_after_tax, true); }
 
         update_table_total();
         update_grand_total();
+    });
+
+    $(document).on('keyup change', '.row_subtotal_after_tax_input', function() {
+        var row = $(this).closest('tr');
+        var new_subtotal = __read_number($(this), true);
+        var quantity = __read_number(row.find('input.purchase_quantity'), true);
+
+        if (quantity != 0) {
+            var new_unit_cost_after_tax = new_subtotal / quantity;
+            var tax_rate = parseFloat(
+                row
+                    .find('select.purchase_line_tax_id')
+                    .find(':selected')
+                    .data('tax_amount')
+            );
+            if (isNaN(tax_rate)) {
+                tax_rate = 0;
+            }
+            var new_unit_cost_before_tax = new_unit_cost_after_tax / (1 + (tax_rate / 100));
+
+            // Set the new purchase unit cost (before tax) with 6 decimals to prevent rounding errors
+            __write_number(row.find('.purchase_unit_cost'), new_unit_cost_before_tax, true, 6);
+
+            // Back-calculate the pp_without_discount based on inline discount
+            var discount_percent = __read_number(row.find('.inline_discounts'), true);
+            var new_pp_without_discount = new_unit_cost_before_tax;
+            if (discount_percent > 0 && discount_percent < 100) {
+                new_pp_without_discount = new_unit_cost_before_tax / (1 - (discount_percent / 100));
+            } else if (discount_percent >= 100) {
+                new_pp_without_discount = 0;
+            }
+            
+            __write_number(row.find('.purchase_unit_cost_without_discount'), new_pp_without_discount, true, 6);
+            
+            // Trigger the normal calculation cascade
+            row.find('.purchase_unit_cost_without_discount').change();
+        }
     });
 
     $(document).on('change', '.purchase_unit_cost_after_tax', function() {
@@ -539,8 +581,9 @@ $(document).ready(function() {
             __currency_trans_from_en(sub_total_after_tax, false, true)
         );
         __write_number(row.find('input.row_subtotal_after_tax_hidden'), sub_total_after_tax, true);
+        if(!row.find('.row_subtotal_after_tax_input').is(':focus')) { __write_number(row.find('.row_subtotal_after_tax_input'), sub_total_after_tax, true); }
 
-        __write_number(row.find('.purchase_unit_cost'), purchase_before_tax, true);
+        __write_number(row.find('.purchase_unit_cost'), purchase_before_tax, true, 6);
 
         row.find('.row_subtotal_before_tax').text(
             __currency_trans_from_en(sub_total_before_tax, false, true)
@@ -968,6 +1011,7 @@ function update_purchase_entry_row_values(row) {
             __currency_trans_from_en(row_subtotal_after_tax, false, true)
         );
         __write_number(row.find('.row_subtotal_after_tax_hidden'), row_subtotal_after_tax, true);
+        __write_number(row.find('.row_subtotal_after_tax_input'), row_subtotal_after_tax, true);
 
         row.find('.expiry_datepicker').each(function() {
             $(this).datepicker({
@@ -991,11 +1035,12 @@ function update_row_price_for_exchange_rate(row) {
     __write_number(
         row.find('.purchase_unit_cost_without_discount'),
         purchase_unit_cost_without_discount,
-        true
+        true,
+        6
     );
 
     var purchase_unit_cost = __read_number(row.find('.purchase_unit_cost'), true) / exchange_rate;
-    __write_number(row.find('.purchase_unit_cost'), purchase_unit_cost, true);
+    __write_number(row.find('.purchase_unit_cost'), purchase_unit_cost, true, 6);
 
     var row_subtotal_before_tax_hidden =
         __read_number(row.find('.row_subtotal_before_tax_hidden'), true) / exchange_rate;
@@ -1030,6 +1075,9 @@ function update_row_price_for_exchange_rate(row) {
         row_subtotal_after_tax_hidden,
         true
     );
+    if(!row.find('.row_subtotal_after_tax_input').is(':focus')) { 
+        __write_number(row.find('.row_subtotal_after_tax_input'), row_subtotal_after_tax_hidden, true); 
+    }
     row.find('.row_subtotal_after_tax').text(
         __currency_trans_from_en(row_subtotal_after_tax_hidden, false, true)
     );
@@ -1517,3 +1565,20 @@ function update_purchase_per_base_hint(tr) {
     var per_base = multiplier > 0 ? unit_cost / multiplier : unit_cost;
     tr.find('.unit_price_per_base').text(__number_f(per_base, true));
 }
+
+// Update Per-Unit Prices toggle button color dynamically
+$(document).on('change', '.per_unit_prices_wrapper input', function() {
+    var wrapper = $(this).closest('.per_unit_prices_wrapper');
+    var has_val = false;
+    wrapper.find('input').each(function() {
+        if ($(this).val() !== '') has_val = true;
+    });
+    var btn = wrapper.find('.toggle_per_unit_prices');
+    if (has_val) {
+        btn.removeClass('btn-info').addClass('btn-success');
+        btn.find('.configured_badge').html('<i class="fa fa-check-circle" title="Prices Configured"></i>');
+    } else {
+        btn.removeClass('btn-success').addClass('btn-info');
+        btn.find('.configured_badge').html('');
+    }
+});

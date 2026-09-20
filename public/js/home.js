@@ -1,7 +1,14 @@
 $(document).ready(function() {
     if ($('#dashboard_date_filter').length == 1) {
-        dateRangeSettings.startDate = moment();
-        dateRangeSettings.endDate = moment();
+        // When shifts are enabled the picker defaults to the current shift-day,
+        // so the shift cards open on the active shift (incl. a night begun the
+        // previous evening). Otherwise it defaults to today.
+        var dashShiftStart = $('#dashboard_date_filter').data('shift-start');
+        var dashShiftEnd = $('#dashboard_date_filter').data('shift-end');
+        var dashDefStart = dashShiftStart ? moment(dashShiftStart, 'YYYY-MM-DD') : moment();
+        var dashDefEnd = dashShiftEnd ? moment(dashShiftEnd, 'YYYY-MM-DD') : moment();
+        dateRangeSettings.startDate = dashDefStart;
+        dateRangeSettings.endDate = dashDefEnd;
         $('#dashboard_date_filter').daterangepicker(dateRangeSettings, function(start, end) {
             $('#dashboard_date_filter span').html(
                 start.format(moment_date_format) + ' ~ ' + end.format(moment_date_format)
@@ -12,10 +19,10 @@ $(document).ready(function() {
             }
         });
 
-        update_statistics(moment().format('YYYY-MM-DD'), moment().format('YYYY-MM-DD'));
+        update_statistics(dashDefStart.format('YYYY-MM-DD'), dashDefEnd.format('YYYY-MM-DD'));
     }
 
-    $('#dashboard_location').change( function(e) {
+    $('#dashboard_location, #dashboard_shift_filter').change( function(e) {
         var start = $('#dashboard_date_filter')
                     .data('daterangepicker')
                     .startDate.format('YYYY-MM-DD');
@@ -174,7 +181,29 @@ function update_statistics(start, end) {
     if ($('#dashboard_location').length > 0) {
         location_id = $('#dashboard_location').val();
     }
-    var data = { start: start, end: end, location_id: location_id };
+    // PosInnova hospital shifts: scope the sell cards to the selected shift.
+    // 'all' (or no selector) means no shift filter — plain date-range totals.
+    var shift = '';
+    if ($('#dashboard_shift_filter').length > 0) {
+        shift = $('#dashboard_shift_filter').val();
+        // 'none' (or legacy 'all') means: don't filter by shift.
+        if (shift === 'none' || shift === 'all') {
+            shift = '';
+        }
+    }
+    var $note = $('#dashboard_shift_scope_note');
+    if ($note.length > 0) {
+        if (shift) {
+            var shift_label = $('#dashboard_shift_filter option:selected').text();
+            $('#dashboard_shift_scope_text').text(
+                ($note.data('note-template') || '').replace('__SHIFT__', shift_label)
+            );
+            $note.show();
+        } else {
+            $note.hide();
+        }
+    }
+    var data = { start: start, end: end, location_id: location_id, shift: shift };
     //get purchase details
     var loader = '<i class="fas fa-sync fa-spin fa-fw margin-bottom"></i>';
     $('.total_purchase').html(loader);

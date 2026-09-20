@@ -924,6 +924,10 @@ $(document).ready(function() {
             }
         }
 
+        if (!isValidPosForm()) {
+            return false;
+        }
+
         $('#modal_payment').modal('show');
     });
 
@@ -954,6 +958,10 @@ $(document).ready(function() {
                 toastr.error(validate_rp['msg']);
                 return false;
             }
+        }
+
+        if (!isValidPosForm()) {
+            return false;
         }
 
         var pay_method = $(this).data('pay_method');
@@ -1092,6 +1100,10 @@ $(document).ready(function() {
         submitHandler: function(form) {
             // Guard: block re-entry from rapid clicks / shortcut spamming / queued submits
             if (window.is_pos_submitting === true) {
+                return false;
+            }
+
+            if (!isValidPosForm()) {
                 return false;
             }
 
@@ -2731,6 +2743,16 @@ function isValidPosForm() {
         $(error).insertAfter($('select#customer_id').parent('div'));
     }
 
+    if ($('#is_custom_customer_name_required').val() == 1) {
+        if ($('select#customer_id').val() == getWalkInCustomerId()) {
+            if ($.trim($('#walk_in_customer_name').val()) == '') {
+                flag = false;
+                error = '<span class="error">' + LANG.required + '</span>';
+                $(error).insertAfter($('#walk_in_customer_name').parent('div'));
+            }
+        }
+    }
+
     if ($('tr.product_row').length == 0) {
         flag = false;
         error = '<span class="error">' + LANG.no_products + '</span>';
@@ -3142,11 +3164,28 @@ function updateRedeemedAmount(argument) {
     $('#rp_redeemed_amount').val(redeemed_amount);
 }
 
+//Returns the business default (walk-in) customer id.
+//On edit screens #default_customer_id holds the transaction's own contact,
+//so #walk_in_customer_contact_id is used when present.
+function getWalkInCustomerId() {
+    if ($('#walk_in_customer_contact_id').length && $('#walk_in_customer_contact_id').val() != '') {
+        return $('#walk_in_customer_contact_id').val();
+    }
+    return $('#default_customer_id').val();
+}
+
 $(document).on('change', 'select#customer_id', function(){
     var default_customer_id = $('#default_customer_id').val();
-    if ($(this).val() == default_customer_id) {
-        //Show walk-in custom name field for the default walk-in customer
+
+    //Show walk-in custom name field only for the default walk-in customer
+    if ($(this).val() == getWalkInCustomerId()) {
         $('.walk_in_customer_name_wrap').show();
+    } else {
+        $('.walk_in_customer_name_wrap').hide();
+        $('#walk_in_customer_name').val('');
+    }
+
+    if ($(this).val() == default_customer_id) {
         //Disable reward points for walkin customers
         if ($('#rp_redeemed_modal').length) {
             $('#rp_redeemed_modal').val('');
@@ -3157,9 +3196,6 @@ $(document).on('change', 'select#customer_id', function(){
             pos_total_row();
         }
     } else {
-        //Hide and clear walk-in custom name field for real customers
-        $('.walk_in_customer_name_wrap').hide();
-        $('#walk_in_customer_name').val('');
         if ($('#rp_redeemed_modal').length) {
             $('#rp_redeemed_modal').removeAttr('disabled');
         }
@@ -3357,6 +3393,12 @@ $(document).on('shown.bs.tab', 'a[href="#tab_quotation"]', function () {
 });
 $(document).on('shown.bs.tab', 'a[href="#tab_draft"]', function () {
     get_recent_transactions('draft', $('div#tab_draft'));
+});
+
+//Pending drafts header indicator: open recent transactions modal on the Draft tab
+$(document).on('click', '#pos_draft_indicator', function () {
+    $('#recent_transactions_modal').modal('show');
+    $('#recent_transactions_modal a[href="#tab_draft"]').tab('show');
 });
 
 function disable_pos_form_actions(){

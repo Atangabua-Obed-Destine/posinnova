@@ -452,9 +452,7 @@ class AccountController extends Controller
                                     }
                                 }
                                 if (auth()->user()->can('edit_account_transaction')) {
-                                    if ($row->sub_type == 'fund_transfer' || $row->sub_type == 'deposit' || $row->sub_type == 'opening_balance') {
-                                        $action .= ' <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-primary btn-modal" data-container="#edit_account_transaction" data-href="'.action([\App\Http\Controllers\AccountController::class, 'editAccountTransaction'], [$row->id]).'"><i class="fa fa-edit"></i> '.__('messages.edit').'</button>';
-                                    }
+                                    $action .= ' <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-primary btn-modal" data-container="#edit_account_transaction" data-href="'.action([\App\Http\Controllers\AccountController::class, 'editAccountTransaction'], [$row->id]).'"><i class="fa fa-edit"></i> '.__('messages.edit').'</button>';
                                 }
 
                                 if (! empty($row->media->first()) || (! empty($row->transfer_transaction && ! empty($row->transfer_transaction->media->first())))) {
@@ -1273,6 +1271,14 @@ class AccountController extends Controller
             }            
 
             $account_transaction->save();
+
+            if (!empty($account_transaction->transaction_payment_id)) {
+                $payment = \App\TransactionPayment::find($account_transaction->transaction_payment_id);
+                if ($payment) {
+                    $payment->paid_on = $account_transaction->operation_date;
+                    $payment->save();
+                }
+            }
 
             if (! empty($account_transaction->transfer_transaction)) {
                 $transfer_transaction = $account_transaction->transfer_transaction;

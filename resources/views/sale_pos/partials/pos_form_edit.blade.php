@@ -10,6 +10,8 @@
 				</span>
 				<input type="hidden" id="default_customer_id" 
 				value="{{ $transaction->contact->id }}" >
+				<input type="hidden" id="walk_in_customer_contact_id" 
+				value="{{ $walk_in_customer['id'] ?? ''}}" >
 				<input type="hidden" id="default_customer_name" 
 				value="{{ $transaction->contact->name }}" >
 				<input type="hidden" id="default_customer_balance" 
@@ -25,6 +27,15 @@
 			</div>
 			<small class="text-danger @if(empty($customer_due)) hide @endif contact_due_text"><strong>@lang('account.customer_due'):</strong> <span>{{$customer_due ?? ''}}</span></small>
 		</div>
+		<div class="form-group walk_in_customer_name_wrap" @if(empty($transaction->contact->is_default)) style="display:none;" @endif>
+			<div class="input-group">
+				<span class="input-group-addon" title="@lang('lang_v1.walk_in_customer_name_help')">
+					<i class="fa fa-id-badge"></i>
+				</span>
+				{!! Form::text('walk_in_customer_name', $transaction->walk_in_customer_name, ['class' => 'form-control', 'id' => 'walk_in_customer_name', 'placeholder' => __('lang_v1.walk_in_customer_name_placeholder'), 'maxlength' => 191, 'autocomplete' => 'off']) !!}
+			</div>
+			<small class="text-muted">@lang('lang_v1.walk_in_customer_name_help')</small>
+		</div>
 	</div>
 	<div class="col-md-8">
 		<div class="form-group">
@@ -34,6 +45,7 @@
 				</div>
                 {{-- Removed mousetrap class as it was causing issue with barcode scanning --}}
 				<input type="hidden" id="pos_disable_auto_add" value="{{ !empty($pos_settings['disable_auto_add_product']) ? 1 : 0 }}">
+				<input type="hidden" id="is_custom_customer_name_required" value="{{ !empty($pos_settings['is_custom_customer_name_required']) ? 1 : 0 }}">
 				{!! Form::text('search_product', null, ['class' => 'form-control', 'id' => 'search_product', 'placeholder' => __('lang_v1.search_product_placeholder'),
 				'autofocus' => true,
 				]); !!}

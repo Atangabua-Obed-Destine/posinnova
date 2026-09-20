@@ -33,4 +33,8 @@
      'print_detailed' => 'Imprimer en Détail',
     'print_mini' => 'Imprimer Mini',
     'opening' => 'Ouverture',
- ];
+ 
+    // Report export strings (auto-added)
+    'by' => 'Par',
+    'status' => 'Statut',
+];

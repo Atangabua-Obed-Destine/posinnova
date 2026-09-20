@@ -98,4 +98,7 @@
      'is_active' => 'Actif',
      'created_by' => 'Créé par',
      'additional_number_secondary' => 'Numéro supplémentaire/Numéro secondaire',
- ];
+ 
+    // Report export strings (auto-added)
+    'location_name' => 'Nom de l\'emplacement',
+];

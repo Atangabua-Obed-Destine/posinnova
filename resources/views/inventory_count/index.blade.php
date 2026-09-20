@@ -257,6 +257,7 @@
                                 <th class="text-right" title="@lang('inventory_count.col_surplus_help')">
                                     @lang('inventory_count.surpluses') <small class="text-muted">(@lang('inventory_count.units_value'))</small>
                                 </th>
+                                <th title="@lang('inventory_count.count_purpose_col_help')">@lang('inventory_count.profit_impact')</th>
                                 <th class="text-right">@lang('messages.action')</th>
                             </tr>
                         </thead>
@@ -293,6 +294,22 @@
                                             @else
                                                 <span class="text-muted">—</span>
                                             @endif
+                                        @else — @endif
+                                    </td>
+                                    <td>
+                                        @if($r->status === 'posted')
+                                            @if(($r->count_purpose ?? 'routine') === 'migration')
+                                                <span class="label label-info">@lang('inventory_count.count_purpose_migration')</span>
+                                            @else
+                                                <span class="label label-warning">@lang('inventory_count.count_purpose_routine')</span>
+                                            @endif
+                                            @can('inventory_count.approve')
+                                                <button type="button" class="btn btn-xs btn-default ic-toggle-purpose"
+                                                    data-id="{{ $r->id }}"
+                                                    title="@lang('inventory_count.toggle_purpose_help')">
+                                                    <i class="fa fa-exchange"></i>
+                                                </button>
+                                            @endcan
                                         @else — @endif
                                     </td>
                                     <td class="text-right">
@@ -349,6 +366,29 @@ $(function () {
                 }
             },
             error: function () { toastr.error('Network error'); }
+        });
+    });
+
+    // Flip a posted count between routine (affects profit) and migration
+    // (excluded from profit); restamps the linked shortage adjustment.
+    $(document).on('click', '.ic-toggle-purpose', function () {
+        if (!confirm('{{ __('inventory_count.toggle_purpose_confirm') }}')) return;
+        var $btn = $(this).prop('disabled', true);
+        $.ajax({
+            url: '{{ url('inventory-count') }}/' + $btn.data('id') + '/toggle-purpose',
+            type: 'POST',
+            data: { _token: '{{ csrf_token() }}' },
+            dataType: 'json',
+            success: function (resp) {
+                if (resp.success) {
+                    toastr.success(resp.msg);
+                    location.reload();
+                } else {
+                    toastr.error(resp.msg || 'Error');
+                    $btn.prop('disabled', false);
+                }
+            },
+            error: function () { toastr.error('Network error'); $btn.prop('disabled', false); }
         });
     });
 });

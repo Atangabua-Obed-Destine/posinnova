@@ -2,7 +2,7 @@
 
  return [
      'home' => 'Accueil',
-     'welcome_message' => 'Bienvenue :name,',
+     'welcome_message' => 'Bienvenue chez :business, :name 👋',
      'total_sell' => 'Total des ventes',
      'total_purchase' => 'Total des achats',
      'invoice_due' => 'Factures impayées',

@@ -96,6 +96,31 @@
     <div class="clearfix"></div>
     <div class="col-sm-6">
       <div class="form-group">
+        {!! Form::label('barcode_width_percent', 'Barcode Image Width (%)' . ' :*') !!}
+        <div class="input-group">
+          <span class="input-group-addon">
+            <i class="fa fa-text-width" aria-hidden="true"></i>
+          </span>
+          {!! Form::number('barcode_width_percent', 90, ['class' => 'form-control',
+          'placeholder' => 'Barcode Image Width (%)', 'min' => 1, 'max' => 100, 'step' => 0.00001, 'required']); !!}
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6">
+      <div class="form-group">
+        {!! Form::label('barcode_height_percent', 'Barcode Image Height (%)' . ' :*') !!}
+        <div class="input-group">
+          <span class="input-group-addon">
+            <i class="fa fa-text-height" aria-hidden="true"></i>
+          </span>
+          {!! Form::number('barcode_height_percent', 24, ['class' => 'form-control',
+          'placeholder' => 'Barcode Image Height (%)', 'min' => 1, 'max' => 100, 'step' => 0.00001, 'required']); !!}
+        </div>
+      </div>
+    </div>
+    <div class="clearfix"></div>
+    <div class="col-sm-6">
+      <div class="form-group">
         {!! Form::label('paper_width', __('barcode.paper_width') . ' ('. __('barcode.in_in') . '):*') !!}
         <div class="input-group">
           <span class="input-group-addon">
@@ -178,6 +203,7 @@
       </div>
     </div>
     <div class="col-sm-12 text-center">
+      <button type="button" class="tw-dw-btn tw-dw-btn-accent tw-dw-btn-lg tw-text-white" id="preview_barcode_btn">@lang('labels.preview')</button>
       <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-dw-btn-lg tw-text-white">@lang('messages.save')</button>
     </div>
   </div>
@@ -185,4 +211,37 @@
   {!! Form::close() !!}
 </section>
 <!-- /.content -->
+@endsection
+
+@section('javascript')
+<script type="text/javascript">
+$(document).on('click', '#preview_barcode_btn', function(e) {
+    e.preventDefault();
+    let url = '{{ action([\App\Http\Controllers\BarcodeController::class, "preview"]) }}';
+    let form = $('form#add_barcode_settings_form');
+    let old_action = form.attr('action');
+    let old_target = form.attr('target');
+    let method_input = form.find('input[name="_method"]');
+    
+    if (method_input.length) {
+        method_input.prop('disabled', true);
+    }
+
+    form.attr('action', url);
+    form.attr('target', '_blank');
+    form.submit();
+    
+    setTimeout(() => {
+        form.attr('action', old_action);
+        if (old_target) {
+            form.attr('target', old_target);
+        } else {
+            form.removeAttr('target');
+        }
+        if (method_input.length) {
+            method_input.prop('disabled', false);
+        }
+    }, 100);
+});
+</script>
 @endsection

@@ -53,6 +53,32 @@
     }
     .pos-header .pi-datetime-pill .fa { color: #fff; opacity: .85; }
     .pos-header .pi-location-label { font-weight: 700; color: #111827; margin: 0; }
+    .pos-header .pi-cashier-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 10px; border-radius: 8px; background: #00935F; color: #fff;
+        font-weight: 600; font-size: 12px; line-height: 1; white-space: nowrap;
+    }
+    .pos-header .pi-cashier-pill .fa { color: #fff; opacity: .9; }
+    /* PosInnova: pending drafts indicator — pulses to catch the cashier's eye */
+    .pos-header .pi-draft-indicator {
+        display: inline-flex; align-items: center; gap: 6px;
+        height: 40px; padding: 0 14px; border-radius: 8px;
+        background: #F59E0B; border: 1px solid #D97706; color: #fff;
+        font-weight: 700; font-size: 12px; line-height: 1; cursor: pointer;
+        white-space: nowrap;
+        animation: pi-draft-blink 1.4s ease-in-out infinite;
+    }
+    .pos-header .pi-draft-indicator:hover { animation-play-state: paused; background: #D97706; }
+    .pos-header .pi-draft-indicator .pi-draft-count {
+        background: #fff; color: #D97706; border-radius: 999px;
+        min-width: 20px; height: 20px; display: inline-flex;
+        align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 800; padding: 0 6px;
+    }
+    @keyframes pi-draft-blink {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, .55); opacity: 1; }
+        50%      { box-shadow: 0 0 0 7px rgba(245, 158, 11, 0);  opacity: .75; }
+    }
 </style>
 <div class="col-md-12 no-print pos-header">
     <input type="hidden" id="pos_redirect_url" value="{{ $pos_redirect_url }}">
@@ -85,6 +111,52 @@
                     data-toggle="popover" data-placement="bottom" data-content="@include('sale_pos.partials.keyboard_shortcuts_details')"
                     data-html="true" data-trigger="hover" title=""></i>
             </div>
+
+            {{-- PosInnova: who is at the till — current cashier's name --}}
+            <div class="pi-cashier-pill" title="@lang('lang_v1.signed_in_as')">
+                <i class="fa fa-user-circle"></i>
+                <span>{{ trim(preg_replace('/\s+/', ' ', auth()->user()->user_full_name)) }}</span>
+            </div>
+
+            {{-- PosInnova: pending drafts indicator — opens Recent Transactions on the Draft tab --}}
+            @if (!empty($pos_draft_count) && (!isset($pos_settings['hide_recent_trans']) || $pos_settings['hide_recent_trans'] == 0))
+                <button type="button" id="pos_draft_indicator" class="pi-draft-indicator"
+                    title="@lang('lang_v1.draft_indicator_help')">
+                    <i class="fa fa-file-alt"></i>
+                    <span class="pi-draft-count">{{ $pos_draft_count }}</span>
+                    <span>@lang('lang_v1.drafts_pending')</span>
+                </button>
+            @endif
+
+            @if (!empty($shift_enabled) && !empty($current_shift))
+                {{-- PosInnova hospital shifts: current shift badge + live countdown (just after the keyboard shortcut icon) --}}
+                <span id="pos_shift_badge"
+                    class="tw-inline-flex tw-items-center tw-gap-1.5 tw-px-3 tw-h-10 tw-rounded-lg tw-text-white tw-font-semibold tw-text-xs tw-whitespace-nowrap"
+                    style="{{ $current_shift == 'morning' ? 'background:#f39c12;' : 'background:#34495e;' }}"
+                    data-shift="{{ $current_shift }}"
+                    data-ends-at="{{ $shift_ends_at }}"
+                    data-server-now="{{ $shift_server_now }}"
+                    data-extended="{{ !empty($shift_extended) ? 1 : 0 }}">
+                    @if ($current_shift == 'morning')<i class="fa fa-sun-o"></i>@else<i class="fa fa-moon-o"></i>@endif
+                    <span>{{ $current_shift_label }}</span>
+                    @if (!empty($current_shift_start) && !empty($current_shift_end))
+                        <span class="tw-font-normal tw-opacity-90">{{ $current_shift_start }}–{{ $current_shift_end }}</span>
+                    @endif
+                    <span id="pos_shift_countdown"></span>
+                </span>
+            @endif
+
+            {{-- PosInnova Stock Doctor: detect & heal display/purchase stock drift
+                 that blocks sales ("Mismatch between sold and purchase quantity").
+                 Placed right after the shift badge so it is always visible. --}}
+            <button type="button" id="stock_doctor_btn" title="@lang('lang_v1.stock_doctor')"
+                class="tw-relative tw-inline-flex tw-items-center tw-gap-1.5 tw-px-3 tw-h-10 tw-rounded-lg tw-whitespace-nowrap tw-cursor-pointer"
+                style="display:none; background:#fff; border:1px solid #EF4B53; color:#EF4B53; font-weight:600; font-size:12px; line-height:1;">
+                <i class="fa fa-stethoscope" style="color:#EF4B53;"></i>
+                <span>@lang('lang_v1.stock_doctor')</span>
+                <span id="stock_doctor_badge"
+                    style="display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:#EF4B53; color:#fff; font-size:10px; font-weight:700; line-height:1;"></span>
+            </button>
 
             @if (empty($pos_settings['hide_product_suggestion']))
                 <button type="button" title="{{ __('lang_v1.view_products') }}" data-placement="bottom"
@@ -234,6 +306,13 @@
                     <span>@lang('expense.add_expense')</span>
                 </button>
             @endcan
+
+            {{-- PosInnova: sign out — same logout action as the main header --}}
+            <a href="{{ action([\App\Http\Controllers\Auth\LoginController::class, 'logout']) }}"
+                title="@lang('lang_v1.sign_out')"
+                class="{{ $pi_icon_btn }}">
+                <i class="fas fa-sign-out-alt tw-text-[#EF4B53]"></i>
+            </a>
 
         </div>
     </div>

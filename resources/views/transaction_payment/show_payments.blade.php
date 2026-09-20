@@ -107,7 +107,7 @@
                     <div class="col-sm-4 invoice-col">
                         @lang('contact.customer'):
                         <address>
-                            <strong>{{ $transaction->contact->name }}</strong>
+                            <strong>@if(!empty($transaction->walk_in_customer_name) && !empty($transaction->contact->is_default)){{ $transaction->walk_in_customer_name }}@else{{ $transaction->contact->name }}@endif</strong>
 
                             {!! $transaction->contact->contact_address !!}
                             @if(!empty($transaction->contact->tax_number))

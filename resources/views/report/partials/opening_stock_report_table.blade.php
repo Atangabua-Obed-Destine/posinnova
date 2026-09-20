@@ -26,7 +26,17 @@
         <td>
             <span class="display_currency" data-currency_symbol="true">{{$data['total_adjustment']}}</span>
         </td>
-    </tr> 
+    </tr>
+    @if(!empty($data['total_reconciliation']))
+    <tr>
+        <th class="text-muted">{{ __('lang_v1.inventory_reconciliation') }}: <br>
+            <small class="text-muted">(@lang('lang_v1.inventory_reconciliation_help'))</small>
+        </th>
+        <td class="text-muted">
+            <span class="display_currency" data-currency_symbol="true">{{$data['total_reconciliation']}}</span>
+        </td>
+    </tr>
+    @endif
     <tr>
         <th>{{ __('report.total_expense') }}:</th>
         <td>

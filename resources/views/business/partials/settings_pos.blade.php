@@ -142,9 +142,36 @@
                 <div class="checkbox">
                 <br>
                   <label>
-                    {!! Form::checkbox('pos_settings[disable_draft]', 1,  
-                        $pos_settings['disable_draft'] , 
+                    {!! Form::checkbox('pos_settings[disable_draft]', 1,
+                        $pos_settings['disable_draft'] ,
                     [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.disable_draft' ) }}
+                  </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-4">
+            <div class="form-group">
+                <div class="checkbox">
+                <br>
+                  <label>
+                    {!! Form::checkbox('pos_settings[hide_payment_account_balance]', 1,
+                        !empty($pos_settings['hide_payment_account_balance']),
+                    [ 'class' => 'input-icheck']); !!} @lang('lang_v1.hide_payment_account_balance')
+                    <i class="fa fa-info-circle text-info" data-toggle="tooltip" title="@lang('lang_v1.hide_payment_account_balance_help')"></i>
+                  </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-4">
+            <div class="form-group">
+                <div class="checkbox">
+                <br>
+                  <label>
+                    {!! Form::checkbox('pos_settings[is_custom_customer_name_required]', 1,
+                        !empty($pos_settings['is_custom_customer_name_required']),
+                    [ 'class' => 'input-icheck']); !!} @lang('lang_v1.is_walk_in_customer_name_required') @show_tooltip(__('lang_v1.is_walk_in_customer_name_required_help'))
                   </label>
                 </div>
             </div>

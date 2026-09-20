@@ -61,7 +61,8 @@ return [
     'variation_sku_format' => 'Variation SKU Format',
     'variation_sku_format_help_text' => 'Variation SKU Format -  When variation SKU is empty this format will be used to generate SKU for variations',
     'sku_number' => 'SKU-Number (Example -> ABC-1, ABC-2)',
-    'sku_variation_number' => 'SKUVariation (Example -> ABCS, ABCM)'
+    'sku_variation_number' => 'SKUVariation (Example -> ABCS, ABCM)',
 
-
+    // Report export strings (auto-added)
+    'variation' => 'Variation',
 ];

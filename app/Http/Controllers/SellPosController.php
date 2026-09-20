@@ -180,6 +180,9 @@ class SellPosController extends Controller
 
         $register_details = $this->cashRegisterUtil->getCurrentCashRegister(auth()->user()->id);
 
+        // PosInnova hospital shifts: badge + countdown data for the POS screen (no-op when disabled).
+        extract($this->getPosShiftHeaderData($register_details));
+
         $walk_in_customer = $this->contactUtil->getWalkInCustomer($business_id);
 
         $business_details = $this->businessUtil->getDetails($business_id);
@@ -233,7 +236,7 @@ class SellPosController extends Controller
         //Accounts
         $accounts = [];
         if ($this->moduleUtil->isModuleEnabled('account')) {
-            $accounts = Account::forDropdown($business_id, true, false, true);
+            $accounts = Account::forDropdown($business_id, true, false, empty($pos_settings['hide_payment_account_balance']));
         }
 
         //Selling Price Group Dropdown
@@ -265,6 +268,13 @@ class SellPosController extends Controller
 
         //Added check because $users is of no use if enable_contact_assign if false
         $users = config('constants.enable_contact_assign') ? User::forDropdown($business_id, false, false, false, true) : [];
+
+        //Hospital module: pre-fill POS from a consultation prescription or a ward
+        //admission. Only built when those params are present, so normal POS is
+        //completely unaffected.
+        $prescription_data = $this->hospitalDispensePrefill($business_id);
+
+        $pos_draft_count = $this->getPosDraftCount($business_id, $sub_type);
 
         return view('sale_pos.create')
             ->with(compact(
@@ -299,7 +309,65 @@ class SellPosController extends Controller
                 'default_invoice_schemes',
                 'invoice_layouts',
                 'users',
+                'shift_enabled',
+                'current_shift',
+                'current_shift_label',
+                'shift_ends_at',
+                'shift_extended',
+                'shift_server_now',
+                'current_shift_start',
+                'current_shift_end',
+                'prescription_data',
+                'pos_draft_count',
             ));
+    }
+
+    /**
+     * Build the hospital dispense prefill for the POS screen, or null when the
+     * request carries no hospital params (so the normal pharmacy POS is never
+     * affected). Driven by ?prescription_id (consultation) or ?admission_id.
+     */
+    private function hospitalDispensePrefill($business_id)
+    {
+        $prescription_id = request()->get('prescription_id');
+        $admission_id = request()->get('admission_id');
+        if (empty($prescription_id) && empty($admission_id)) {
+            return null;
+        }
+
+        // Ward dispense: lock to the admitted patient, no auto lines.
+        if (! empty($admission_id)) {
+            $admission = \App\Admission::forBusiness($business_id)->with('patient')->find($admission_id);
+            if (! $admission) {
+                return null;
+            }
+
+            return [
+                'mode' => 'ward_dispense',
+                'contact_id' => $admission->contact_id,
+                'patient_name' => optional($admission->patient)->name,
+                'admission_id' => $admission->id,
+                'consultation_id' => null,
+                'lines' => [],
+            ];
+        }
+
+        $consultation = \App\Consultation::forBusiness($business_id)->with(['prescriptions', 'patient'])->find($prescription_id);
+        if (! $consultation) {
+            return null;
+        }
+
+        $lines = $consultation->prescriptions->where('is_dispensed', 0)->filter(fn ($rx) => ! empty($rx->variation_id))
+            ->map(fn ($rx) => ['variation_id' => $rx->variation_id, 'quantity' => (float) $rx->quantity ?: 1])->values();
+
+        return [
+            'mode' => 'prescription',
+            'contact_id' => $consultation->contact_id,
+            'patient_name' => optional($consultation->patient)->name,
+            'consultation_id' => $consultation->id,
+            'admission_id' => null,
+            'lines' => $lines,
+        ];
     }
 
     /**
@@ -339,10 +407,11 @@ class SellPosController extends Controller
         try {
             $input = $request->except('_token');
 
-            //Optional walk-in customer name (only stored when contact is the default walk-in)
+            //Optional walk-in customer name (only stored when contact is the default walk-in customer)
             $input['walk_in_customer_name'] = !empty($input['walk_in_customer_name']) ? trim($input['walk_in_customer_name']) : null;
             if (!empty($input['walk_in_customer_name']) && !empty($input['contact_id'])) {
-                $is_walk_in_contact = \App\Contact::where('business_id', $business_id)
+                $wk_business_id = $request->session()->get('user.business_id');
+                $is_walk_in_contact = \App\Contact::where('business_id', $wk_business_id)
                     ->where('id', $input['contact_id'])
                     ->where('is_default', 1)
                     ->exists();
@@ -511,6 +580,19 @@ class SellPosController extends Controller
 
                 $transaction = $this->transactionUtil->createSellTransaction($business_id, $input, $invoice_total, $user_id);
 
+                // PosInnova hospital shifts: stamp the cashier's active shift
+                // (from their open register, so it honours an extended shift).
+                if (! $is_direct_sale && $this->cashRegisterUtil->isShiftEnabled()) {
+                    $shift_register = $this->cashRegisterUtil->getCurrentCashRegister($user_id);
+                    $active_shift = (! empty($shift_register) && ! empty($shift_register->shift))
+                        ? $shift_register->shift
+                        : $this->cashRegisterUtil->shiftFor();
+                    if (! empty($active_shift)) {
+                        $transaction->shift = $active_shift;
+                        $transaction->save();
+                    }
+                }
+
                 //Upload Shipping documents
                 Media::uploadMedia($business_id, $transaction, $request, 'shipping_documents', false, 'shipping_document');
 
@@ -524,6 +606,15 @@ class SellPosController extends Controller
                 $is_credit_sale = isset($input['is_credit_sale']) && $input['is_credit_sale'] == 1 ? true : false;
 
                 if (!$transaction->is_suspend && !empty($input['payment']) && !$is_credit_sale) {
+                    $raw_transaction_date = $request->input('transaction_date');
+                    if (!empty($raw_transaction_date)) {
+                        foreach ($input['payment'] as &$payment) {
+                            if (empty($payment['paid_on'])) {
+                                $payment['paid_on'] = $raw_transaction_date;
+                            }
+                        }
+                        unset($payment);
+                    }
                     $this->transactionUtil->createOrUpdatePaymentLines($transaction, $input['payment']);
                 }
 
@@ -625,6 +716,20 @@ class SellPosController extends Controller
 
                 if (!empty($transaction->sales_order_ids)) {
                     $this->transactionUtil->updateSalesOrderStatus($transaction->sales_order_ids);
+                }
+
+                //Hospital module: mark prescription dispensed + stamp visit on
+                //the sale. Gated on the hidden field; no effect on normal sales.
+                $rx_consultation_id = $request->input('prescription_consultation_id');
+                if (! empty($rx_consultation_id)) {
+                    \App\ConsultationPrescription::where('consultation_id', $rx_consultation_id)
+                        ->where('is_dispensed', 0)
+                        ->update(['is_dispensed' => 1, 'dispensed_at' => \Carbon::now(), 'dispensed_by' => $user_id]);
+                    $consult = \App\Consultation::find($rx_consultation_id);
+                    if ($consult) {
+                        $transaction->visit_id = $consult->visit_id;
+                        $transaction->save();
+                    }
                 }
 
                 $this->moduleUtil->getModuleData('after_sale_saved', ['transaction' => $transaction, 'input' => $input]);
@@ -1100,10 +1205,11 @@ class SellPosController extends Controller
         //Accounts
         $accounts = [];
         if ($this->moduleUtil->isModuleEnabled('account')) {
-            $accounts = Account::forDropdown($business_id, true, false, true);
+            $accounts = Account::forDropdown($business_id, true, false, empty($pos_settings['hide_payment_account_balance']));
         }
 
         $waiters = [];
+        $waiters_enabled = false;
         if ($this->productUtil->isModuleEnabled('service_staff') && !empty($pos_settings['inline_service_staff'])) {
             $waiters_enabled = true;
             $waiters = $this->productUtil->serviceStaffDropdown($business_id);
@@ -1148,14 +1254,21 @@ class SellPosController extends Controller
         $business_locations_for_line = BusinessLocation::forDropdown($business_id, false);
         $price_groups = SellingPriceGroup::forDropdown($business_id);
 
+        $pos_draft_count = $this->getPosDraftCount($business_id, $sub_type);
+
+        // Shift badge + countdown for the POS header (same data create() provides)
+        extract($this->getPosShiftHeaderData());
+
         return view('sale_pos.edit')
             ->with(compact('business_details', 'taxes', 'payment_types', 'walk_in_customer',
                 'sell_details', 'transaction', 'payment_lines', 'location_printer_type', 'shortcuts',
                 'commission_agent', 'categories', 'pos_settings', 'change_return', 'types', 'customer_groups',
-                'brands', 'accounts', 'waiters', 'redeem_details', 'edit_price', 'edit_discount',
+                'brands', 'accounts', 'waiters', 'waiters_enabled', 'redeem_details', 'edit_price', 'edit_discount',
                 'shipping_statuses', 'warranties', 'sub_type', 'pos_module_data', 'invoice_schemes',
                 'default_invoice_schemes', 'invoice_layouts', 'featured_products', 'customer_due',
-                'users', 'only_payment', 'business_locations_for_line', 'price_groups'));
+                'users', 'only_payment', 'business_locations_for_line', 'price_groups', 'pos_draft_count',
+                'shift_enabled', 'current_shift', 'current_shift_label', 'shift_ends_at',
+                'shift_extended', 'shift_server_now', 'current_shift_start', 'current_shift_end'));
     }
 
     /**
@@ -1445,6 +1558,15 @@ class SellPosController extends Controller
                     $input['payment'][] = $change_return;
 
                     if (!$is_direct_sale || auth()->user()->can('sell.payments')) {
+                        $raw_transaction_date = $request->input('transaction_date');
+                        if (!empty($raw_transaction_date)) {
+                            foreach ($input['payment'] as &$payment) {
+                                if (empty($payment['paid_on'])) {
+                                    $payment['paid_on'] = $raw_transaction_date;
+                                }
+                            }
+                            unset($payment);
+                        }
                         $this->transactionUtil->createOrUpdatePaymentLines($transaction, $input['payment']);
 
                         //Update cash register
@@ -1834,7 +1956,7 @@ class SellPosController extends Controller
         //Accounts
         $accounts = [];
         if ($this->moduleUtil->isModuleEnabled('account')) {
-            $accounts = Account::forDropdown($business_id, true, false, true);
+            $accounts = Account::forDropdown($business_id, true, false, empty($business_pos_settings['hide_payment_account_balance']));
         }
 
         return view('sale_pos.partials.payment_row')
@@ -1847,6 +1969,73 @@ class SellPosController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
+    /**
+     * PosInnova hospital shifts: badge + countdown data consumed by
+     * layouts/partials/header-pos.blade.php. Shared by create() and edit()
+     * so the shift badge behaves identically on both POS screens.
+     * All values are null/false when shifts are disabled (badge hidden).
+     */
+    private function getPosShiftHeaderData($register_details = null): array
+    {
+        if (is_null($register_details)) {
+            $register_details = $this->cashRegisterUtil->getCurrentCashRegister(auth()->user()->id);
+        }
+
+        $shift_enabled = $this->cashRegisterUtil->isShiftEnabled();
+        $current_shift = $shift_enabled ? ($register_details->shift ?? $this->cashRegisterUtil->shiftFor()) : null;
+        $current_shift_label = $this->cashRegisterUtil->shiftLabel($current_shift);
+        $shift_ends_at = null;
+        if ($shift_enabled) {
+            // Prefer the register-anchored end (honours an extended shift);
+            // fall back to the current shift's end when the open register has
+            // no stamped shift (e.g. opened before shifts were enabled).
+            $ends = $this->cashRegisterUtil->shiftEndsAtForRegister($register_details);
+            if (empty($ends) && $current_shift) {
+                $ends = $this->cashRegisterUtil->shiftEndsAt($current_shift, \Carbon::now());
+            }
+            $shift_ends_at = optional($ends)->toIso8601String();
+        }
+        $shift_extended = $shift_enabled && ! empty($register_details->extended_at);
+        $shift_server_now = \Carbon::now()->toIso8601String();
+        // Configured start/end times of the current shift, for the badge.
+        $current_shift_start = null;
+        $current_shift_end = null;
+        if ($shift_enabled && $current_shift) {
+            $shift_settings = $this->cashRegisterUtil->getShiftSettings();
+            if ($current_shift === 'morning') {
+                $current_shift_start = $shift_settings['morning_start'];
+                $current_shift_end = $shift_settings['morning_end'];
+            } else {
+                $current_shift_start = $shift_settings['night_start'];
+                $current_shift_end = $shift_settings['night_end'];
+            }
+        }
+
+        return compact(
+            'shift_enabled', 'current_shift', 'current_shift_label', 'shift_ends_at',
+            'shift_extended', 'shift_server_now', 'current_shift_start', 'current_shift_end'
+        );
+    }
+
+    /**
+     * Number of pending POS drafts for the logged-in cashier.
+     * Mirrors the filters of getRecentTransactions() draft tab so the
+     * header indicator count always matches what the modal lists.
+     */
+    private function getPosDraftCount($business_id, $sub_type = null)
+    {
+        return Transaction::where('business_id', $business_id)
+            ->where('created_by', auth()->user()->id)
+            ->where('type', 'sell')
+            ->where('is_direct_sale', 0)
+            ->where('status', 'draft')
+            ->whereNull('sub_status')
+            ->when(!empty($sub_type),
+                fn ($q) => $q->where('sub_type', $sub_type),
+                fn ($q) => $q->whereNull('sub_type'))
+            ->count();
+    }
+
     public function getRecentTransactions(Request $request)
     {
         $business_id = $request->session()->get('user.business_id');
@@ -1887,7 +2076,9 @@ class SellPosController extends Controller
 
         // Retrieve the limit for displaying recent transactions from the configuration
         $limit = config('constants.pos_recent_transactions_display_limit', 10);
-        
+
+        $total_count = (clone $query)->distinct('transactions.id')->count('transactions.id');
+
         $transactions = $query->orderBy('transactions.created_at', 'desc')
             ->groupBy('transactions.id')
             ->select('transactions.*')
@@ -1896,7 +2087,7 @@ class SellPosController extends Controller
             ->get();
 
         return view('sale_pos.partials.recent_transactions')
-            ->with(compact('transactions', 'transaction_sub_type'));
+            ->with(compact('transactions', 'transaction_sub_type', 'transaction_status', 'total_count', 'limit'));
     }
 
     /**

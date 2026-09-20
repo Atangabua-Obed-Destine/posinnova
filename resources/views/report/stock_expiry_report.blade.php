@@ -67,6 +67,8 @@
             @endcomponent
         </div>
     </div>
+    @include('report.partials.export_buttons', ['export_base' => '/reports/export/stock-expiry', 'export_map_id' => 'stockExpiry'])
+
     <div class="row">
         <div class="col-md-12">
             @component('components.widget', ['class' => 'box-primary'])
@@ -108,4 +110,16 @@
 
 @section('javascript')
     <script src="{{ asset('js/report.js?v=' . $asset_v) }}"></script>
+    <script>
+    $(document).on('click.stockExpiryExport', '.btn-report-export[data-export-map="stockExpiry"]', function(e) {
+        e.stopImmediatePropagation(); e.preventDefault();
+        var params = {
+            format:      $(this).data('export-format'),
+            location_id: $('#location_id').val() || '',
+            category_id: $('#category_id').val() || '',
+            expiry_period: $('[name="view_stock_filter"]').val() || '',
+        };
+        window.location.href = $(this).data('export-base') + '?' + $.param(params);
+    });
+    </script>
 @endsection

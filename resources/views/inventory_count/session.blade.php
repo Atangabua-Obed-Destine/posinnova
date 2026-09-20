@@ -363,6 +363,23 @@
                     </div>
                 @endif
                 <div class="form-group">
+                    <label>@lang('inventory_count.count_purpose')</label>
+                    <div class="radio">
+                        <label>
+                            <input type="radio" name="ic_count_purpose" value="routine" checked>
+                            <strong>@lang('inventory_count.count_purpose_routine')</strong>
+                            — <small class="text-muted">@lang('inventory_count.count_purpose_routine_help')</small>
+                        </label>
+                    </div>
+                    <div class="radio">
+                        <label>
+                            <input type="radio" name="ic_count_purpose" value="migration">
+                            <strong>@lang('inventory_count.count_purpose_migration')</strong>
+                            — <small class="text-muted">@lang('inventory_count.count_purpose_migration_help')</small>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label>@lang('inventory_count.approval_notes')</label>
                     <textarea id="ic_approval_notes" class="form-control" rows="3" maxlength="2000"></textarea>
                 </div>
@@ -534,6 +551,7 @@
         </div>
     </div>
 </div>
+
 @endif
 
 @endsection
@@ -557,7 +575,8 @@ $(function () {
             }
         },
         columns: [
-            { data: 'sku', name: 'v.sub_sku', visible: false },
+            // SKU column becomes visible (with inline editor) while the session is editable
+            { data: 'sku', name: 'v.sub_sku', visible: IS_EDITABLE && @json(auth()->user()->can('product.update')) },
             { data: 'product', name: 'p.name' },
             { data: 'category', name: 'cat.name', defaultContent: '', visible: false },
             { data: 'unit', orderable: false },
@@ -1129,6 +1148,66 @@ $(function () {
                 toastr.error(msg);
             });
         });
+
+        // ---------- Inline product name / SKU editors (update the product master) ----------
+        // Both save buttons post name+sku together: values are read from the row's
+        // two inputs (name input in the product cell, sku input in the SKU cell).
+        function icSaveProductInfo($btn) {
+            var $row = $btn.closest('tr');
+            var $nameInput = $row.find('.ic-name-input');
+            var $skuInput = $row.find('.ic-sku-input');
+            var name = ($nameInput.val() || '').toString().trim();
+            var sku = $skuInput.length ? ($skuInput.val() || '').toString().trim() : ($nameInput.data('orig-sku') || '');
+            if (!name) {
+                toastr.warning(@json(__('validation.required', ['attribute' => __('product.product_name')])));
+                $nameInput.focus();
+                return;
+            }
+            $btn.prop('disabled', true).find('i').removeClass('fa-check').addClass('fa-spinner fa-spin');
+            $.ajax({
+                url: BASE_URL + '/' + SESSION_ID + '/update-product-info',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    product_id: $nameInput.data('product-id'),
+                    variation_id: $nameInput.data('variation-id'),
+                    name: name,
+                    sku: sku
+                },
+                dataType: 'json'
+            }).done(function (resp) {
+                if (resp.success) {
+                    toastr.success(resp.msg);
+                    $nameInput.data('orig', resp.name);
+                    if ($skuInput.length) { $skuInput.data('orig', resp.sku); }
+                    var $cell = $btn.closest('.input-group');
+                    $cell.addClass('has-success');
+                    setTimeout(function () { $cell.removeClass('has-success'); }, 1500);
+                    dt.ajax.reload(null, false);
+                } else {
+                    toastr.error(resp.msg || 'Error');
+                    $nameInput.val($nameInput.data('orig'));
+                    if ($skuInput.length) { $skuInput.val($skuInput.data('orig')); }
+                }
+            }).fail(function (xhr) {
+                var msg = (xhr.responseJSON && (xhr.responseJSON.msg || (xhr.responseJSON.errors && Object.values(xhr.responseJSON.errors)[0][0]))) || 'Error';
+                toastr.error(msg);
+                $nameInput.val($nameInput.data('orig'));
+                if ($skuInput.length) { $skuInput.val($skuInput.data('orig')); }
+            }).always(function () {
+                $btn.prop('disabled', false).find('i').removeClass('fa-spinner fa-spin').addClass('fa-check');
+            });
+        }
+
+        $(document).on('click', '.ic-name-save, .ic-sku-save', function () {
+            icSaveProductInfo($(this));
+        });
+        $(document).on('keydown', '.ic-name-input', function (e) {
+            if (e.which === 13) { e.preventDefault(); $(this).closest('.ic-name-edit').find('.ic-name-save').click(); }
+        });
+        $(document).on('keydown', '.ic-sku-input', function (e) {
+            if (e.which === 13) { e.preventDefault(); $(this).closest('.ic-sku-edit').find('.ic-sku-save').click(); }
+        });
     }
 
     // ---------- Post ----------
@@ -1330,6 +1409,7 @@ $(function () {
             data: {
                 _token: '{{ csrf_token() }}',
                 approval_notes: $('#ic_approval_notes').val(),
+                count_purpose: $('input[name="ic_count_purpose"]:checked').val() || 'routine',
             },
             dataType: 'json'
         }).done(function (resp) {

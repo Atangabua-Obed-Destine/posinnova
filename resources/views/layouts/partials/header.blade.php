@@ -1,4 +1,36 @@
 @inject('request', 'Illuminate\Http\Request')
+@php
+    // PosInnova hospital shifts: data for the header shift badge (no-op when disabled).
+    $shiftUtil = app(\App\Utils\BusinessUtil::class);
+    $hdr_shift_enabled = $shiftUtil->isShiftEnabled();
+    $hdr_current_shift = null;
+    $hdr_shift_label = '';
+    $hdr_shift_start = null;
+    $hdr_shift_end = null;
+    $hdr_shift_ends_at = null;
+    $hdr_shift_extended = false;
+    $hdr_server_now = null;
+    if ($hdr_shift_enabled) {
+        $hdr_register = \App\CashRegister::where('user_id', auth()->id())->where('status', 'open')->first();
+        $hdr_current_shift = ($hdr_register->shift ?? null) ?: $shiftUtil->shiftFor();
+        $hdr_shift_label = $shiftUtil->shiftLabel($hdr_current_shift);
+        $hdr_settings = $shiftUtil->getShiftSettings();
+        if ($hdr_current_shift === 'morning') {
+            $hdr_shift_start = $hdr_settings['morning_start'];
+            $hdr_shift_end = $hdr_settings['morning_end'];
+        } elseif ($hdr_current_shift === 'night') {
+            $hdr_shift_start = $hdr_settings['night_start'];
+            $hdr_shift_end = $hdr_settings['night_end'];
+        }
+        $hdr_ends = $hdr_register ? $shiftUtil->shiftEndsAtForRegister($hdr_register) : null;
+        if (empty($hdr_ends) && $hdr_current_shift) {
+            $hdr_ends = $shiftUtil->shiftEndsAt($hdr_current_shift, \Carbon::now());
+        }
+        $hdr_shift_ends_at = optional($hdr_ends)->toIso8601String();
+        $hdr_shift_extended = $hdr_register && ! empty($hdr_register->extended_at);
+        $hdr_server_now = \Carbon::now()->toIso8601String();
+    }
+@endphp
 <!-- Main Header -->
 
 <div
@@ -35,6 +67,24 @@
                         <path d="M10 10l-2 2l2 2" />
                     </svg>
                 </button>
+
+                @if (!empty($hdr_shift_enabled) && !empty($hdr_current_shift))
+                    {{-- PosInnova hospital shifts: current shift badge + live countdown (left-aligned, mobile-friendly) --}}
+                    <span id="pos_shift_badge"
+                        class="tw-inline-flex tw-items-center tw-gap-1.5 tw-py-1.5 tw-px-2 sm:tw-px-3 tw-rounded-lg tw-ring-1 tw-ring-white/10 tw-text-white tw-font-semibold tw-text-xs tw-whitespace-nowrap"
+                        style="{{ $hdr_current_shift == 'morning' ? 'background:#f39c12;' : 'background:#34495e;' }}"
+                        data-shift="{{ $hdr_current_shift }}"
+                        data-ends-at="{{ $hdr_shift_ends_at }}"
+                        data-server-now="{{ $hdr_server_now }}"
+                        data-extended="{{ !empty($hdr_shift_extended) ? 1 : 0 }}">
+                        @if ($hdr_current_shift == 'morning')<i class="fa fa-sun-o"></i>@else<i class="fa fa-moon-o"></i>@endif
+                        <span>{{ $hdr_shift_label }}</span>
+                        @if (!empty($hdr_shift_start) && !empty($hdr_shift_end))
+                            <span class="tw-hidden sm:tw-inline tw-font-normal tw-opacity-90">{{ $hdr_shift_start }}–{{ $hdr_shift_end }}</span>
+                        @endif
+                        <span id="pos_shift_countdown"></span>
+                    </span>
+                @endif
             </div>
 
 

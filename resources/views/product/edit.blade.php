@@ -32,8 +32,17 @@
               </div>
             </div>
 
-            {{-- SKU hidden; auto-generated and preserved --}}
-            {!! Form::hidden('sku', $product->sku, ['id' => 'sku']) !!}
+            {{-- PosInnova: SKU editable only when enabled under Settings → Product. --}}
+            @if(!empty($common_settings['enable_editable_product_sku']))
+                <div class="col-sm-4">
+                    <div class="form-group">
+                        {!! Form::label('sku', __('product.sku') . ':') !!} @show_tooltip(__('lang_v1.enable_editable_product_sku_help'))
+                        {!! Form::text('sku', $product->sku, ['class' => 'form-control', 'id' => 'sku', 'placeholder' => __('lang_v1.leave_empty_to_autogenerate')]) !!}
+                    </div>
+                </div>
+            @else
+                {!! Form::hidden('sku', $product->sku, ['id' => 'sku']) !!}
+            @endif
 
             <div class="col-sm-4">
               <div class="form-group">

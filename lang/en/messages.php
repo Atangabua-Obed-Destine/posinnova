@@ -24,6 +24,7 @@ return [
     'required' => 'This field is required',
     'please_select' => 'Please Select',
     'cancel' => 'Cancel',
+    'back' => 'Back',
     'date' => 'Date',
     'filter_by_date' => 'Filter by date',
     'location' => 'Location',
@@ -47,4 +48,8 @@ return [
     'print_detailed' => 'Print Detailed',
     'print_mini' => 'Print Mini',
     'opening' => 'opening',
+
+    // Report export strings (auto-added)
+    'by' => 'By',
+    'status' => 'Status',
 ];

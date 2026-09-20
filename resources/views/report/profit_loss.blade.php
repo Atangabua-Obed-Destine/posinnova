@@ -49,6 +49,8 @@
         </div>
 
 
+        @include('report.partials.export_buttons', ['export_base' => '/reports/export/profit-loss', 'export_map_id' => 'profitLoss'])
+
         <div class="row no-print">
             <div class="col-sm-12 tw-mb-2">
                 <button class="tw-dw-btn tw-dw-btn-primary tw-text-white pull-right" aria-label="Print"
@@ -528,6 +530,18 @@
                 }
                 $("a.btn").removeClass("btn btn-default buttons-excel buttons-html5");
             });
+        });
+
+        $(document).on('click.plExport', '.btn-report-export[data-export-map="profitLoss"]', function(e) {
+            e.stopImmediatePropagation(); e.preventDefault();
+            var dr = $('#profit_loss_date_filter').data('daterangepicker');
+            var params = {
+                format:      $(this).data('export-format'),
+                location_id: $('#profit_loss_location_filter').val() || '',
+                start_date:  dr ? dr.startDate.format('YYYY-MM-DD') : '',
+                end_date:    dr ? dr.endDate.format('YYYY-MM-DD') : '',
+            };
+            window.location.href = $(this).data('export-base') + '?' + $.param(params);
         });
     </script>
 

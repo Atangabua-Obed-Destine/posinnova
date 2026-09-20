@@ -83,7 +83,7 @@ class BarcodeController extends Controller
         try {
             $input = $request->only(['name', 'description', 'width', 'height', 'top_margin',
                 'left_margin', 'row_distance', 'col_distance',
-                'stickers_in_one_row', 'paper_width', ]);
+                'stickers_in_one_row', 'paper_width', 'barcode_width_percent', 'barcode_height_percent', ]);
             $business_id = $request->session()->get('user.business_id');
             $input['business_id'] = $business_id;
 
@@ -163,7 +163,7 @@ class BarcodeController extends Controller
         try {
             $input = $request->only(['name', 'description', 'width', 'height', 'top_margin',
                 'left_margin', 'row_distance', 'col_distance',
-                'stickers_in_one_row', 'paper_width', ]);
+                'stickers_in_one_row', 'paper_width', 'barcode_width_percent', 'barcode_height_percent', ]);
 
             if (! empty($request->input('is_continuous'))) {
                 $input['is_continuous'] = 1;
@@ -264,6 +264,92 @@ class BarcodeController extends Controller
             }
 
             return $output;
+        }
+    }
+
+    /**
+     * Preview the barcode setting.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function preview(Request $request)
+    {
+        if (! auth()->user()->can('barcode_settings.access')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $input = $request->only(['name', 'description', 'width', 'height', 'top_margin',
+                'left_margin', 'row_distance', 'col_distance',
+                'stickers_in_one_row', 'paper_width', 'barcode_width_percent', 'barcode_height_percent', 'is_continuous', 'stickers_in_one_sheet', 'paper_height']);
+            
+            $barcode_details = (object) $input;
+
+            if (! empty($request->input('is_continuous'))) {
+                $barcode_details->is_continuous = 1;
+                $barcode_details->stickers_in_one_sheet = 28;
+                $barcode_details->paper_height = 0;
+            } else {
+                $barcode_details->is_continuous = 0;
+            }
+
+            $barcode_details->stickers_in_one_sheet = $barcode_details->is_continuous ? $barcode_details->stickers_in_one_row : $barcode_details->stickers_in_one_sheet;
+            $barcode_details->paper_height = $barcode_details->is_continuous ? $barcode_details->height : $barcode_details->paper_height;
+            if ($barcode_details->stickers_in_one_row == 1) {
+                $barcode_details->col_distance = 0;
+                $barcode_details->row_distance = 0;
+            }
+
+            $business_name = $request->session()->get('business.name');
+
+            $dummy_product = new \stdClass();
+            $dummy_product->product_actual_name = 'Example Product';
+            $dummy_product->lot_number = 'LOT-1234';
+            $dummy_product->is_dummy = 0;
+            $dummy_product->product_variation_name = 'Size';
+            $dummy_product->variation_name = 'M';
+            $dummy_product->sell_price_inc_tax = 120.00;
+            $dummy_product->default_sell_price = 100.00;
+            $dummy_product->exp_date = date('Y-m-d', strtotime('+1 year'));
+            $dummy_product->packing_date = date('Y-m-d');
+            $dummy_product->sub_sku = 'SKU-001';
+            $dummy_product->barcode_type = 'C128';
+
+            $page_products = [];
+            for ($i = 0; $i < $barcode_details->stickers_in_one_sheet; $i++) {
+                $page_products[] = clone $dummy_product;
+            }
+
+            $margin_top = $barcode_details->is_continuous ? 0 : $barcode_details->top_margin * 1;
+            $margin_left = $barcode_details->is_continuous ? 0 : $barcode_details->left_margin * 1;
+            $paper_width = $barcode_details->paper_width * 1;
+            $paper_height = $barcode_details->paper_height * 1;
+
+            $factor = (($barcode_details->width / $barcode_details->height)) / ($barcode_details->is_continuous ? 2 : 4);
+
+            $print = [
+                'business_name' => 0, 'business_name_size' => 15,
+                'name' => 1, 'name_size' => 15,
+                'price' => 0, 'price_size' => 15, 'price_type' => 'inclusive',
+                'variations' => 0, 'variations_size' => 15,
+                'exp_date' => 0, 'exp_date_size' => 12,
+                'packing_date' => 0, 'packing_date_size' => 12,
+                'lot_number' => 0, 'lot_number_size' => 12
+            ];
+
+            $is_first = true;
+            $is_last = true;
+
+            $output = view('labels.partials.preview_2')
+                        ->with(compact('print', 'page_products', 'business_name', 'barcode_details', 'margin_top', 'margin_left', 'paper_width', 'paper_height', 'is_first', 'is_last', 'factor'))->render();
+            print_r($output);
+            print_r('<script>window.print()</script>');
+            exit;
+
+        } catch (\Exception $e) {
+            \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
+            die(__('lang_v1.barcode_label_error'));
         }
     }
 }

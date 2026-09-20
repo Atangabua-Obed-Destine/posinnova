@@ -50,6 +50,12 @@ return [
             'driver' => 'session',
             'provider' => 'contacts',
         ],
+
+        // Hospital module — external Patient Portal session (separate from staff `web`).
+        'patient' => [
+            'driver' => 'session',
+            'provider' => 'contacts',
+        ],
     ],
 
     /*

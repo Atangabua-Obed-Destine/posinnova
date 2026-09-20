@@ -128,7 +128,12 @@
         @endif
 
         @include('layouts.partials.javascripts')
-        
+
+        {{-- PosInnova hospital shifts: header shift badge countdown (non-POS pages) --}}
+        @if (!$pos_layout && !empty(session('business.enable_shift')))
+            @include('layouts.partials.shift_badge_countdown')
+        @endif
+
         {{-- Module JS --}}
         @include('layouts.module-assets')
         <div class="modal fade view_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel"></div>

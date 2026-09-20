@@ -74,7 +74,7 @@
         @if(!empty($sell->contact->supplier_business_name))
           {{ $sell->contact->supplier_business_name }}<br>
         @endif
-        <b>{{ __('sale.customer_name') }}:</b> {{ $sell->contact->name }}<br>
+        <b>{{ __('sale.customer_name') }}:</b> @if(!empty($sell->walk_in_customer_name) && !empty($sell->contact->is_default)){{ $sell->walk_in_customer_name }}@else{{ $sell->contact->name }}@endif<br>
         <b>{{ __('business.address') }}:</b><br>
         @if(!empty($sell->billing_address()))
           {{$sell->billing_address()}}

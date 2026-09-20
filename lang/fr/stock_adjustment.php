@@ -17,4 +17,8 @@
      'search_products' => 'Recherche des produits',
      'delete_success' => 'Ajustement de stock supprimé avec succès',
      'view_details' => "Afficher les détails de l'ajustement des stocks",
+
+     // Types d'ajustement générés par l'inventaire
+     'recount_shortage' => "Manquant d'inventaire",
+     'recount_migration' => 'Réconciliation d\'inventaire (sans impact sur le bénéfice)',
  ];

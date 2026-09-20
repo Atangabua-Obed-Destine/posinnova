@@ -35,6 +35,9 @@
         <td>
             {!! Form::select('products[' . $row_index . '][price_group_id]', $price_groups, null, ['class' => 'form-control', 'placeholder' => __('lang_v1.none')]); !!}
         </td>
+        <td>
+            <button type="button" class="btn btn-danger btn-sm remove_product_row"><i class="fa fa-times"></i></button>
+        </td>
     </tr>
 @empty
 

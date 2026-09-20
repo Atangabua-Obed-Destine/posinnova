@@ -10,8 +10,13 @@
 @if(!empty($transactions))
 	<table class="table">
 		@foreach ($transactions as $transaction)
+			@php
+				$display_customer_name = (!empty($transaction->walk_in_customer_name) && !empty($transaction->contact?->is_default))
+					? $transaction->walk_in_customer_name
+					: $transaction->contact?->name;
+			@endphp
 			<tr class="cursor-pointer" 
-	    		title="Customer: {{$transaction->contact?->name}} 
+	    		title="Customer: {{$display_customer_name}} 
 		    		@if(!empty($transaction->contact->mobile) && $transaction->contact->is_default == 0)
 		    			<br/>Mobile: {{$transaction->contact->mobile}}
 		    		@endif
@@ -20,7 +25,7 @@
 					{{ $loop->iteration}}.
 				</td>
 				<td class="col-md-4">
-					{{ $transaction->invoice_no }} ({{$transaction->contact?->name}})
+					{{ $transaction->invoice_no }} ({{$display_customer_name}})
 					@if(!empty($transaction->table))
 						- {{$transaction->table->name}}
 					@endif
@@ -58,6 +63,28 @@
 			</tr>
 		@endforeach
 	</table>
+
+	@if(($transaction_status ?? '') == 'draft')
+		<div class="tw-flex tw-items-center tw-justify-between tw-px-2 tw-pb-1">
+			<span class="tw-text-xs tw-text-gray-500">
+				@if(($total_count ?? 0) > ($limit ?? 10))
+					@lang('lang_v1.showing_latest') {{ $limit }} / {{ $total_count }}
+				@endif
+			</span>
+			<a href="{{ url('sells/drafts') }}" target="_blank" rel="noopener"
+				class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline tw-dw-btn-warning">
+				<i class="fa fa-external-link-alt"></i>
+				@lang('lang_v1.view_all_drafts') @if(!empty($total_count))({{ $total_count }})@endif
+			</a>
+		</div>
+	@endif
 @else
 	<p>@lang('sale.no_recent_transactions')</p>
+	@if(($transaction_status ?? '') == 'draft')
+		<div class="tw-px-2 tw-pb-1">
+			<a href="{{ url('sells/drafts') }}" target="_blank" rel="noopener" class="tw-text-xs">
+				@lang('lang_v1.view_all_drafts')
+			</a>
+		</div>
+	@endif
 @endif

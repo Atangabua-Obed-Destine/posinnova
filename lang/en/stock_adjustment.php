@@ -27,4 +27,8 @@ return [
     'search_products' => 'Search Products',
     'delete_success' => 'Stock adjustment deleted successfully',
     'view_details' => 'View stock adjustment details',
+
+    // Inventory-count generated adjustment types
+    'recount_shortage' => 'Inventory count shortage',
+    'recount_migration' => 'Inventory reconciliation (no profit impact)',
 ];

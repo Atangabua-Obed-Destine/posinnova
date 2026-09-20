@@ -5,7 +5,7 @@
 
     <div class="modal-header">
       <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-      <h4 class="modal-title">@if($account_transaction->sub_type == 'opening_balance')@lang( 'lang_v1.edit_opening_balance' ) @elseif($account_transaction->sub_type == 'fund_transfer') @lang( 'lang_v1.edit_fund_transfer' ) @elseif($account_transaction->sub_type == 'deposit') @lang( 'lang_v1.edit_deposit' ) @endif</h4>
+      <h4 class="modal-title">@if($account_transaction->sub_type == 'opening_balance')@lang( 'lang_v1.edit_opening_balance' ) @elseif($account_transaction->sub_type == 'fund_transfer') @lang( 'lang_v1.edit_fund_transfer' ) @elseif($account_transaction->sub_type == 'deposit') @lang( 'lang_v1.edit_deposit' ) @else @lang('messages.edit') @endif</h4>
     </div>
 
     <div class="modal-body">
@@ -36,7 +36,7 @@
 
             <div class="form-group">
                 {!! Form::label('amount', __( 'sale.amount' ) .":*") !!}
-                {!! Form::text('amount', @num_format($account_transaction->amount), ['class' => 'form-control input_number', 'required','placeholder' => __( 'sale.amount' ) ]); !!}
+                {!! Form::text('amount', @num_format($account_transaction->amount), ['class' => 'form-control input_number', 'required','placeholder' => __( 'sale.amount' ), !empty($account_transaction->transaction_payment_id) ? 'readonly' : '' ]); !!}
             </div>
             @if($account_transaction->sub_type == 'deposit')
             @php
@@ -66,7 +66,7 @@
                   </span>
                 </div>
             </div>
-            @if($account_transaction->sub_type == 'fund_transfer' || $account_transaction->sub_type == 'deposit')
+            @if($account_transaction->sub_type == 'fund_transfer' || $account_transaction->sub_type == 'deposit' || empty($account_transaction->sub_type))
             <div class="form-group">
                 {!! Form::label('note', __( 'brand.note' )) !!}
                 {!! Form::textarea('note', $account_transaction->note, ['class' => 'form-control', 'placeholder' => __( 'brand.note' ), 'rows' => 4]); !!}

@@ -46,6 +46,16 @@ $(document).ready(function () {
     //Toastr setting
     toastr.options.preventDuplicates = true;
     toastr.options.timeOut = '3000';
+    // Always show a close (×) button so a toast can be dismissed manually,
+    // and give it a finite hover timeout so it can't get stuck on screen.
+    toastr.options.closeButton = true;
+    toastr.options.extendedTimeOut = '3000';
+    toastr.options.progressBar = true;
+    // Make the × dismiss the toast instantly instead of fading over ~1s
+    // (closeDuration otherwise falls back to the 1000ms hideDuration).
+    toastr.options.closeMethod = 'fadeOut';
+    toastr.options.closeDuration = 0;
+    toastr.options.closeEasing = 'swing';
 
     //Play notification sound on success, error and warning
     toastr.options.onShown = function () {

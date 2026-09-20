@@ -30,6 +30,17 @@
             </div>
 
             <div class="form-group">
+                {!! Form::label('department_type', __('lang_v1.department_type') . ':') !!}
+                {!! Form::select('department_type', \App\Http\Controllers\WardController::departmentTypes(), 'other', ['class' => 'form-control']) !!}
+            </div>
+
+            <div class="form-group">
+                {!! Form::label('location_id', __('lang_v1.mapped_location') . ':') !!}
+                {!! Form::select('location_id', $business_locations ?? [], null, ['class' => 'form-control']) !!}
+                <p class="help-block">@lang('lang_v1.mapped_location_help')</p>
+            </div>
+
+            <div class="form-group">
                 {!! Form::label('description', __('lang_v1.description') . ':') !!}
                 {!! Form::textarea('description', null, ['class' => 'form-control', 'rows' => 3]) !!}
             </div>

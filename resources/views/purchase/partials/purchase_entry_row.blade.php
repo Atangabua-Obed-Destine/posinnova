@@ -174,7 +174,8 @@
             {!! Form::text('purchases[' . $row_count . '][purchase_price_inc_tax]', $dpp_inc_tax, ['class' => 'form-control input-sm purchase_unit_cost_after_tax input_number', 'required']); !!}
         </td>
         <td>
-            <span class="row_subtotal_after_tax display_currency">0</span>
+            <span class="row_subtotal_after_tax display_currency hide">0</span>
+            <input type="text" class="form-control input-sm row_subtotal_after_tax_input input_number" value="0">
             <input type="hidden" class="row_subtotal_after_tax_hidden" value=0>
         </td>
         <td class="@if(!session('business.enable_editing_product_from_purchase') || !empty($is_purchase_order)) hide @endif">
@@ -184,6 +185,66 @@
         <td>
             @if(session('business.enable_editing_product_from_purchase'))
                 {!! Form::text('purchases[' . $row_count . '][default_sell_price]', number_format($variation->sell_price_inc_tax, $currency_precision, $currency_details->decimal_separator, $currency_details->thousand_separator), ['class' => 'form-control input-sm input_number default_sell_price', 'required']); !!}
+
+                {{-- Per-Unit Prices Toggle & Table --}}
+                @php
+                    $unit_prices_data = $all_unit_prices_data[$variation->id] ?? [];
+                    $has_sub_units = collect($unit_prices_data)->contains(function($val) {
+                        return (float) $val['multiplier'] != 1.0;
+                    });
+                    $has_configured_prices = collect($unit_prices_data)->contains(function($val) {
+                        return (float) $val['multiplier'] != 1.0 && (!empty($val['exc']) || !empty($val['inc']));
+                    });
+                @endphp
+                @if($has_sub_units)
+                    <div class="per_unit_prices_wrapper">
+                        <br>
+                        <button type="button" class="btn btn-xs toggle_per_unit_prices {{ $has_configured_prices ? 'btn-success' : 'btn-info' }}" onclick="$('.per_unit_prices_row_{{$row_count}}').toggle();">
+                            <i class="fas fa-tags"></i> @lang('lang_v1.per_unit_selling_prices') 
+                            <span class="configured_badge">
+                                @if($has_configured_prices) <i class="fa fa-check-circle" title="Prices Configured"></i> @endif
+                            </span>
+                        </button>
+
+                        <div class="per_unit_prices_row_{{$row_count}}" style="display: none; margin-top: 10px; background: #f9fafb; border-left: 4px solid #3c8dbc; padding: 5px; min-width: 200px; position: absolute; z-index: 100; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">
+                            <table class="table table-bordered table-condensed mb-0" style="font-size: 11px; background: #fff;">
+                                <thead>
+                                    <tr style="background:#eef3f7;">
+                                        <th>@lang('product.unit')</th>
+                                        <th class="per_unit_col_exc {{ $tax_type == 'inclusive' ? 'hide' : '' }}">@lang('product.exc_of_tax')</th>
+                                        <th class="per_unit_col_inc {{ $tax_type == 'inclusive' ? '' : 'hide' }}">@lang('product.inc_of_tax')</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($unit_prices_data as $unit_id => $u)
+                                        @if((float) $u['multiplier'] == 1.0)
+                                            @continue
+                                        @endif
+                                        <tr>
+                                            <td><strong>{{ $u['name'] }}</strong></td>
+                                            <td class="per_unit_col_exc {{ $tax_type == 'inclusive' ? 'hide' : '' }}">
+                                                <input type="text" name="purchases[{{$row_count}}][unit_prices][{{ $unit_id }}][exc]"
+                                                    value="{{ !empty($u['exc']) ? @num_format($u['exc']) : '' }}"
+                                                    class="form-control input-sm input_number per_unit_price_exc"
+                                                    data-unit_id="{{ $unit_id }}"
+                                                    data-multiplier="{{ $u['multiplier'] }}"
+                                                    placeholder="@lang('lang_v1.auto')">
+                                            </td>
+                                            <td class="per_unit_col_inc {{ $tax_type == 'inclusive' ? '' : 'hide' }}">
+                                                <input type="text" name="purchases[{{$row_count}}][unit_prices][{{ $unit_id }}][inc]"
+                                                    value="{{ !empty($u['inc']) ? @num_format($u['inc']) : '' }}"
+                                                    class="form-control input-sm input_number per_unit_price_inc"
+                                                    data-unit_id="{{ $unit_id }}"
+                                                    data-multiplier="{{ $u['multiplier'] }}"
+                                                    placeholder="@lang('lang_v1.auto')">
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
             @else
                 {{ number_format($variation->sell_price_inc_tax, $currency_precision, $currency_details->decimal_separator, $currency_details->thousand_separator)}}
             @endif

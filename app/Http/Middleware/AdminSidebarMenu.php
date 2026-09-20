@@ -312,6 +312,13 @@ class AdminSidebarMenu
                                 ['icon' => '', 'active' => request()->segment(1) == 'sells' && request()->segment(2) == null]
                             );
                         }
+                        if (session('business.enable_shift') && ($is_admin || auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'direct_sell.view', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping']))) {
+                            $sub->url(
+                                action([\App\Http\Controllers\SellController::class, 'salesByShift']),
+                                __('lang_v1.sales_by_shift'),
+                                ['icon' => '', 'active' => request()->segment(1) == 'sells-by-shift']
+                            );
+                        }
                         if (in_array('add_sale', $enabled_modules) && auth()->user()->can('direct_sell.access')) {
                             $sub->url(
                                 action([\App\Http\Controllers\SellController::class, 'create']),
@@ -477,10 +484,100 @@ class AdminSidebarMenu
             }
 
             //Hospital - Department Issues dropdown
-            if (auth()->user()->can('department.view') || auth()->user()->can('department.create') || auth()->user()->can('department_issue.access') || auth()->user()->can('department_issue.create')) {
+            // Whole Hospital dropdown (incl. Department Issues) is hidden when the
+            // hospital module is disabled in Business Settings → Modules.
+            if (in_array('hospital', $enabled_modules)
+                && (auth()->user()->can('department.view') || auth()->user()->can('department.create') || auth()->user()->can('department_issue.access') || auth()->user()->can('department_issue.create')
+                || auth()->user()->can('patient.view') || auth()->user()->can('patient.create') || auth()->user()->can('visit.view') || auth()->user()->can('visit.create') || auth()->user()->can('consultation.view_own') || auth()->user()->can('consultation.view_all') || auth()->user()->can('lab_request.view') || auth()->user()->can('lab_test.manage_catalogue') || auth()->user()->can('imaging_request.view') || auth()->user()->can('admission.view') || auth()->user()->can('admission.create') || auth()->user()->can('ward.manage') || auth()->user()->can('theatre.view') || auth()->user()->can('theatre.book') || auth()->user()->can('antenatal.view') || auth()->user()->can('delivery.record') || auth()->user()->can('morgue.view') || auth()->user()->can('morgue.receive'))) {
                 $menu->dropdown(
                     __('lang_v1.hospital'),
-                    function ($sub) {
+                    function ($sub) use ($enabled_modules) {
+                        if (in_array('hospital', $enabled_modules)) {
+                            if (auth()->user()->can('patient.view') || auth()->user()->can('patient.create')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\PatientController::class, 'index']),
+                                    __('lang_v1.patients'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'patients']
+                                );
+                            }
+                            if (auth()->user()->can('visit.view') || auth()->user()->can('visit.create')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\VisitController::class, 'index']),
+                                    __('lang_v1.visits'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'visits']
+                                );
+                            }
+                            if (auth()->user()->can('consultation.view_own') || auth()->user()->can('consultation.view_all')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\ConsultationController::class, 'create']),
+                                    __('lang_v1.consultations'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'consultations']
+                                );
+                            }
+                            if (auth()->user()->can('lab_request.view')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\LabRequestController::class, 'index']),
+                                    __('lang_v1.lab_requests'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'lab-requests']
+                                );
+                            }
+                            if (auth()->user()->can('lab_test.manage_catalogue')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\LabTestController::class, 'index']),
+                                    __('lang_v1.lab_test_catalogue'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'lab-tests']
+                                );
+                            }
+                            if (auth()->user()->can('imaging_request.view')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\ImagingController::class, 'index']),
+                                    __('lang_v1.imaging'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'imaging-requests']
+                                );
+                            }
+                            if (auth()->user()->can('admission.view') || auth()->user()->can('admission.create')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\AdmissionController::class, 'index']),
+                                    __('lang_v1.admissions'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'admissions']
+                                );
+                            }
+                            if (auth()->user()->can('ward.manage')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\WardController::class, 'index']),
+                                    __('lang_v1.wards'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'wards']
+                                );
+                            }
+                            if (auth()->user()->can('theatre.view') || auth()->user()->can('theatre.book')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\TheatreController::class, 'index']),
+                                    __('lang_v1.theatre'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'theatre']
+                                );
+                            }
+                            if (auth()->user()->can('antenatal.view')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\AntenatalController::class, 'index']),
+                                    __('lang_v1.antenatal'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'antenatal']
+                                );
+                            }
+                            if (auth()->user()->can('delivery.record')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\DeliveryController::class, 'index']),
+                                    __('lang_v1.deliveries'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'deliveries']
+                                );
+                            }
+                            if (auth()->user()->can('morgue.view') || auth()->user()->can('morgue.receive')) {
+                                $sub->url(
+                                    action([\App\Http\Controllers\MorgueController::class, 'index']),
+                                    __('lang_v1.morgue'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'morgue']
+                                );
+                            }
+                        }
                         if (auth()->user()->can('department.view') || auth()->user()->can('department.create')) {
                             $sub->url(
                                 action([\App\Http\Controllers\DepartmentController::class, 'index']),
@@ -611,10 +708,19 @@ class AdminSidebarMenu
             if (auth()->user()->can('purchase_n_sell_report.view') || auth()->user()->can('contacts_report.view')
                 || auth()->user()->can('stock_report.view') || auth()->user()->can('tax_report.view')
                 || auth()->user()->can('trending_product_report.view') || auth()->user()->can('sales_representative.view') || auth()->user()->can('register_report.view')
+                || auth()->user()->can('shift_report.view')
+                || (in_array('hospital', $enabled_modules) && auth()->user()->can('hospital_report.dashboard'))
                 || auth()->user()->can('expense_report.view')) {
                 $menu->dropdown(
                     __('report.reports'),
                     function ($sub) use ($enabled_modules, $is_admin) {
+                        if (in_array('hospital', $enabled_modules) && auth()->user()->can('hospital_report.dashboard')) {
+                            $sub->url(
+                                action([\App\Http\Controllers\HospitalReportController::class, 'dashboard']),
+                                __('lang_v1.hospital_dashboard'),
+                                ['icon' => '', 'active' => request()->segment(2) == 'hospital']
+                            );
+                        }
                         if (auth()->user()->can('profit_loss_report.view')) {
                             $sub->url(
                                 action([\App\Http\Controllers\ReportController::class, 'getProfitLoss']),
@@ -759,6 +865,13 @@ class AdminSidebarMenu
                                 ['icon' => '', 'active' => request()->segment(2) == 'register-report']
                             );
                         }
+                        if (session('business.enable_shift') && auth()->user()->can('shift_report.view')) {
+                            $sub->url(
+                                action([\App\Http\Controllers\ReportController::class, 'getShiftSummaryReport']),
+                                __('lang_v1.shift_summary_report'),
+                                ['icon' => '', 'active' => request()->segment(2) == 'shift-summary']
+                            );
+                        }
                         if (auth()->user()->can('sales_representative.view')) {
                             $sub->url(
                                 action([\App\Http\Controllers\ReportController::class, 'getSalesRepresentativeReport']),
@@ -871,6 +984,7 @@ class AdminSidebarMenu
                 auth()->user()->can('invoice_settings.access') ||
                 auth()->user()->can('tax_rate.view') ||
                 auth()->user()->can('tax_rate.create') ||
+                auth()->user()->can('shift_settings.access') ||
                 auth()->user()->can('access_package_subscriptions')) {
                 $menu->dropdown(
                     __('business.settings'),
@@ -914,6 +1028,14 @@ class AdminSidebarMenu
                                 action([\App\Http\Controllers\TaxRateController::class, 'index']),
                                 __('tax_rate.tax_rates'),
                                 ['icon' => '', 'active' => request()->segment(1) == 'tax-rates']
+                            );
+                        }
+
+                        if (auth()->user()->can('shift_settings.access')) {
+                            $sub->url(
+                                action([\App\Http\Controllers\ShiftSettingController::class, 'index']),
+                                __('lang_v1.shift_settings'),
+                                ['icon' => '', 'active' => request()->segment(1) == 'shift-settings']
                             );
                         }
 

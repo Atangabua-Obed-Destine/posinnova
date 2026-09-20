@@ -6,11 +6,21 @@
 <!-- Content Header (Page header) -->
 <section class="content-header no-print">
     <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">@lang('sale.pos_sale')
+        {{-- PosInnova Stock Doctor: detect & heal display/purchase stock drift --}}
+        <button type="button" id="stock_doctor_btn" title="@lang('lang_v1.stock_doctor')"
+            class="tw-dw-btn tw-dw-btn-sm tw-bg-[#EF4B53] tw-text-white tw-border-none tw-rounded-full tw-relative pull-right"
+            style="display:none;">
+            <i class="fa fa-stethoscope"></i> @lang('lang_v1.stock_doctor')
+            <span id="stock_doctor_badge"
+                class="tw-absolute tw-top-0 tw-right-0 tw--mt-1 tw--mr-1 tw-min-w-[18px] tw-h-[18px] tw-px-1 tw-rounded-full tw-bg-[#b91c1c] tw-text-white tw-text-[10px] tw-font-bold tw-leading-[18px] tw-text-center"></span>
+        </button>
     </h1>
 </section>
 
 <!-- Main content -->
 <section class="content no-print">
+    @include('sale_pos.partials.stock_integrity_modal')
+
     @component('components.filters', ['title' => __('report.filters')])
         @include('sell.partials.sell_list_filters')
     @endcomponent

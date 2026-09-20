@@ -30,4 +30,7 @@
      'total_sale_paid' => 'Total des paiements de vente',
      'total_sale_due' => 'Total des ventes impayées',
      'customer' => 'Client',
- ];
+ 
+    // Report export strings (auto-added)
+    'supplier' => 'Fournisseur',
+];

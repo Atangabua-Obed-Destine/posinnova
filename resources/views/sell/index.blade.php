@@ -1,11 +1,11 @@
 @extends('layouts.app')
-@section('title', __('lang_v1.all_sales'))
+@section('title', !empty($shift_mode) ? __('lang_v1.sales_by_shift') : __('lang_v1.all_sales'))
 
 @section('content')
 
     <!-- Content Header (Page header) -->
     <section class="content-header no-print">
-        <h1  class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">@lang('sale.sells') <span id="sell_list_selected_range" class="tw-text-gray-600 tw-font-normal tw-text-base">{{ @format_date(\Carbon\Carbon::now()->subDays(29)) }} ~ {{ @format_date(\Carbon\Carbon::now()) }}</span>
+        <h1  class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">{{ !empty($shift_mode) ? __('lang_v1.sales_by_shift') : __('sale.sells') }} <span id="sell_list_selected_range" class="tw-text-gray-600 tw-font-normal tw-text-base">@if(!empty($shift_mode)){{ @format_date($shift_range_start) }} ~ {{ @format_date($shift_range_end) }}@else{{ @format_date(\Carbon\Carbon::now()->subDays(29)) }} ~ {{ @format_date(\Carbon\Carbon::now()) }}@endif</span>
         </h1>
     </section>
 
@@ -35,6 +35,21 @@
                             'class' => 'form-control select2',
                             'style' => 'width:100%',
                             'placeholder' => __('lang_v1.all'),
+                        ]) !!}
+                    </div>
+                </div>
+            @endif
+
+            @if (!empty($shift_mode) && !empty(session('business.enable_shift')))
+                {{-- PosInnova hospital shifts: shift filter (defaults to current shift) --}}
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {!! Form::label('sell_list_filter_shift', __('lang_v1.shift') . ':') !!}
+                        {!! Form::select('sell_list_filter_shift', $shifts, $current_shift ?? null, [
+                            'class' => 'form-control select2',
+                            'id' => 'sell_list_filter_shift',
+                            'style' => 'width:100%',
+                            'placeholder' => __('report.all'),
                         ]) !!}
                     </div>
                 </div>
@@ -75,6 +90,8 @@
                             <th>@lang('sale.payment_status')</th>
                             <th>@lang('lang_v1.payment_method')</th>
                             <th>@lang('sale.total_amount')</th>
+                            <th>Cost of Goods Sold</th>
+                            <th>@lang('lang_v1.profit')</th>
                             <th>@lang('sale.total_paid')</th>
                             <th>@lang('lang_v1.sell_due')</th>
                             <th>@lang('lang_v1.sell_return_due')</th>
@@ -102,12 +119,14 @@
                             <td class="footer_payment_status_count"></td>
                             <td class="payment_method_count"></td>
                             <td class="footer_sale_total"></td>
+                            <td class="footer_total_cogs"></td>
+                            <td class="footer_total_profit"></td>
                             <td class="footer_total_paid"></td>
                             <td class="footer_total_remaining"></td>
                             <td class="footer_total_sell_return_due"></td>
                             <td colspan="2"></td>
                             <td class="service_type_count"></td>
-                            <td colspan="7"></td>
+                            <td colspan="11"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -131,9 +150,16 @@
     <script type="text/javascript">
         $(document).ready(function() {
             //Date range as a button
+            @if(!empty($shift_mode))
+            // Span the whole current shift (covers a night shift wrapping past
+            // midnight, and any extension running into the next day).
+            var startLast30 = moment('{{ $shift_range_start }}', 'YYYY-MM-DD');
+            var endLast = moment('{{ $shift_range_end }}', 'YYYY-MM-DD');
+            @else
             var startLast30 = moment().subtract(29, 'days');
             var endLast = moment();
-            
+            @endif
+
             // Function to update heading with date range
             function updateDateRangeHeading(start, end) {
                 if (start && end) {
@@ -141,10 +167,15 @@
                     var formattedEnd = end.format(moment_date_format);
                     $('#sell_list_selected_range').text(formattedStart + ' ~ ' + formattedEnd);
                 } else {
+                    @if(!empty($shift_mode))
+                    // Shift mode default span (current shift, incl. midnight wrap).
+                    $('#sell_list_selected_range').text(startLast30.format(moment_date_format) + ' ~ ' + endLast.format(moment_date_format));
+                    @else
                     // Reset to default (last 30 days)
                     var defaultStart = moment().subtract(29, 'days').format(moment_date_format);
                     var defaultEnd = moment().format(moment_date_format);
                     $('#sell_list_selected_range').text(defaultStart + ' ~ ' + defaultEnd);
+                    @endif
                 }
             }
             
@@ -155,6 +186,11 @@
                     sell_table.ajax.reload();
                 }
             );
+            @if(!empty($shift_mode))
+            // Default the range to today so the initial load is the current shift's day.
+            $('#sell_list_filter_date_range').val(startLast30.format(moment_date_format) + ' ~ ' + endLast.format(moment_date_format));
+            updateDateRangeHeading(startLast30, endLast);
+            @endif
             $('#sell_list_filter_date_range').on('cancel.daterangepicker', function(ev, picker) {
                 $('#sell_list_filter_date_range').val('');
                 updateDateRangeHeading(null, null);
@@ -179,7 +215,14 @@
                             d.start_date = start;
                             d.end_date = end;
                         }
+                        @if(empty($shift_mode))
                         d.is_direct_sale = 1;
+                        @endif
+                        @if(!empty($shift_mode))
+                        if ($('#sell_list_filter_shift').length) {
+                            d.shift = $('#sell_list_filter_shift').val();
+                        }
+                        @endif
 
                         d.location_id = $('#sell_list_filter_location_id').val();
                         d.customer_id = $('#sell_list_filter_customer_id').val();
@@ -248,6 +291,16 @@
                     {
                         data: 'final_total',
                         name: 'final_total'
+                    },
+                    {
+                        data: 'total_cogs',
+                        name: 'total_cogs',
+                        "searchable": false
+                    },
+                    {
+                        data: 'invoice_profit',
+                        name: 'invoice_profit',
+                        "searchable": false
                     },
                     {
                         data: 'total_paid',
@@ -350,12 +403,18 @@
                 },
                 "footerCallback": function(row, data, start, end, display) {
                     var footer_sale_total = 0;
+                    var footer_total_cogs = 0;
+                    var footer_total_profit = 0;
                     var footer_total_paid = 0;
                     var footer_total_remaining = 0;
                     var footer_total_sell_return_due = 0;
                     for (var r in data) {
                         footer_sale_total += $(data[r].final_total).data('orig-value') ? parseFloat($(
                             data[r].final_total).data('orig-value')) : 0;
+                        footer_total_cogs += $(data[r].total_cogs).data('orig-value') ? parseFloat($(
+                            data[r].total_cogs).data('orig-value')) : 0;
+                        footer_total_profit += $(data[r].invoice_profit).data('orig-value') ? parseFloat($(
+                            data[r].invoice_profit).data('orig-value')) : 0;
                         footer_total_paid += $(data[r].total_paid).data('orig-value') ? parseFloat($(
                             data[r].total_paid).data('orig-value')) : 0;
                         footer_total_remaining += $(data[r].total_remaining).data('orig-value') ?
@@ -369,6 +428,8 @@
                         footer_total_sell_return_due));
                     $('.footer_total_remaining').html(__currency_trans_from_en(footer_total_remaining));
                     $('.footer_total_paid').html(__currency_trans_from_en(footer_total_paid));
+                    $('.footer_total_cogs').html(__currency_trans_from_en(footer_total_cogs));
+                    $('.footer_total_profit').html(__currency_trans_from_en(footer_total_profit));
                     $('.footer_sale_total').html(__currency_trans_from_en(footer_sale_total));
 
                     $('.footer_payment_status_count').html(__count_status(data, 'payment_status'));
@@ -381,7 +442,7 @@
             });
 
             $(document).on('change',
-                '#sell_list_filter_location_id, #sell_list_filter_customer_id, #sell_list_filter_payment_status, #created_by, #sales_cmsn_agnt, #service_staffs, #shipping_status, #sell_list_filter_source, #payment_method',
+                '#sell_list_filter_location_id, #sell_list_filter_customer_id, #sell_list_filter_payment_status, #created_by, #sales_cmsn_agnt, #service_staffs, #shipping_status, #sell_list_filter_source, #payment_method, #sell_list_filter_shift',
                 function() {
                     sell_table.ajax.reload();
                 });
