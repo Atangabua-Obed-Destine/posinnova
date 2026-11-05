@@ -23,11 +23,15 @@
             'method' => 'post',
             'id' => 'add_pos_sell_form',
         ]) !!}
+        {{-- Same condition as the product pane below: no pane, nothing to collapse. --}}
+        @if (empty($pos_settings['hide_product_suggestion']) && !isMobile())
+            @include('sale_pos.partials.pos_browser_toggle')
+        @endif
         <div class="row mb-12">
             <div class="col-md-12 tw-pt-0 tw-mb-14">
                 <div class="row tw-flex lg:tw-flex-row md:tw-flex-col sm:tw-flex-col tw-flex-col tw-items-start md:tw-gap-4">
                     {{-- <div class="@if (empty($pos_settings['hide_product_suggestion'])) col-md-7 @else col-md-10 col-md-offset-1 @endif no-padding pr-12"> --}}
-                    <div class="tw-px-3 tw-w-full  lg:tw-px-0 lg:tw-pr-0 @if(empty($pos_settings['hide_product_suggestion'])) lg:tw-w-[60%]  @else lg:tw-w-[100%] @endif">
+                    <div class="pi-pos-cart-pane tw-px-3 tw-w-full  lg:tw-px-0 lg:tw-pr-0 @if(empty($pos_settings['hide_product_suggestion'])) lg:tw-w-[60%]  @else lg:tw-w-[100%] @endif">
 
                         <div class="tw-shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] tw-rounded-2xl tw-bg-white tw-mb-2 md:tw-mb-8 tw-p-2">
 
@@ -72,7 +76,7 @@
                         </div>
                     </div>
                     @if (empty($pos_settings['hide_product_suggestion']) && !isMobile())
-                        <div class="md:tw-no-padding tw-w-full lg:tw-w-[40%] tw-px-5">
+                        <div class="pi-pos-browser-pane md:tw-no-padding tw-w-full lg:tw-w-[40%] tw-px-5" id="pi_pos_browser_pane">
                             @include('sale_pos.partials.pos_sidebar')
                         </div>
                     @endif
@@ -380,6 +384,8 @@
                     if (typeof toastr !== 'undefined') {
                         toastr.info(@json(__('lang_v1.dispensing_prescription_for')) + ' ' + rx.patient_name);
                     }
+                } else if (typeof toastr !== 'undefined') {
+                    toastr.warning(@json(__('clinic.rx_nothing_waiting')));
                 }
             });
         </script>

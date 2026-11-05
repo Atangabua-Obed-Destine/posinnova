@@ -23,6 +23,24 @@ class PatientPortalAuth
             return redirect()->route('portal.login');
         }
 
+        //PosInnova: the portal can be switched off in Clinic settings, and a
+        //session left idle longer than the clinic allows is signed out (the
+        //portal faces the internet; phones get shared).
+        if (! \App\Utils\ClinicSettings::get($patient->business_id, 'portal_enabled')) {
+            Auth::guard('patient')->logout();
+
+            return redirect()->route('portal.login')->with('login_error', __('clinic.portal_disabled'));
+        }
+        $idle_limit = 60 * (int) \App\Utils\ClinicSettings::get($patient->business_id, 'portal_idle_minutes');
+        $last = (int) $request->session()->get('portal_last_activity', 0);
+        if ($last > 0 && time() - $last > $idle_limit) {
+            Auth::guard('patient')->logout();
+            $request->session()->forget('portal_last_activity');
+
+            return redirect()->route('portal.login')->with('login_error', __('clinic.portal_signed_out_idle'));
+        }
+        $request->session()->put('portal_last_activity', time());
+
         // Load the patient's business context (name, date/currency format) so
         // shared helpers like @format_date and display_currency work on the
         // portal, which doesn't run the staff SetSessionData middleware.

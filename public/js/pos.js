@@ -232,52 +232,11 @@ $(document).ready(function() {
             .autocomplete({
                 delay: 0,
                 source: function(request, response) {
-                    var price_group = '';
-                    var search_fields = [];
-                    $('.search_fields:checked').each(function(i){
-                      search_fields[i] = $(this).val();
-                    });
-
-                    if ($('#price_group').length > 0) {
-                        price_group = $('#price_group').val();
-                    }
-                    
-                    //If default price group present
-                    if ($('#default_price_group').length > 0 && price_group === '') {
-                        price_group = $('#default_price_group').val();
-                    }
-
-                    //If types of service selected give more priority
-                    if ($('#types_of_service_price_group').length > 0 && 
-                        $('#types_of_service_price_group').val()) {
-                        price_group = $('#types_of_service_price_group').val();
-                    }
-                    
-                    var customer_id = $('select#customer_id').val();
-                    var is_direct_sell = false;
-                    if ($('input[name="is_direct_sale"]').length > 0 &&
-                        $('input[name="is_direct_sale"]').val() == 1) {
-                        is_direct_sell = true;
-                    }
-                    
-                    var disable_qty_alert = false;
-                    if ($('#disable_qty_alert').length) {
-                        disable_qty_alert = true;
-                    }
-                    
-                    var is_sales_order = $('#sale_type').length && $('#sale_type').val() == 'sales_order' ? true : false;
-                    
-                    var is_draft = false;
-                    if($('#status') && ($('#status').val()=='quotation' || 
-                    $('#status').val()=='draft')) {
-                        is_draft = true;
-                    }
-                    
-                    var is_serial_no = false;
-                    if ($('input[name="is_serial_no"]').length > 0 &&
-                        $('input[name="is_serial_no"]').val() == 1) {
-                        is_serial_no = true;
-                    }
+                    //PosInnova: every input that shapes the request lives in
+                    //pos_search_request_params(), shared with the Enter/scan path.
+                    var __p = pos_search_request_params(request.term);
+                    var price_group = __p.price_group;
+                    var search_fields = __p.search_fields;
 
                     //PosInnova: build a cache key from the inputs that affect results.
                     //Skip the cache when auto_add_single might fire (single result triggers
@@ -318,52 +277,68 @@ $(document).ready(function() {
                         }
                     }
 
-                    //3) Abort any previous in-flight request — keystrokes shouldn't queue.
-                    if (window.__posSearchInFlight && window.__posSearchInFlight.readyState !== 4) {
-                        try { window.__posSearchInFlight.abort(); } catch (e) {}
+                    //3) PosInnova: the NETWORK request waits until the keys stop.
+                    //   The cache and the local pre-filter above stay instant; only the
+                    //   round-trip is debounced. Before this, every character fired its
+                    //   own request and aborted the previous one - but abort() only stops
+                    //   the browser waiting, Apache still runs each one in full. A scanned
+                    //   6-character code cost 6 server requests, and the one that mattered
+                    //   queued behind 5 discarded ones (measured: 0.9s alone, 2.0-2.3s in
+                    //   a scan burst). A USB scanner types a whole code inside this window,
+                    //   so a scan is now ONE request; a person typing pays 150ms after
+                    //   their last key, on top of the instant local results.
+                    clearTimeout(window.__posSearchTimer);
+                    if (window.__posSearchPendingResponse) {
+                        //release jQuery UI's bookkeeping for the call this one supersedes
+                        //(its index is stale, so the empty list is never displayed)
+                        window.__posSearchPendingResponse([]);
                     }
+                    window.__posSearchPendingResponse = __preFiltered ? null : response;
 
-                    window.__posSearchInFlight = $.getJSON(
-                        '/products/list',
-                        {
-                            price_group: price_group,
-                            location_id: $('input#location_id').val(),
-                            term: request.term,
-                            not_for_selling: 0,
-                            search_fields: search_fields,
-                            auto_add_single: true,
-                            auto_add_only_exact_sku: $('#pos_disable_auto_add').val() == 1 ? 1 : 0,
-                            product_row: $('input#product_row_count').val(),
-                            customer_id: customer_id,
-                            is_direct_sell: is_direct_sell,
-                            is_serial_no: is_serial_no,
-                            is_sales_order: is_sales_order,
-                            disable_qty_alert: disable_qty_alert,
-                            is_draft: is_draft,
-                            multi_location_search: $('#multi_location_sale_enabled').length ? 1 : 0
-                        },
-                        function(data) {
-                            // Check if auto-add is enabled (single product found)
-                            if (data.auto_add && data.row_data) {
-                                // Automatically add the product row
-                                if (data.row_data.success) {
-                                    $('#search_product').val('');
-                                    pos_add_product_row_from_data(data.row_data);
-                                } else {
-                                    toastr.error(data.row_data.msg);
-                                }
-                                // Return a special marker to indicate auto-add was handled
-                                response([{auto_added: true}]);
-                            } else {
-                                // Normal autocomplete response — cache plain product lists.
-                                var list = data.products || data;
-                                if (Array.isArray(list)) {
-                                    __posCacheSet(__cacheKey, list);
-                                }
-                                response(list);
-                            }
+                    window.__posSearchTimer = setTimeout(function() {
+                        window.__posSearchPendingResponse = null;
+
+                        //Abort a previous TYPING request - its results are stale. Requests
+                        //committed with Enter are never stored here, so typing can't kill them.
+                        if (window.__posSearchInFlight && window.__posSearchInFlight.readyState !== 4) {
+                            try { window.__posSearchInFlight.abort(); } catch (e) {}
                         }
-                    );
+
+                        var __sentTerm = request.term;
+                        window.__posSearchInFlight = $.getJSON(
+                            '/products/list',
+                            //read at SEND time: the row counter may have moved during the wait
+                            pos_search_request_params(__sentTerm),
+                            function(data) {
+                                // Check if auto-add is enabled (single product found)
+                                if (data.auto_add && data.row_data) {
+                                    // Automatically add the product row
+                                    if (data.row_data.success) {
+                                        //PosInnova: clear the box only if it still holds what was
+                                        //searched - otherwise it is the next code being typed.
+                                        if ($('#search_product').val() === __sentTerm) {
+                                            $('#search_product').val('');
+                                        }
+                                        pos_add_product_row_from_data(data.row_data);
+                                    } else {
+                                        toastr.error(data.row_data.msg);
+                                    }
+                                    // Return a special marker to indicate auto-add was handled
+                                    response([{auto_added: true}]);
+                                } else {
+                                    // Normal autocomplete response — cache plain product lists.
+                                    var list = data.products || data;
+                                    if (Array.isArray(list)) {
+                                        __posCacheSet(__cacheKey, list);
+                                    }
+                                    response(list);
+                                }
+                            }
+                        ).fail(function(xhr, status) {
+                            //superseded by a newer search: release jQuery UI's bookkeeping
+                            if (status === 'abort') { response([]); }
+                        });
+                    }, 150);
                 },
                 minLength: 1,
                 response: function(event, ui) {
@@ -845,6 +820,9 @@ $(document).ready(function() {
             return;
         }
 
+        //PosInnova: renumber rows so no cart line can be lost to a duplicate index.
+        pos_reindex_product_rows();
+
         var data = pos_form_obj.serialize();
         data = data + '&status=draft';
         var url = pos_form_obj.attr('action');
@@ -879,6 +857,9 @@ $(document).ready(function() {
         if (is_valid != true) {
             return;
         }
+
+        //PosInnova: renumber rows so no cart line can be lost to a duplicate index.
+        pos_reindex_product_rows();
 
         var data = pos_form_obj.serialize();
         data = data + '&status=quotation';
@@ -1168,6 +1149,9 @@ $(document).ready(function() {
                 disable_pos_form_actions();
                 window.is_pos_submitting = true;
 
+                //PosInnova: renumber rows so no cart line can be lost to a duplicate index.
+                pos_reindex_product_rows();
+
                 var data = $(form).serialize();
                 data = data + '&status=final';
                 var url = $(form).attr('action');
@@ -1181,6 +1165,8 @@ $(document).ready(function() {
                             if (result.whatsapp_link) {
                                 window.open(result.whatsapp_link);
                             }
+                            //PosInnova: read the totals before the form is cleared
+                            pos_display_announce_sale(result);
                             $('#modal_payment').modal('hide');
                             toastr.success(result.msg);
 
@@ -1540,6 +1526,9 @@ $(document).ready(function() {
             }
         }
 
+        //PosInnova: renumber rows so no cart line can be lost to a duplicate index.
+        pos_reindex_product_rows();
+
         if (sell_form.valid()) {
             window.onbeforeunload = null;
             $(this).attr('disabled', true);
@@ -1680,6 +1669,22 @@ $(document).ready(function() {
             .find('textarea')
             .first()
             .focus();
+    });
+
+    //PosInnova: Enter commits the search box - see pos_commit_search_term(). Bound
+    //on document, so it runs AFTER jQuery UI's own keydown: when the suggestion list
+    //has a highlighted item, jQuery UI has already selected it and prevented the
+    //default, and that case is left exactly as it was.
+    $(document).on('keydown', '#search_product', function(e) {
+        if (e.which !== 13 || e.isDefaultPrevented()) {
+            return;
+        }
+        var term = String($(this).val() || '').trim();
+        if (!term) {
+            return;
+        }
+        e.preventDefault();
+        pos_commit_search_term(term);
     });
 
     //Press enter on search product to jump into last quantty and vice-versa
@@ -2142,19 +2147,126 @@ function get_recent_transactions(status, element_obj) {
 //variation_id is null when weighing_scale_barcode is used.
 
 /**
+ * PosInnova: mint a fresh idempotency key for the next checkout.
+ *
+ * The key identifies one checkout attempt, not one request. It is kept across
+ * a FAILED submit on purpose: if the first attempt never created a sale the
+ * retry proceeds normally, and if it did create one but the response was lost,
+ * the retry is recognised and the existing sale is returned instead of a
+ * duplicate. It is replaced only once a sale has actually been recorded.
+ */
+function pos_new_idempotency_key() {
+    var key;
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        key = window.crypto.randomUUID();
+    } else {
+        key = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : ((r & 0x3) | 0x8)).toString(16);
+        });
+    }
+    $('input#idempotency_key').val(key);
+
+    return key;
+}
+
+/**
+ * PosInnova: reserve the next product row index.
+ *
+ * The index is what becomes the POST field name (products[N][...]), so it must
+ * be unique across the cart. Reserving is synchronous - the counter is bumped
+ * the moment an index is handed out - so two products added inside one AJAX
+ * round-trip can never receive the same index.
+ *
+ * @returns {number} an index no other row holds
+ */
+function pos_reserve_product_row_index() {
+    var current = parseInt($('input#product_row_count').val());
+    if (isNaN(current)) {
+        current = 0;
+    }
+    $('input#product_row_count').val(current + 1);
+
+    return current;
+}
+
+/**
+ * PosInnova: stamp a cart row with an index.
+ *
+ * Rewrites every products[...] field name in the row, plus the per-row modal id
+ * and the data-row_index attributes that other handlers match rows on. Only the
+ * FIRST bracket is replaced, so nested names such as
+ * products[3][combo][1][quantity] keep their inner indexes.
+ *
+ * @param {object} $row      the <tr> to stamp
+ * @param {number} new_index the index to give it
+ */
+function pos_set_product_row_index($row, new_index) {
+    if (!$row || !$row.length) {
+        return;
+    }
+
+    $row.find('[name^="products["]').each(function () {
+        var name = $(this).attr('name');
+        if (name) {
+            $(this).attr('name', name.replace(/^products\[\d+\]/, 'products[' + new_index + ']'));
+        }
+    });
+
+    //Keep the per-row price modal addressable, and unique.
+    $row.find('.row_edit_product_price_model').attr('id', 'row_edit_product_price_modal_' + new_index);
+    $row.find('[data-target^="#row_edit_product_price_modal_"]')
+        .attr('data-target', '#row_edit_product_price_modal_' + new_index);
+
+    //Set the attribute AND jQuery's data cache - .attr() alone leaves a stale
+    //value behind for anything that already called .data('row_index').
+    $row.attr('data-row_index', new_index).data('row_index', new_index);
+    $row.find('[data-row_index]').each(function () {
+        $(this).attr('data-row_index', new_index).data('row_index', new_index);
+    });
+}
+
+/**
+ * PosInnova: renumber every cart row 0..n-1 in display order.
+ *
+ * Called immediately before the form is serialised. Even if a duplicate index
+ * were to slip through, this guarantees the server receives one products[N]
+ * entry per visible row - PHP silently keeps only the last value of a repeated
+ * key, which would drop a line from the sale without any error.
+ *
+ * Also records the row count so the server can verify nothing was lost in
+ * transit (see expected_product_rows).
+ *
+ * @returns {number} the number of rows submitted
+ */
+function pos_reindex_product_rows() {
+    var $rows = $('table#pos_table tbody').find('tr.product_row');
+
+    $rows.each(function (index) {
+        pos_set_product_row_index($(this), index);
+    });
+
+    $('input#expected_product_rows').val($rows.length);
+
+    return $rows.length;
+}
+
+/**
  * Common function to insert product row into POS table
  * @param {object} result - The result object containing html_content and other data
  */
 function pos_insert_product_row(result) {
-    var product_row = $('input#product_row_count').val();
     $('table#pos_table tbody')
         .append(result.html_content)
         .find('input.pos_quantity');
-    //increment row count
-    $('input#product_row_count').val(parseInt(product_row) + 1);
     var this_row = $('table#pos_table tbody')
         .find('tr')
         .last();
+    //PosInnova: the index the server baked into this row was derived from the
+    //counter as it stood when the request was SENT, so two products added
+    //within one round-trip come back stamped identically. Re-stamp locally with
+    //a reserved index instead of trusting it.
+    pos_set_product_row_index(this_row, pos_reserve_product_row_index());
     pos_each_row(this_row);
 
     //For initial discount if present
@@ -2189,11 +2301,7 @@ function pos_insert_product_row(result) {
     round_row_to_iraqi_dinnar(this_row);
     __currency_convert_recursively(this_row);
 
-    if (!$('#__is_mobile').length) {
-        $('input#search_product')
-            .focus()
-            .select();
-    }
+    pos_focus_search_after_add();
 
     //Used in restaurant module
     if (result.html_modifier) {
@@ -2206,6 +2314,145 @@ function pos_insert_product_row(result) {
 
     //scroll bottom of items list
     $(".pos_product_div").animate({ scrollTop: $('.pos_product_div').prop("scrollHeight")}, 1000);
+}
+
+//PosInnova: every input that shapes a product search, in one place. Used by the
+//search box as you type AND by pos_commit_search_term() (Enter / scanner), so the
+//two can never drift apart. Everything is read at call time.
+function pos_search_request_params(term) {
+    var price_group = '';
+    var search_fields = [];
+    $('.search_fields:checked').each(function(i) {
+        search_fields[i] = $(this).val();
+    });
+
+    if ($('#price_group').length > 0) {
+        price_group = $('#price_group').val();
+    }
+
+    //If default price group present
+    if ($('#default_price_group').length > 0 && price_group === '') {
+        price_group = $('#default_price_group').val();
+    }
+
+    //If types of service selected give more priority
+    if ($('#types_of_service_price_group').length > 0 &&
+        $('#types_of_service_price_group').val()) {
+        price_group = $('#types_of_service_price_group').val();
+    }
+
+    var is_draft = false;
+    if ($('#status') && ($('#status').val() == 'quotation' ||
+        $('#status').val() == 'draft')) {
+        is_draft = true;
+    }
+
+    return {
+        price_group: price_group,
+        location_id: $('input#location_id').val(),
+        term: term,
+        not_for_selling: 0,
+        search_fields: search_fields,
+        auto_add_single: true,
+        auto_add_only_exact_sku: $('#pos_disable_auto_add').val() == 1 ? 1 : 0,
+        product_row: $('input#product_row_count').val(),
+        customer_id: $('select#customer_id').val(),
+        is_direct_sell: $('input[name="is_direct_sale"]').length > 0 &&
+            $('input[name="is_direct_sale"]').val() == 1,
+        is_serial_no: $('input[name="is_serial_no"]').length > 0 &&
+            $('input[name="is_serial_no"]').val() == 1,
+        is_sales_order: $('#sale_type').length && $('#sale_type').val() == 'sales_order' ? true : false,
+        disable_qty_alert: $('#disable_qty_alert').length ? true : false,
+        is_draft: is_draft,
+        multi_location_search: $('#multi_location_sale_enabled').length ? 1 : 0
+    };
+}
+
+//PosInnova: Enter in the search box commits what is in it - which is what a
+//barcode scanner does after every code.
+//
+//The text leaves the box at once, so the next scan starts in an empty box. It
+//used to stay until the server answered (~1-2s), so a second scan landed on the
+//end of the first - "ACICLOACICLO" - matched nothing, and its keystrokes aborted
+//the first scan's request: BOTH items were lost.
+//
+//The request is deliberately NOT kept in __posSearchInFlight, so nothing typed
+//afterwards can abort it, and its line goes through pos_add_product_row_from_data(),
+//which decides merge-or-insert when the line arrives - three scans of the same box
+//in quick succession end as one line with qty 3.
+function pos_commit_search_term(term) {
+    var $box = $('#search_product');
+    $box.val('');
+    try { $box.autocomplete('close'); } catch (e) {}
+
+    //anything still waiting or in flight for this text is now redundant
+    clearTimeout(window.__posSearchTimer);
+    if (window.__posSearchPendingResponse) {
+        window.__posSearchPendingResponse([]);
+        window.__posSearchPendingResponse = null;
+    }
+    if (window.__posSearchInFlight && window.__posSearchInFlight.readyState !== 4) {
+        try { window.__posSearchInFlight.abort(); } catch (e) {}
+    }
+
+    return $.getJSON('/products/list', pos_search_request_params(term), function(data) {
+        if (data && data.auto_add && data.row_data) {
+            if (data.row_data.success) {
+                pos_add_product_row_from_data(data.row_data);
+            } else {
+                toastr.error(data.row_data.msg);
+                //give the code back so it can be read and retyped - unless the
+                //cashier has already moved on to the next one
+                if (String($box.val() || '') === '') {
+                    $box.val(term).select();
+                }
+            }
+            return;
+        }
+
+        var list = (data && (data.products || data)) || [];
+        var boxFree = String($box.val() || '') === '';
+
+        //Nothing matches. Say so here: the list's own response handler stays silent
+        //when "Disable auto-add" is on (as it is for PMI), so an unknown barcode used
+        //to just sit in the box. Hand it back HIGHLIGHTED, so the next scan replaces
+        //it instead of being appended to it.
+        if (!list.length) {
+            toastr.error(LANG.no_products_found + ': ' + term);
+            if (boxFree) {
+                $box.val(term).select();
+            }
+            return;
+        }
+
+        //Several matches, or one that wasn't auto-added. If the cashier hasn't
+        //started on something else, put the text back and let the normal search
+        //flow take it from there: one match is selected (lot pre-selection
+        //included), several open the list - as it behaved before Enter was handled.
+        if (boxFree) {
+            $box.val(term).autocomplete('search', term);
+        } else {
+            toastr.warning(LANG.please_select + ': ' + term);
+        }
+    });
+}
+
+//PosInnova: after a line is added, put the cursor back in the search box - but only
+//highlight its text when the box is empty. When it isn't, that text is the NEXT
+//code a scanner is typing at this very moment, and highlighting it made the rest
+//of the keystrokes overwrite it. (Failure paths still highlight on purpose: the
+//rejected code is selected so it can be retyped.)
+function pos_focus_search_after_add() {
+    if ($('#__is_mobile').length) {
+        return;
+    }
+    var $b = $('input#search_product');
+    if (document.activeElement !== $b[0]) {
+        $b.focus();
+    }
+    if (!$b.val()) {
+        $b.select();
+    }
 }
 
 // Helper function to add product row from server data
@@ -2264,11 +2511,7 @@ function pos_add_product_row_from_data(result) {
                         
                         round_row_to_iraqi_dinnar($(this));
                         
-                        if (!$('#__is_mobile').length) {
-                            $('input#search_product')
-                                .focus()
-                                .select();
-                        }
+                        pos_focus_search_after_add();
                     }
             });
         }
@@ -2344,11 +2587,7 @@ function pos_product_row(variation_id = null, purchase_line_id = null, weighing_
 
                     round_row_to_iraqi_dinnar($(this));
 
-                    if (!$('#__is_mobile').length) {
-                        $('input#search_product')
-                            .focus()
-                            .select();
-                    }
+                    pos_focus_search_after_add();
                 }
         });
     }
@@ -2430,7 +2669,22 @@ function pos_product_row(variation_id = null, purchase_line_id = null, weighing_
                 dataType: 'json',
                 success: function(result) {
                     if (result.success) {
-                        pos_insert_product_row(result);
+                        //PosInnova: decide merge-or-insert NOW, when the line arrives,
+                        //not when the click happened. The duplicate check above runs
+                        //before the request, so two clicks on one tile inside a
+                        //round-trip both saw "not in the cart yet" and the cashier got
+                        //two lines of qty 1. pos_add_product_row_from_data() re-checks
+                        //against the cart as it is now (the scan path already did).
+                        //Only plain qty-1 adds at the sale's own location take this
+                        //route: weighing-scale, lot-specific and other-location lines
+                        //keep the original insert.
+                        if (variation_id && !weighing_scale_barcode && !purchase_line_id &&
+                            quantity == 1 && String(chosen_location_id) === String(location_id)) {
+                            result.variation_id = result.variation_id || variation_id;
+                            pos_add_product_row_from_data(result);
+                        } else {
+                            pos_insert_product_row(result);
+                        }
                     } else {
                         toastr.error(result.msg);
                         if (!$('#__is_mobile').length) {
@@ -2780,6 +3034,9 @@ function reset_pos_form(){
 	if(pos_form_obj[0]){
 		pos_form_obj[0].reset();
 	}
+	//PosInnova: the previous sale is recorded - start a new checkout identity.
+	//(form.reset() restores the server-rendered value, which is already used.)
+	pos_new_idempotency_key();
 	if(sell_form[0]){
 		sell_form[0].reset();
 	}
@@ -4204,6 +4461,38 @@ function update_serial_no(){
 }
 
 
+//PosInnova: the customer display (/customer-display) shows a thank-you screen
+//with what was paid and the change. It is written just before the form is
+//cleared, because after that the totals are gone.
+function pos_display_announce_sale(result) {
+    try {
+        var methods = [];
+        $('#payment_rows_div select.payment_types_dropdown').each(function() {
+            var idx = String(this.id || '').replace('method_', '');
+            var amount = $('#amount_' + idx).length ? __read_number($('#amount_' + idx)) : 0;
+            if ($(this).val() && amount > 0) {
+                methods.push($(this).val());
+            }
+        });
+        localStorage.setItem('pos_display_last_sale', JSON.stringify({
+            at: Date.now(),
+            total: __read_number($('input#final_total_input')),
+            paid: __read_number($('input#total_paying_input')),
+            change: __read_number($('input#change_return')),
+            balance: __read_number($('input#in_balance_due')),
+            methods: methods,
+            location_id: $('input#location_id').val(),
+            invoice_no: (result && result.invoice_no) ? result.invoice_no : ''
+        }));
+    } catch (e) {}
+}
+
+$(document).on('shown.bs.modal hidden.bs.modal', '#modal_payment', function() {
+    if (typeof saveFormDataToLocalStorage === 'function') {
+        saveFormDataToLocalStorage();
+    }
+});
+
 /**
  * Saves the serialized form data from #add_pos_sell_form into LocalStorage.
  */
@@ -4214,6 +4503,9 @@ function saveFormDataToLocalStorage() {
     if(global_is_clear_local_storage){
         localStorage.setItem("pos_form_data_array", JSON.stringify([]));
         global_is_clear_local_storage = false;
+        //PosInnova: the sale is done (or the form was cleared), so there is
+        //nothing left to offer back on the next page load.
+        pos_clear_cart_snapshot();
         return false; // Exit the function early if global_is_clear_local_storage was true
     }
 
@@ -4245,7 +4537,7 @@ function saveFormDataToLocalStorage() {
     // Find if "order_tax" already exists in the array
     let textIndex = formArray.findIndex(item => item.name === "order_tax");
 
-    if (priceIndex !== -1) {
+    if (textIndex !== -1) {
         // If exists, update the value
         formArray[textIndex].value = $("#order_tax").text().trim();
     } else {
@@ -4256,7 +4548,7 @@ function saveFormDataToLocalStorage() {
     // Find if "shipping_charges_amount" already exists in the array
     let shipping_charges_amount = formArray.findIndex(item => item.name === "shipping_charges_amount");
 
-    if (priceIndex !== -1) {
+    if (shipping_charges_amount !== -1) {
         // If exists, update the value
         formArray[shipping_charges_amount].value = $("#shipping_charges_amount").text().trim();
     } else {
@@ -4267,7 +4559,7 @@ function saveFormDataToLocalStorage() {
     // Find if "total_paying_input" already exists in the array
     let total_paying_input = formArray.findIndex(item => item.name === "total_paying_input");
     
-    if (priceIndex !== -1) {
+    if (total_paying_input !== -1) {
         // If exists, update the value
         formArray[total_paying_input].value = $("#total_paying_input").val();
     } else {
@@ -4277,7 +4569,7 @@ function saveFormDataToLocalStorage() {
 
     // Find if "change_return" already exists in the array
     let change_return = formArray.findIndex(item => item.name === "change_return");
-    if (priceIndex !== -1) {
+    if (change_return !== -1) {
         // If exists, update the value
         formArray[change_return].value = $("#change_return").val();
     } else {
@@ -4286,15 +4578,25 @@ function saveFormDataToLocalStorage() {
     }
      // Find if "in_balance_due" already exists in the array
      let in_balance_due = formArray.findIndex(item => item.name === "in_balance_due");
-     if (priceIndex !== -1) {
+     if (in_balance_due !== -1) {
          // If exists, update the value
          formArray[in_balance_due].value = $("#in_balance_due").val();
      } else {
          // If not exists, push new entry
          formArray.push({ name: "in_balance_due", value: $("#in_balance_due").val()});
      }
+    //PosInnova: tell the customer display whether the payment window is open,
+    //so it can switch from the item list to the payment and change.
+    formArray.push({ name: "__display_paying", value: $('#modal_payment').is(':visible') ? 1 : 0 });
+
     // Store serialized data in LocalStorage as a JSON string
     localStorage.setItem("pos_form_data_array", JSON.stringify(formArray));
+
+    //PosInnova: keep the cart-recovery snapshot in step. Hooked here rather
+    //than at each call site so every path that already saves form state - adding
+    //a row, changing a quantity, changing the customer, entering a payment -
+    //keeps the recoverable cart current too.
+    pos_save_cart_snapshot();
 
     // console.log("Form data successfully saved to LocalStorage.");
 }
@@ -4328,4 +4630,688 @@ $(document).on('click', '.pos_pay_contact_due', function (e) {
             $('.pay_contact_due_modal').find('form#pay_contact_due_form').validate();
         },
     });
+});
+
+/* ==========================================================================
+ * PosInnova: cart recovery
+ *
+ * A part-built sale lives only in the DOM. An accidental refresh, a closed
+ * tab or a browser crash loses it, and the cashier has to remember what was
+ * already scanned. This keeps a snapshot of the cart in this browser and
+ * offers it back on the next visit to the POS screen.
+ *
+ * Three rules make it safe to use in a pharmacy:
+ *
+ *   1. It never restores by itself. The cashier is shown what was found and
+ *      has to press a button. A stale cart can therefore never turn into a
+ *      sale nobody meant to make.
+ *   2. Restoring re-fetches every line from the server, exactly the way
+ *      scanning the product again would. Price, stock, tax and batch come
+ *      from the database as it is now - never from the snapshot. A line whose
+ *      product is no longer sellable at this location is dropped and named.
+ *   3. If a price moved since the snapshot was taken, the cashier is told
+ *      which products, so nothing changes quietly under them.
+ *
+ * Quantity and customer are the only things taken from the snapshot, and both
+ * are re-validated by the server when the sale is finalized.
+ *
+ * Deliberately NOT restored: payment lines, discounts, order tax and shipping.
+ * Those are decided at the end of a sale against a total that no longer
+ * exists once the lines are re-priced, so replaying them could misstate what
+ * the customer owes.
+ * ========================================================================== */
+
+var POS_CART_SNAPSHOT_KEY = 'posinnova_cart_snapshot_v1';
+var pos_cart_restore_in_progress = false;
+
+//PosInnova: false until pos_offer_cart_recovery() has had its chance to read
+//the snapshot. Until then an empty cart must NOT delete it. The POS calls
+//pos_total_row() during page init - set_default_customer() triggers the
+//select#customer_id change handler, whose reward-point branch calls it - and
+//the cart is legitimately empty at that moment, so the snapshot was being
+//destroyed before it could ever be offered back.
+var pos_cart_recovery_settled = false;
+
+/**
+ * Read the config and translated strings the blade handed us.
+ * Returns null on any screen that has no recovery element (POS edit, etc).
+ */
+function pos_cart_recovery_cfg() {
+    var $el = $('#pos_cart_recovery');
+    if (!$el.length) {
+        return null;
+    }
+    //attr() not data(): data() keeps its own cache and normalises key names,
+    //and we only ever want the literal value the server rendered.
+    var a = function (name) {
+        var v = $el.attr('data-' + name);
+        return typeof v === 'undefined' ? '' : String(v);
+    };
+
+    return {
+        $el: $el,
+        user_id: a('user-id'),
+        business_id: a('business-id'),
+        max_age_mins: parseInt(a('max-age-mins'), 10) || 720,
+        lang: {
+            heading: a('lang-heading'),
+            help: a('lang-help'),
+            restore: a('lang-restore'),
+            discard: a('lang-discard'),
+            restoring: a('lang-restoring'),
+            restored: a('lang-restored'),
+            discarded: a('lang-discarded'),
+            price_changed: a('lang-price-changed'),
+            skipped: a('lang-skipped')
+        }
+    };
+}
+
+/**
+ * Read the current cart out of the DOM.
+ *
+ * Fields are matched on their exact name (products[IDX][field]) rather than a
+ * suffix, so a combo product child row - products[IDX][combo][K][field] -
+ * cannot be mistaken for a line of its own.
+ */
+function pos_collect_cart_lines() {
+    var lines = [];
+
+    $('table#pos_table tbody tr.product_row').each(function () {
+        var $tr = $(this);
+        var idx = $tr.attr('data-row_index');
+        if (typeof idx === 'undefined' || idx === '') {
+            return;
+        }
+
+        var field = function (name) {
+            return $tr.find('[name="products[' + idx + '][' + name + ']"]');
+        };
+
+        var variation_id = field('variation_id').val();
+        if (!variation_id) {
+            return;
+        }
+
+        var $name_cell = $tr.children('td').not('.serial_no').first();
+        var name = $.trim(($name_cell.text() || '').replace(/\s+/g, ' ')).substring(0, 60);
+
+        lines.push({
+            variation_id: String(variation_id),
+            product_id: String(field('product_id').val() || ''),
+            quantity: String(field('quantity').val() || ''),
+            unit_price: String(field('unit_price').val() || ''),
+            lot_no_line_id: String(field('lot_no_line_id').val() || ''),
+            sub_unit_id: String(field('sub_unit_id').val() || ''),
+            line_location_id: String(field('location_id').val() || ''),
+            //Everything below is cashier-editable on the row. Without it a
+            //restored line came back at the catalogue price with no discount,
+            //no row tax override and no note - not the cart they had.
+            line_discount_amount: String(field('line_discount_amount').val() || ''),
+            line_discount_type: String(field('line_discount_type').val() || ''),
+            tax_id: String(field('tax_id').val() || ''),
+            sell_line_note: String(field('sell_line_note').val() || ''),
+            name: name
+        });
+    });
+
+    return lines;
+}
+
+/**
+ * Overwrite the snapshot with the cart as it stands. An empty cart removes it,
+ * so finishing or clearing a sale leaves nothing to offer back.
+ *
+ * Every localStorage call is guarded: it throws in private-browsing mode and
+ * when the origin quota is full, and losing the snapshot must never break the
+ * sale in progress.
+ */
+function pos_save_cart_snapshot() {
+    if (pos_cart_restore_in_progress) {
+        return;
+    }
+
+    var cfg = pos_cart_recovery_cfg();
+    if (!cfg || $('form#add_pos_sell_form').length === 0) {
+        return;
+    }
+
+    try {
+        var lines = pos_collect_cart_lines();
+        if (!lines.length) {
+            //An empty cart means "nothing worth keeping" only once the page has
+            //settled. While it is still initialising it just means the rows are
+            //not on screen yet, and the snapshot is what we are about to offer.
+            if (pos_cart_recovery_settled) {
+                pos_clear_cart_snapshot();
+            }
+
+            return;
+        }
+
+        localStorage.setItem(POS_CART_SNAPSHOT_KEY, JSON.stringify({
+            v: 2,
+            ts: Date.now(),
+            user_id: cfg.user_id,
+            business_id: cfg.business_id,
+            location_id: String($('input#location_id').val() || ''),
+            contact_id: String($('select#customer_id').val() || ''),
+            contact_text: $.trim($('select#customer_id option:selected').text() || ''),
+            lines: lines
+        }));
+    } catch (e) {
+        /* best effort only */
+    }
+}
+
+function pos_clear_cart_snapshot() {
+    try {
+        localStorage.removeItem(POS_CART_SNAPSHOT_KEY);
+    } catch (e) {
+        /* best effort only */
+    }
+}
+
+/**
+ * Return the snapshot only if it is safe to offer on this screen.
+ *
+ * A snapshot belonging to another cashier or another business is left in place
+ * rather than deleted - that cashier gets it back when they log in again - but
+ * it is never shown here.
+ */
+function pos_read_cart_snapshot() {
+    var cfg = pos_cart_recovery_cfg();
+    if (!cfg) {
+        return null;
+    }
+
+    var raw = null;
+    try {
+        raw = localStorage.getItem(POS_CART_SNAPSHOT_KEY);
+    } catch (e) {
+        return null;
+    }
+    if (!raw) {
+        return null;
+    }
+
+    var snap = null;
+    try {
+        snap = JSON.parse(raw);
+    } catch (e) {
+        pos_clear_cart_snapshot();
+
+        return null;
+    }
+
+    if (!snap || snap.v !== 2 || !snap.lines || !snap.lines.length) {
+        pos_clear_cart_snapshot();
+
+        return null;
+    }
+
+    //Another user or another business on the same PC: not ours to show.
+    if (String(snap.user_id) !== cfg.user_id || String(snap.business_id) !== cfg.business_id) {
+        return null;
+    }
+
+    //Too old to be a refresh. Also catches a clock that moved backwards.
+    var age_mins = (Date.now() - (parseInt(snap.ts, 10) || 0)) / 60000;
+    if (!(age_mins >= 0) || age_mins > cfg.max_age_mins) {
+        pos_clear_cart_snapshot();
+
+        return null;
+    }
+
+    //A different location means different stock and different prices. Keep it
+    //for when they switch back, but do not offer it against this one.
+    if (String(snap.location_id || '') !== String($('input#location_id').val() || '')) {
+        return null;
+    }
+
+    return snap;
+}
+
+/**
+ * Show the recovery banner, if there is anything to recover.
+ */
+function pos_offer_cart_recovery() {
+    var cfg = pos_cart_recovery_cfg();
+    if (!cfg || $('form#add_pos_sell_form').length === 0) {
+        pos_cart_recovery_settled = true;
+
+        return;
+    }
+
+    //Already showing one, or a cart is already on screen (a draft, quotation
+    //or sales order was loaded into the page): not a recovery case.
+    if ($('#pos_cart_recovery_banner').length) {
+        return;
+    }
+    if ($('table#pos_table tbody tr.product_row').length > 0) {
+        pos_cart_recovery_settled = true;
+
+        return;
+    }
+
+    var snap = pos_read_cart_snapshot();
+    if (!snap) {
+        pos_cart_recovery_settled = true;
+
+        return;
+    }
+
+    //A banner is going up. Deliberately leave the snapshot unsettled so that a
+    //stray pos_total_row() on the still-empty cart cannot delete the very
+    //thing the cashier is being offered.
+
+    var when = '';
+    try {
+        when = (typeof moment !== 'undefined')
+            ? moment(snap.ts).format('LT')
+            : new Date(snap.ts).toLocaleTimeString();
+    } catch (e) {
+        when = '';
+    }
+
+    var help = cfg.lang.help
+        .replace('__COUNT__', snap.lines.length)
+        .replace('__TIME__', when);
+
+    //type=button on both: a stray Enter or click must never submit the sale.
+    var $banner = $(
+        '<div class="alert alert-warning" id="pos_cart_recovery_banner" style="margin-bottom: 8px;">' +
+            '<i class="fa fa-history"></i> <strong class="pos_cart_recovery_heading"></strong> ' +
+            '<span class="pos_cart_recovery_help"></span>' +
+            '<div style="margin-top: 6px;">' +
+                '<button type="button" class="btn btn-primary btn-sm" id="pos_cart_recovery_restore"></button> ' +
+                '<button type="button" class="btn btn-default btn-sm" id="pos_cart_recovery_discard"></button> ' +
+                '<span class="pos_cart_recovery_status text-muted" style="margin-left: 8px;"></span>' +
+            '</div>' +
+        '</div>'
+    );
+
+    //text(), never html(): product names and the translated strings go in as
+    //text so a name containing markup cannot be rendered.
+    $banner.find('.pos_cart_recovery_heading').text(cfg.lang.heading);
+    $banner.find('.pos_cart_recovery_help').text(help);
+    $banner.find('#pos_cart_recovery_restore').text(cfg.lang.restore);
+    $banner.find('#pos_cart_recovery_discard').text(cfg.lang.discard);
+
+    $banner.data('pos_snapshot', snap);
+    $('form#add_pos_sell_form').prepend($banner);
+}
+
+/**
+ * Put one snapshot line's cashier-edited state back onto a freshly inserted
+ * row: the sub-unit, the row tax override, the line discount, the price they
+ * typed and the line note.
+ *
+ * Returns true when the catalogue price has moved since the snapshot was
+ * taken. The row keeps the cashier's price either way - this is what lets the
+ * caller warn about a line it has deliberately NOT repriced.
+ */
+function pos_apply_line_state($row, line) {
+    //Re-select the stored unit FIRST. The sub_unit handler rescales
+    //the price by the unit multiplier, and the snapshot price was
+    //recorded with this unit already applied, so the unit has to be
+    //back in place before the price is written.
+    if (line.sub_unit_id) {
+        var $sub = $row.find('select.sub_unit');
+        if ($sub.length && $sub.find('option[value="' + line.sub_unit_id + '"]').length) {
+            $sub.val(line.sub_unit_id).trigger('change');
+        }
+    }
+
+    //What the catalogue charges right now, read before anything is
+    //overwritten, so the cashier can be told if it has moved.
+    var live_price = __read_number($row.find('input.pos_unit_price'));
+    var snap_price = __num_uf(line.unit_price);
+
+    //Row tax override. Set the VALUE ONLY: the select.tax_id change
+    //handler back-computes unit_price from the tax-inclusive figure,
+    //which would discard the price we are about to restore.
+    if (line.tax_id) {
+        var $tax = $row.find('select.tax_id');
+        if ($tax.length && $tax.find('option[value="' + line.tax_id + '"]').length) {
+            $tax.val(line.tax_id);
+        }
+    }
+
+    //Line discount, values only for the same reason.
+    if (line.line_discount_type) {
+        var $dtype = $row.find('select.row_discount_type');
+        if ($dtype.length && $dtype.find('option[value="' + line.line_discount_type + '"]').length) {
+            $dtype.val(line.line_discount_type);
+        }
+    }
+    var snap_discount = __num_uf(line.line_discount_amount);
+    if (!isNaN(snap_discount)) {
+        __write_number($row.find('input.row_discount_amount'), snap_discount);
+    }
+
+    //The cashier's own price, then ONE change event. The
+    //input.pos_unit_price handler re-reads the discount and the tax
+    //rate off this row and rewrites the tax-inclusive price, item_tax,
+    //the line total and the cart totals, so the whole row lands
+    //consistent instead of us computing derived figures by hand.
+    if (!isNaN(snap_price)) {
+        __write_number($row.find('input.pos_unit_price'), snap_price);
+    }
+    $row.find('input.pos_unit_price').change();
+
+    if (line.sell_line_note) {
+        $row.find('textarea[name$="[sell_line_note]"]').val(line.sell_line_note);
+    }
+
+    //The cart is back the way they left it. Report a catalogue price that has
+    //moved underneath it, because this row is deliberately not at that price.
+    return (!isNaN(snap_price) && !isNaN(live_price) && Math.abs(snap_price - live_price) > 0.0001);
+}
+
+/**
+ * Put the snapshot lines back, one at a time, through the same server endpoint
+ * that scanning a product uses.
+ *
+ * Sequential on purpose: it preserves the order the cashier originally scanned
+ * in, and it keeps the row-index reservation simple to follow.
+ */
+function pos_restore_cart_snapshot(snap) {
+    var cfg = pos_cart_recovery_cfg();
+    if (!cfg || !snap || !snap.lines || !snap.lines.length) {
+        return;
+    }
+
+    var $banner = $('#pos_cart_recovery_banner');
+    $banner.find('button').prop('disabled', true);
+    $banner.find('.pos_cart_recovery_status').text(cfg.lang.restoring);
+
+    //Restore the customer FIRST. The price a line is fetched at depends on the
+    //customer price group, so the rows must be requested with the customer
+    //already in place.
+    if (snap.contact_id && String($('select#customer_id').val() || '') !== String(snap.contact_id)) {
+        var $cust = $('select#customer_id');
+        if ($cust.find('option[value="' + snap.contact_id + '"]').length === 0 && snap.contact_text) {
+            $cust.append($('<option>', { value: snap.contact_id, text: snap.contact_text }));
+        }
+        $cust.val(snap.contact_id).trigger('change');
+    }
+
+    var header_location_id = $('input#location_id').val();
+    var price_group = $('#price_group').length ? $('#price_group').val() : '';
+    var is_direct_sell = ($('input[name="is_direct_sale"]').length > 0 && $('input[name="is_direct_sale"]').val() == 1);
+
+    var restored = 0;
+    var skipped = [];
+    var price_changed = [];
+
+    //Suppress snapshot writes while rows are going in, so a half-restored cart
+    //never overwrites the snapshot we are still reading from.
+    pos_cart_restore_in_progress = true;
+
+    var finish = function () {
+        pos_cart_restore_in_progress = false;
+        pos_cart_recovery_settled = true;
+
+        if (typeof pos_reindex_product_rows === 'function') {
+            pos_reindex_product_rows();
+        }
+        pos_total_row();
+
+        //The snapshot has served its purpose. pos_total_row() has just written
+        //a fresh one from the cart that is now on screen.
+        pos_clear_cart_snapshot();
+        pos_save_cart_snapshot();
+        $('#pos_cart_recovery_banner').remove();
+
+        if (restored > 0) {
+            toastr.success(cfg.lang.restored.replace('__COUNT__', restored));
+        }
+        if (price_changed.length) {
+            toastr.warning(cfg.lang.price_changed.replace('__PRODUCTS__', price_changed.join(', ')));
+        }
+        if (skipped.length) {
+            toastr.warning(cfg.lang.skipped.replace('__PRODUCTS__', skipped.join(', ')));
+        }
+
+        if (!$('#__is_mobile').length) {
+            $('input#search_product').focus();
+        }
+    };
+
+    var add_line = function (i) {
+        if (i >= snap.lines.length) {
+            finish();
+
+            return;
+        }
+
+        var line = snap.lines[i];
+        var row_location_id = line.line_location_id || header_location_id;
+
+        $.ajax({
+            method: 'GET',
+            url: '/sells/pos/get_product_row/' + line.variation_id + '/' + row_location_id,
+            data: {
+                product_row: $('input#product_row_count').val(),
+                customer_id: $('select#customer_id').val(),
+                is_direct_sell: is_direct_sell,
+                price_group: price_group,
+                //Ask for the same batch. If it is gone the server falls back to
+                //its normal batch choice rather than failing.
+                purchase_line_id: line.lot_no_line_id,
+                quantity: line.quantity,
+                line_location_id: row_location_id
+            },
+            dataType: 'json'
+        }).done(function (result) {
+            if (!result || !result.success || !result.html_content) {
+                //Out of stock, discontinued, or no longer sold here.
+                skipped.push(line.name || line.variation_id);
+
+                return;
+            }
+
+            pos_insert_product_row(result);
+            restored++;
+
+            var $row = $('table#pos_table tbody').find('tr').last();
+
+            if (pos_apply_line_state($row, line)) {
+                price_changed.push(line.name || line.variation_id);
+            }        }).fail(function () {
+            skipped.push(line.name || line.variation_id);
+        }).always(function () {
+            add_line(i + 1);
+        });
+    };
+
+    add_line(0);
+}
+
+$(document).ready(function () {
+    $(document).on('click', '#pos_cart_recovery_restore', function (e) {
+        e.preventDefault();
+        var snap = $('#pos_cart_recovery_banner').data('pos_snapshot');
+        if (snap) {
+            pos_restore_cart_snapshot(snap);
+        }
+    });
+
+    $(document).on('click', '#pos_cart_recovery_discard', function (e) {
+        e.preventDefault();
+        var cfg = pos_cart_recovery_cfg();
+        pos_cart_recovery_settled = true;
+        pos_clear_cart_snapshot();
+        $('#pos_cart_recovery_banner').remove();
+        if (cfg) {
+            toastr.info(cfg.lang.discarded);
+        }
+    });
+
+    //Let select2, the product search and set_default_customer() settle first,
+    //so the banner is not built against a half-initialised form.
+    setTimeout(pos_offer_cart_recovery, 500);
+});
+
+/* ==========================================================================
+ * PosInnova: the category and brand pickers expand in place.
+ *
+ * They used to be DaisyUI drawers that slid a half-screen overlay over the
+ * cart. The markup in pos_sidebar.blade.php is now a panel under each button,
+ * but every class the older handlers bind to is still there, so none of the
+ * filtering logic above had to change:
+ *
+ *   .main-category[data-parent=0]  applies that category and closes the picker
+ *   .main-category[data-parent=1]  drills into .all-sub-category
+ *   .product_category              applies a sub-category
+ *   .product_brand                 applies a brand
+ *   .overlay-category/.overlay-brand  "close the picker" - handled here by
+ *                                  collapsing the panel, which is what the
+ *                                  existing $('.overlay-category').trigger('click')
+ *                                  calls now end up doing.
+ * ========================================================================== */
+$(document).ready(function () {
+    var $bar = $('#pi_facet_bar');
+    if ($bar.length === 0) {
+        return;
+    }
+
+    //Native trim, not $.trim: jQuery 4 removed $.trim and this module should
+    //not be the thing that breaks on that upgrade.
+    function piTrim(v) {
+        return String(v == null ? '' : v).replace(/^\s+|\s+$/g, '');
+    }
+
+    var PANELS = {
+        cat: { $btn: $('#pi_cat_btn'), $panel: $('#pi_cat_panel') },
+        brand: { $btn: $('#pi_brand_btn'), $panel: $('#pi_brand_panel') }
+    };
+
+    function setPanel(which) {
+        $.each(PANELS, function (key, p) {
+            if (p.$panel.length === 0) {
+                return;
+            }
+            var on = key === which;
+            p.$panel.toggleClass('pi-open', on);
+            p.$btn.attr('aria-expanded', on ? 'true' : 'false');
+        });
+    }
+
+    function currentPanel() {
+        var open = '';
+        $.each(PANELS, function (key, p) {
+            if (p.$panel.hasClass('pi-open')) {
+                open = key;
+            }
+        });
+
+        return open;
+    }
+
+    $.each(PANELS, function (key, p) {
+        if (p.$btn.length === 0) {
+            return;
+        }
+        p.$btn.on('click', function (e) {
+            e.preventDefault();
+            setPanel(currentPanel() === key ? '' : key);
+        });
+    });
+
+    //What used to close the drawer now closes the panel. Bound on both the
+    //element and the document so a trigger() from the older handlers is caught
+    //whichever way it is dispatched.
+    $(document).on('click', '.overlay-category, .overlay-brand', function () {
+        setPanel('');
+    });
+
+    //Type-to-filter inside a panel. Hides options, never removes them, so the
+    //handlers bound to those same elements at page load keep working.
+    $bar.on('input', '.pi-facet-filter', function () {
+        var term = piTrim($(this).val()).toLowerCase();
+        var $scope = $($(this).data('scope'));
+        $scope.find('.pi-opt').each(function () {
+            var $o = $(this);
+            //Never hide the "all" escape hatch - it is how a filter is cleared.
+            if ($o.attr('data-value') === 'all') {
+                return;
+            }
+            var hit = term === '' || piTrim($o.text()).toLowerCase().indexOf(term) !== -1;
+            $o.prop('hidden', !hit);
+        });
+    });
+
+    /* ---- the chips that say what is filtering the grid -------------------- */
+    var active = { cat: null, brand: null };
+
+    function labelOf($el) {
+        var t = piTrim($el.text());
+
+        return t.replace(/\s+/g, ' ');
+    }
+
+    function clearFilter(kind) {
+        //Re-use the real "all" option so the request goes out exactly as it
+        //would if the cashier had clicked it.
+        var sel = kind === 'cat'
+            ? '.main-category[data-value="all"]'
+            : '.product_brand[data-value="all"]';
+        var $all = $(sel).first();
+        if ($all.length) {
+            $all.trigger('click');
+        } else {
+            active[kind] = null;
+            renderChips();
+        }
+    }
+
+    function renderChips() {
+        var $row = $('#pi_active_row');
+        $row.empty();
+
+        var add = function (kind, text) {
+            var $chip = $('<span class="pi-chip"></span>');
+            $('<span></span>').text(text).appendTo($chip);
+            var $x = $('<button type="button" aria-label="Clear filter">&times;</button>');
+            $x.on('click', function (e) {
+                e.preventDefault();
+                clearFilter(kind);
+            });
+            $chip.append($x);
+            $row.append($chip);
+        };
+
+        if (active.cat) { add('cat', active.cat); }
+        if (active.brand) { add('brand', active.brand); }
+    }
+
+    function markActive($panel, $opt) {
+        $panel.find('.pi-opt').removeClass('pi-opt-active');
+        if ($opt) {
+            $opt.addClass('pi-opt-active');
+        }
+    }
+
+    //Bound after the filtering handlers above, so by the time these run the
+    //request has already gone out with the new category or brand.
+    $('.main-category, .product_category').on('click', function () {
+        var $o = $(this);
+        if ($o.attr('data-parent') === '1') {
+            return;   //drilling down, not choosing
+        }
+        active.cat = $o.attr('data-value') === 'all' ? null : labelOf($o);
+        markActive($('#pi_cat_panel'), active.cat ? $o : null);
+        renderChips();
+    });
+
+    $('.product_brand').on('click', function () {
+        var $o = $(this);
+        active.brand = $o.attr('data-value') === 'all' ? null : labelOf($o);
+        markActive($('#pi_brand_panel'), active.brand ? $o : null);
+        renderChips();
+    });
+
+    renderChips();
 });

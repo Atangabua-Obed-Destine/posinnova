@@ -51,8 +51,20 @@ class ConsultationController extends Controller
         }
 
         $visit = Visit::forBusiness($business_id)
-            ->with(['patient.patientDetails'])
+            ->with(['patient.patientDetails', 'package'])
             ->findOrFail($request->input('visit_id'));
+
+        //PosInnova clinic: pay-first gate and queue status.
+        if ($blocked = $this->payGateResponse($visit)) {
+            return $blocked;
+        }
+        if ($visit->status == 'open' && $visit->queue_status == 'waiting') {
+            $visit->queue_status = 'with_doctor';
+            $visit->called_at = now();
+            $visit->save();
+        }
+        //The consultation was billed at check-in (package or default fee).
+        $fee_billed = $visit->billedAtCheckin();
 
         $departments = Department::forDropdown($business_id, true);
         $default_fee = \App\Business::where('id', $business_id)->value('consultation_fee') ?: 0;
@@ -68,7 +80,7 @@ class ConsultationController extends Controller
             : collect();
 
         return view('consultation.create')
-            ->with(compact('visit', 'departments', 'default_fee', 'lab_tests', 'imaging_catalogue'));
+            ->with(compact('visit', 'departments', 'default_fee', 'lab_tests', 'imaging_catalogue', 'fee_billed'));
     }
 
     public function store(Request $request)
@@ -88,6 +100,10 @@ class ConsultationController extends Controller
             $business_id = $request->session()->get('user.business_id');
 
             $visit = Visit::forBusiness($business_id)->findOrFail($request->input('visit_id'));
+
+            if ($blocked = $this->payGateResponse($visit)) {
+                return $blocked;
+            }
 
             $is_final = $request->input('action') === 'final';
             if ($is_final && ! auth()->user()->can('consultation.finalize')) {
@@ -121,7 +137,8 @@ class ConsultationController extends Controller
                 'referral_to' => $request->input('referral_to') ?: null,
                 'admission_requested' => $request->boolean('admission_requested') ? 1 : 0,
                 'status' => $is_final ? 'final' : 'draft',
-                'consultation_fee' => $request->filled('consultation_fee') ? $this->commonUtil->num_uf($request->input('consultation_fee')) : 0,
+                'consultation_fee' => $visit->billedAtCheckin() ? 0
+                    : ($request->filled('consultation_fee') ? $this->commonUtil->num_uf($request->input('consultation_fee')) : 0),
             ]);
 
             $this->savePrescriptions($request, $consultation);
@@ -131,6 +148,7 @@ class ConsultationController extends Controller
             //Bill the consultation fee to the patient (only once it is final).
             if ($is_final) {
                 $this->chargeConsultationFee($consultation, $visit);
+                $this->markSeen($visit);
             }
 
             DB::commit();
@@ -167,6 +185,7 @@ class ConsultationController extends Controller
         $consultation = Consultation::forBusiness($business_id)
             ->with(['visit', 'patient.patientDetails', 'consultedBy', 'referralDepartment', 'prescriptions.variation', 'prescriptions.product'])
             ->findOrFail($id);
+        \App\Utils\Dispensing::attach($consultation->prescriptions);
 
         //If user can only view own, enforce it.
         if (! auth()->user()->can('consultation.view_all') && auth()->user()->can('consultation.view_own')) {
@@ -195,6 +214,7 @@ class ConsultationController extends Controller
                 $consultation->save();
                 //Bill the consultation fee now that it is finalized.
                 $this->chargeConsultationFee($consultation, $consultation->visit);
+                $this->markSeen($consultation->visit);
             }
 
             $output = ['success' => true, 'msg' => __('lang_v1.consultation_finalized_success')];
@@ -350,6 +370,31 @@ class ConsultationController extends Controller
     }
 
     /**
+     * PosInnova clinic: when the clinic takes payment before the doctor, an
+     * unpaid check-in keeps the consultation closed (see App\Utils\ClinicQueue).
+     */
+    private function payGateResponse($visit)
+    {
+        if (! \App\Utils\ClinicQueue::payGateBlocks($visit)) {
+            return null;
+        }
+
+        return redirect()
+            ->action([\App\Http\Controllers\VisitController::class, 'show'], [$visit->id])
+            ->with('status', ['success' => false, 'msg' => __('clinic.pay_first_blocked')]);
+    }
+
+    /** The doctor has finished with the patient: out of the queue. */
+    private function markSeen($visit)
+    {
+        if ($visit && in_array($visit->queue_status, ['waiting', 'with_doctor'])) {
+            $visit->queue_status = 'seen';
+            $visit->seen_at = now();
+            $visit->save();
+        }
+    }
+
+    /**
      * Post the consultation fee to the patient's account as a sell/due (Phase 8
      * billing). Idempotent via the consultations.fee_charged flag, so finalizing
      * the same consultation twice never double-charges.
@@ -357,6 +402,10 @@ class ConsultationController extends Controller
     private function chargeConsultationFee(Consultation $consultation, $visit)
     {
         if ($consultation->fee_charged || $consultation->consultation_fee <= 0) {
+            return;
+        }
+        //Billed at check-in already (clinic phase 2): never charge twice.
+        if ($visit && $visit->billedAtCheckin()) {
             return;
         }
 

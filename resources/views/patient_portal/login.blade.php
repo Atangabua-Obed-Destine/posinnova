@@ -85,16 +85,17 @@
                         <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-2">@lang('lang_v1.file_number')</label>
                         <div class="tw-relative">
                             <span class="tw-absolute tw-inset-y-0 tw-left-0 tw-flex tw-items-center tw-pl-3.5 tw-text-gray-400"><i class="fas fa-id-card"></i></span>
-                            <input type="text" name="file_number" value="{{ old('file_number') }}" required autofocus inputmode="text" placeholder="e.g. PMI-0001"
+                            <input type="text" name="file_number" value="{{ old('file_number') }}" required autofocus inputmode="text" autocomplete="username" placeholder="@lang('lang_v1.file_number')"
                                    class="tw-w-full tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-text-gray-900 tw-pl-10 tw-pr-3 tw-py-3 tw-text-sm focus:tw-ring-2 focus:tw-ring-indigo-500 focus:tw-border-indigo-500 tw-transition">
                         </div>
                     </div>
                     <div>
-                        <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-2">@lang('lang_v1.mobile')</label>
+                        {{-- PosInnova: file number + PIN (set by reception), never the phone number --}}
+                        <label for="portal_pin" class="tw-block tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-2">@lang('clinic.your_pin')</label>
                         <div class="tw-relative">
-                            <span class="tw-absolute tw-inset-y-0 tw-left-0 tw-flex tw-items-center tw-pl-3.5 tw-text-gray-400"><i class="fas fa-mobile-screen"></i></span>
-                            <input type="tel" name="mobile" value="{{ old('mobile') }}" required inputmode="tel" placeholder="@lang('lang_v1.your_registered_mobile')"
-                                   class="tw-w-full tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-text-gray-900 tw-pl-10 tw-pr-3 tw-py-3 tw-text-sm focus:tw-ring-2 focus:tw-ring-indigo-500 focus:tw-border-indigo-500 tw-transition">
+                            <span class="tw-absolute tw-inset-y-0 tw-left-0 tw-flex tw-items-center tw-pl-3.5 tw-text-gray-400"><i class="fas fa-lock"></i></span>
+                            <input type="password" id="portal_pin" name="pin" required inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" placeholder="••••"
+                                   class="tw-w-full tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-text-gray-900 tw-pl-10 tw-pr-3 tw-py-3 tw-text-sm tw-tracking-widest focus:tw-ring-2 focus:tw-ring-indigo-500 focus:tw-border-indigo-500 tw-transition">
                         </div>
                     </div>
                     <button type="submit" class="login-press tw-w-full tw-rounded-xl tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-font-semibold tw-py-3 tw-text-sm tw-shadow-lg hover:tw-opacity-95">

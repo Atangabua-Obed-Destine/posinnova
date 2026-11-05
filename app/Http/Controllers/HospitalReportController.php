@@ -205,6 +205,9 @@ class HospitalReportController extends Controller
     public function admissions(Request $request)
     {
         $this->checkHospitalEnabled();
+        if (! \App\Utils\ClinicSettings::sectionOn($request->session()->get('user.business_id'), 'wards')) {
+            abort(404);
+        }
         if (! auth()->user()->can('hospital_report.admissions')) {
             abort(403, 'Unauthorized action.');
         }
@@ -328,6 +331,9 @@ class HospitalReportController extends Controller
     public function ward(Request $request)
     {
         $this->checkHospitalEnabled();
+        if (! \App\Utils\ClinicSettings::sectionOn($request->session()->get('user.business_id'), 'wards')) {
+            abort(404);
+        }
         if (! auth()->user()->can('hospital_report.ward')) {
             abort(403, 'Unauthorized action.');
         }
@@ -436,6 +442,9 @@ class HospitalReportController extends Controller
     public function mortality(Request $request)
     {
         $this->checkHospitalEnabled();
+        if (! \App\Utils\ClinicSettings::sectionOn($request->session()->get('user.business_id'), 'morgue')) {
+            abort(404);
+        }
         if (! auth()->user()->can('hospital_report.mortality')) {
             abort(403, 'Unauthorized action.');
         }
@@ -491,6 +500,9 @@ class HospitalReportController extends Controller
     public function antenatal(Request $request)
     {
         $this->checkHospitalEnabled();
+        if (! \App\Utils\ClinicSettings::sectionOn($request->session()->get('user.business_id'), 'maternity')) {
+            abort(404);
+        }
         if (! auth()->user()->can('hospital_report.antenatal')) {
             abort(403, 'Unauthorized action.');
         }
@@ -557,6 +569,9 @@ class HospitalReportController extends Controller
     public function morgue(Request $request)
     {
         $this->checkHospitalEnabled();
+        if (! \App\Utils\ClinicSettings::sectionOn($request->session()->get('user.business_id'), 'morgue')) {
+            abort(404);
+        }
         if (! auth()->user()->can('hospital_report.morgue')) {
             abort(403, 'Unauthorized action.');
         }

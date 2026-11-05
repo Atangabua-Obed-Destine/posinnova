@@ -45,8 +45,8 @@
             <div class="tw-space-y-1.5">
                 @foreach($c->prescriptions as $rx)
                     <div class="tw-flex tw-items-center tw-justify-between tw-text-sm tw-gap-2">
-                        <span class="tw-text-gray-700 tw-truncate">{{ optional($rx->product)->name }} <span class="tw-text-gray-400">· {{ $rx->dosage }} {{ $rx->frequency }}</span></span>
-                        <span class="tw-text-[10px] tw-px-1.5 tw-py-0.5 tw-rounded-full tw-shrink-0 {{ $rx->is_dispensed ? 'tw-bg-green-100 tw-text-green-700' : 'tw-bg-gray-100 tw-text-gray-500' }}">{{ $rx->is_dispensed ? __('lang_v1.dispensed') : __('lang_v1.pending') }}</span>
+                        <span class="tw-text-gray-700 tw-truncate">{{ $rx->displayName() }} <span class="tw-text-gray-400">· {{ $rx->dosage }} {{ $rx->frequency }}</span></span>
+                        @include('patient_portal.partials.rx_state', ['rx' => $rx])
                     </div>
                 @endforeach
             </div>

@@ -12,7 +12,7 @@
             <div class="tw-flex tw-items-start tw-gap-3">
                 <span class="tw-inline-flex tw-items-center tw-justify-center tw-w-10 tw-h-10 tw-rounded-xl tw-text-white tw-shrink-0 tw-shadow" style="background:linear-gradient(135deg,#6366f1,#4f46e5);"><i class="fas fa-pills"></i></span>
                 <div class="tw-flex-1 tw-min-w-0">
-                    <p class="tw-text-sm tw-font-semibold tw-text-gray-800">{{ optional($rx->product)->name }}</p>
+                    <p class="tw-text-sm tw-font-semibold tw-text-gray-800">{{ $rx->displayName() }}</p>
                     <p class="tw-text-xs tw-text-gray-500 tw-mt-0.5">
                         @if($rx->dosage){{ $rx->dosage }}@endif
                         @if($rx->frequency) · {{ $rx->frequency }}@endif
@@ -20,9 +20,7 @@
                     </p>
                     <p class="tw-text-[11px] tw-text-gray-400 tw-mt-1">{{ @format_date(optional($rx->consultation)->created_at) }}</p>
                 </div>
-                <span class="tw-text-[10px] tw-px-2 tw-py-0.5 tw-rounded-full tw-shrink-0 {{ $rx->is_dispensed ? 'tw-bg-green-100 tw-text-green-700' : 'tw-bg-amber-100 tw-text-amber-700' }}">
-                    {{ $rx->is_dispensed ? __('lang_v1.dispensed') : __('lang_v1.pending') }}
-                </span>
+                @include('patient_portal.partials.rx_state', ['rx' => $rx])
             </div>
         </div>
     @empty

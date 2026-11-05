@@ -357,8 +357,10 @@ class SellPosController extends Controller
             return null;
         }
 
-        $lines = $consultation->prescriptions->where('is_dispensed', 0)->filter(fn ($rx) => ! empty($rx->variation_id))
-            ->map(fn ($rx) => ['variation_id' => $rx->variation_id, 'quantity' => (float) $rx->quantity ?: 1])->values();
+        // Only what is still waiting: a line partly given before loads the rest,
+        // closed or fully given lines are left out.
+        $lines = \App\Utils\Dispensing::waitingLines($consultation)->filter(fn ($rx) => ! empty($rx->variation_id))
+            ->map(fn ($rx) => ['variation_id' => $rx->variation_id, 'quantity' => (float) $rx->outstanding_qty ?: 1])->values();
 
         return [
             'mode' => 'prescription',
@@ -379,7 +381,183 @@ class SellPosController extends Controller
         $business_id = request()->session()->get('user.business_id');
         $business_details = $this->businessUtil->getDetails($business_id);
         $pos_settings = empty($business_details->pos_settings) ? $this->businessUtil->defaultPosSettings() : json_decode($business_details->pos_settings, true);
-        return view('sale_pos.display', compact('pos_settings'));
+
+        //PosInnova: the screen shows two languages at once - the user's own
+        //(English or French) first, the other one under it.
+        $primary = in_array(app()->getLocale(), ['en', 'fr']) ? app()->getLocale() : 'en';
+        $secondary = $primary == 'en' ? 'fr' : 'en';
+        $pair = function ($key, $replace = []) use ($primary, $secondary) {
+            $a = __($key, $replace, $primary);
+            $b = __($key, $replace, $secondary);
+
+            return [$a, $a === $b ? null : $b];
+        };
+        $strings = [];
+        foreach (array_keys(trans('customer_display', [], 'en')) as $key) {
+            $strings[$key] = $pair('customer_display.'.$key);
+        }
+
+        $locations = BusinessLocation::where('business_id', $business_id)
+            ->get(['id', 'name', 'city', 'landmark', 'mobile', 'business_id', 'default_payment_accounts']);
+
+        //payment methods each location takes, labelled in both languages where
+        //the label is a built-in one (custom labels are typed by the business)
+        $builtin = ['cash', 'card', 'cheque', 'bank_transfer', 'other'];
+        $custom_labels = json_decode((string) $business_details->custom_labels, true);
+        $payment_methods = [];
+        $accept_methods = [];
+        foreach ($locations as $location) {
+            $types = $this->transactionUtil->payment_types($location, false, $business_id);
+            $payment_methods[$location->id] = [];
+            $accept_methods[$location->id] = [];
+            foreach ($types as $key => $label) {
+                $payment_methods[$location->id][$key] = in_array($key, $builtin) ? $pair('lang_v1.'.$key) : [$label, null];
+                //"We accept" leaves out "other" and custom methods the business never named
+                $named = in_array($key, $builtin) ? $key != 'other' : ! empty($custom_labels['payments'][$key]);
+                if ($named) {
+                    $accept_methods[$location->id][] = $key;
+                }
+            }
+        }
+
+        $units = \App\Unit::where('business_id', $business_id)->pluck('short_name', 'id');
+
+        $carousel_images = [];
+        foreach (range(1, 10) as $i) {
+            if (! empty($pos_settings['carousel_image_'.$i])) {
+                $carousel_images[] = url('uploads/carousel_images/'.$pos_settings['carousel_image_'.$i]);
+            }
+        }
+
+        $messages = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) ($pos_settings['display_screen_messages'] ?? '')))));
+
+        //change breakdown: the business's own denominations if it set them,
+        //otherwise the CFA franc ones; any other currency gets no breakdown
+        $denominations = array_values(array_filter(array_map('floatval', explode(',', (string) ($pos_settings['cash_denominations'] ?? '')))));
+        $is_cfa = in_array($business_details->currency_code, ['XAF', 'XOF']);
+        if (empty($denominations) && $is_cfa) {
+            $denominations = [10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
+        }
+        rsort($denominations);
+
+        $config = [
+            'detailsUrl' => route('pos_display_details'),
+            'locale' => [$primary, $secondary],
+            'strings' => $strings,
+            'currency' => [
+                'code' => $business_details->currency_code,
+                'symbol' => $business_details->currency_symbol,
+                'placement' => $business_details->currency_symbol_placement,
+                'thousand' => $business_details->thousand_separator,
+                'decimal' => $business_details->decimal_separator,
+                'precision' => (int) $business_details->currency_precision,
+                'qtyPrecision' => (int) $business_details->quantity_precision,
+                'denominations' => $denominations,
+                'coinMax' => $is_cfa ? 500 : 0,
+            ],
+            'showExpiry' => ! empty($business_details->enable_product_expiry),
+            'units' => $units,
+            'locations' => $locations->mapWithKeys(function ($l) {
+                return [$l->id => ['name' => $l->name, 'city' => $l->city, 'mobile' => $l->mobile]];
+            }),
+            'defaultLocation' => optional($locations->first())->id,
+            'paymentMethods' => $payment_methods,
+            'acceptMethods' => $accept_methods,
+            'messages' => $messages,
+            'carousel' => $carousel_images,
+        ];
+
+        $heading = trim(html_entity_decode(strip_tags((string) ($pos_settings['display_screen_heading'] ?? ''))));
+        $business_name = $business_details->name;
+        $logo = ! empty($business_details->logo) ? asset('uploads/business_logos/'.$business_details->logo) : null;
+        $cashier = trim(auth()->user()->first_name.' '.auth()->user()->last_name);
+
+        return view('sale_pos.display', compact('config', 'strings', 'heading', 'business_name', 'logo', 'cashier', 'carousel_images'));
+    }
+
+    /**
+     * PosInnova: everything the customer display needs about the lines in the
+     * cart, in one request: product names, the expiry of the lot on each line
+     * (or of the earliest-expiring lot in stock when the line has none), and the
+     * customer's name. Replaces downloading the whole customer list on every
+     * cart change.
+     */
+    public function posDisplayDetails(Request $request)
+    {
+        $business_id = $request->session()->get('user.business_id');
+        $ids = function ($name) use ($request) {
+            return array_values(array_unique(array_filter(array_map('intval', explode(',', (string) $request->input($name, ''))))));
+        };
+        $variation_ids = array_slice($ids('variations'), 0, 300);
+        $lot_ids = array_slice($ids('lots'), 0, 300);
+        $location_id = (int) $request->input('location_id');
+        $contact_id = (int) $request->input('contact_id');
+
+        $out = ['variations' => new \stdClass, 'lots' => new \stdClass, 'earliest' => new \stdClass, 'contact' => null];
+
+        if (! empty($variation_ids)) {
+            $rows = Variation::join('products as p', 'variations.product_id', '=', 'p.id')
+                ->join('product_variations as pv', 'variations.product_variation_id', '=', 'pv.id')
+                ->where('p.business_id', $business_id)
+                ->whereIn('variations.id', $variation_ids)
+                ->get(['variations.id', 'variations.name as v_name', 'pv.name as pv_name', 'p.name', 'p.type', 'p.unit_id']);
+            $vars = [];
+            foreach ($rows as $r) {
+                $name = $r->name;
+                if ($r->type == 'variable') {
+                    $name .= ' - '.$r->pv_name.' '.$r->v_name;
+                }
+                $vars[$r->id] = ['name' => $name, 'unit_id' => $r->unit_id];
+            }
+            $out['variations'] = (object) $vars;
+
+            $business = Business::find($business_id, ['id', 'enable_product_expiry']);
+            if (! empty($vars) && ! empty($business->enable_product_expiry) && ! empty($location_id)) {
+                //earliest expiry still in stock and not yet expired, per variation
+                $earliest = DB::table('purchase_lines as pl')
+                    ->join('transactions as t', 'pl.transaction_id', '=', 't.id')
+                    ->where('t.business_id', $business_id)
+                    ->where('t.location_id', $location_id)
+                    ->whereIn('pl.variation_id', array_keys($vars))
+                    ->whereNotNull('pl.exp_date')
+                    ->whereDate('pl.exp_date', '>=', \Carbon\Carbon::today())
+                    ->whereRaw('(pl.quantity - pl.quantity_sold - pl.quantity_adjusted - pl.quantity_returned) > 0')
+                    ->groupBy('pl.variation_id')
+                    ->select('pl.variation_id', DB::raw('MIN(pl.exp_date) as exp'))
+                    ->pluck('exp', 'variation_id');
+                $out['earliest'] = (object) $earliest->map(function ($d) {
+                    return substr($d, 0, 10);
+                })->all();
+
+                if (! empty($lot_ids)) {
+                    $lots = DB::table('purchase_lines as pl')
+                        ->join('transactions as t', 'pl.transaction_id', '=', 't.id')
+                        ->where('t.business_id', $business_id)
+                        ->whereIn('pl.id', $lot_ids)
+                        ->get(['pl.id', 'pl.exp_date']);
+                    $l = [];
+                    foreach ($lots as $lot) {
+                        $l[$lot->id] = empty($lot->exp_date) ? null : substr($lot->exp_date, 0, 10);
+                    }
+                    $out['lots'] = (object) $l;
+                }
+            }
+        }
+
+        if (! empty($contact_id)) {
+            $contact = Contact::where('business_id', $business_id)
+                ->where('id', $contact_id)
+                ->first(['id', 'name', 'supplier_business_name', 'is_default']);
+            if (! empty($contact)) {
+                $out['contact'] = [
+                    'id' => $contact->id,
+                    'name' => ! empty($contact->name) ? $contact->name : $contact->supplier_business_name,
+                    'is_default' => (int) $contact->is_default,
+                ];
+            }
+        }
+
+        return response()->json($out);
     }
 
     /**
@@ -419,6 +597,60 @@ class SellPosController extends Controller
                     $input['walk_in_customer_name'] = null;
                 }
             }
+
+            //PosInnova: refuse a sale that reached us with fewer lines than the
+            //browser submitted. PHP keeps only the last value of a repeated POST
+            //key, so a duplicated row index - or a payload truncated by
+            //max_input_vars - would otherwise save a short invoice with no error
+            //at all. Checked before anything reads the cart, because a lost line
+            //also makes the totals and the credit-limit check wrong.
+            //Skipped when the count is absent (0), e.g. API clients.
+            $expected_rows = (int) $request->input('expected_product_rows', 0);
+            $received_rows = ! empty($input['products']) && is_array($input['products'])
+                ? count($input['products'])
+                : 0;
+
+            if ($expected_rows > 0 && $received_rows < $expected_rows) {
+                $output = ['success' => 0,
+                    'msg' => __('lang_v1.sell_lines_lost_in_transit', [
+                        'expected' => $expected_rows,
+                        'received' => $received_rows,
+                    ]),
+                ];
+
+                return ! empty($request->input('is_direct_sale'))
+                    ? redirect()->back()->with('status', $output)
+                    : $output;
+            }
+
+            // PosInnova: idempotency. The POS mints one key per checkout. If the
+            // same checkout arrives twice - a double-click, or a retry after the
+            // response was lost in transit - hand back the sale that already
+            // exists instead of creating a second one with a second stock
+            // deduction. Without this, two identical submits produced two sales.
+            $idempotency_key = trim((string) $request->input('idempotency_key'));
+            if ($idempotency_key !== '') {
+                $already = Transaction::where('business_id', $request->session()->get('user.business_id'))
+                    ->where('idempotency_key', $idempotency_key)
+                    ->first();
+
+                if (! empty($already)) {
+                    return $this->replayedSaleResponse($already, ! empty($request->input('is_direct_sale')));
+                }
+
+                $input['idempotency_key'] = $idempotency_key;
+            }
+
+            // PosInnova: validate the cart before anything is written.
+            $cart_error = $this->validateSaleCart($input, $request->session()->get('user.business_id'));
+            if ($cart_error !== null) {
+                $output = ['success' => 0, 'msg' => $cart_error];
+
+                return ! empty($request->input('is_direct_sale'))
+                    ? redirect()->back()->with('status', $output)
+                    : $output;
+            }
+
 
             $input['is_quotation'] = 0;
             //status is send as quotation from Add sales screen.
@@ -718,17 +950,19 @@ class SellPosController extends Controller
                     $this->transactionUtil->updateSalesOrderStatus($transaction->sales_order_ids);
                 }
 
-                //Hospital module: mark prescription dispensed + stamp visit on
-                //the sale. Gated on the hidden field; no effect on normal sales.
+                //Hospital module: a sale made from a consultation's prescription
+                //remembers the consultation and visit, and its lines are linked
+                //to the prescription lines they fill. Only a finished sale counts
+                //as given (a draft or quotation is linked when it is finalised).
+                //Gated on the hidden field; no effect on normal sales.
                 $rx_consultation_id = $request->input('prescription_consultation_id');
                 if (! empty($rx_consultation_id)) {
-                    \App\ConsultationPrescription::where('consultation_id', $rx_consultation_id)
-                        ->where('is_dispensed', 0)
-                        ->update(['is_dispensed' => 1, 'dispensed_at' => \Carbon::now(), 'dispensed_by' => $user_id]);
-                    $consult = \App\Consultation::find($rx_consultation_id);
-                    if ($consult) {
+                    $consult = \App\Consultation::forBusiness($business_id)->find($rx_consultation_id);
+                    if ($consult && $consult->contact_id == $transaction->contact_id) {
                         $transaction->visit_id = $consult->visit_id;
+                        $transaction->consultation_id = $consult->id;
                         $transaction->save();
+                        \App\Utils\Dispensing::allocate($transaction);
                     }
                 }
 
@@ -780,6 +1014,8 @@ class SellPosController extends Controller
                 }
 
                 $output = ['success' => 1, 'msg' => $msg, 'receipt' => $receipt];
+                //PosInnova: the customer display shows the receipt number on its thank-you screen
+                $output['invoice_no'] = $transaction->invoice_no;
 
                 if (!empty($whatsapp_link)) {
                     $output['whatsapp_link'] = $whatsapp_link;
@@ -789,6 +1025,32 @@ class SellPosController extends Controller
                     'msg' => trans('messages.something_went_wrong'),
                 ];
             }
+        } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
+
+            // PosInnova: two identical submits raced past the check above and
+            // both tried to insert. The unique index stopped the second one -
+            // return the sale the winner created rather than an error.
+            $dup_key = ! empty($idempotency_key)
+                && (int) ($e->errorInfo[1] ?? 0) === 1062
+                && strpos($e->getMessage(), 'transactions_business_idempotency_unique') !== false;
+
+            if ($dup_key) {
+                $already = Transaction::where('business_id', $request->session()->get('user.business_id'))
+                    ->where('idempotency_key', $idempotency_key)
+                    ->first();
+
+                if (! empty($already)) {
+                    return $this->replayedSaleResponse($already, ! empty($request->input('is_direct_sale')));
+                }
+            }
+
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+            $output = ['success' => 0, 'msg' => trans('messages.something_went_wrong')];
+
+            return ! empty($request->input('is_direct_sale'))
+                ? redirect()->action([\App\Http\Controllers\SellController::class, 'index'])->with('status', $output)
+                : $output;
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
@@ -851,6 +1113,111 @@ class SellPosController extends Controller
      * @param  string  $printer_type = null
      * @return array
      */
+    /**
+     * PosInnova: reject a cart that should never have been accepted.
+     *
+     * Each of these was reachable before and wrote bad data:
+     *   - no contact_id at all   -> sale saved with contact_id NULL (one such
+     *     row already exists in live data; receipts and reports join contacts)
+     *   - a contact from another business -> accepted as-is, across tenants
+     *   - quantity 0             -> zero-value invoice, invoice number consumed
+     *   - negative quantity      -> negative sale, an un-audited refund path
+     *   - a product from another business -> only blocked incidentally, by a
+     *     stock-mapping error further down
+     *
+     * @param  array  $input
+     * @param  int  $business_id
+     * @return string|null  an error message, or null when the cart is sound
+     */
+    private function validateSaleCart(array $input, $business_id)
+    {
+        $contact_id = (int) ($input['contact_id'] ?? 0);
+        if ($contact_id < 1) {
+            return __('lang_v1.sale_customer_required');
+        }
+
+        $contact_belongs = Contact::where('business_id', $business_id)
+            ->where('id', $contact_id)
+            ->exists();
+        if (! $contact_belongs) {
+            return __('lang_v1.sale_customer_invalid');
+        }
+
+        $products = $input['products'] ?? null;
+        if (! is_array($products) || empty($products)) {
+            // An empty cart is already handled by the existing path.
+            return null;
+        }
+
+        $variation_ids = [];
+        foreach ($products as $product) {
+            // num_uf() honours the business's thousand/decimal separators, so
+            // "1,000" and "0.5" both read correctly. A plain (float) cast would
+            // turn "0,5" into 0 under a comma decimal separator.
+            $qty = $this->productUtil->num_uf($product['quantity'] ?? 0);
+
+            if (! is_numeric($qty) || (float) $qty <= 0) {
+                return __('lang_v1.sale_quantity_invalid');
+            }
+
+            if (! empty($product['variation_id'])) {
+                $variation_ids[] = (int) $product['variation_id'];
+            }
+        }
+
+        $variation_ids = array_values(array_unique($variation_ids));
+        if (! empty($variation_ids)) {
+            $owned = Variation::join('products as p', 'p.id', '=', 'variations.product_id')
+                ->where('p.business_id', $business_id)
+                ->whereIn('variations.id', $variation_ids)
+                ->count();
+
+            if ($owned !== count($variation_ids)) {
+                return __('lang_v1.sale_product_invalid');
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * PosInnova: answer a resubmitted checkout with the sale that already exists.
+     *
+     * Returned when the same idempotency key arrives twice, so the cashier gets
+     * their receipt and the form resets exactly as it would have the first time,
+     * while the database keeps one sale and one stock deduction.
+     *
+     * @param  \App\Transaction  $transaction  the sale created by the first submit
+     * @param  bool  $is_direct_sale
+     * @return array|\Illuminate\Http\RedirectResponse
+     */
+    private function replayedSaleResponse($transaction, $is_direct_sale = false)
+    {
+        $output = [
+            'success' => 1,
+            'msg' => __('lang_v1.sale_already_recorded', ['invoice_no' => $transaction->invoice_no]),
+            'receipt' => [],
+            'duplicate_submission' => true,
+        ];
+
+        // The receipt is a convenience on a replay - never fail the response for it.
+        try {
+            if (auth()->user()->can('print_invoice')) {
+                $output['receipt'] = $this->receiptContent(
+                    $transaction->business_id,
+                    $transaction->location_id,
+                    $transaction->id
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::warning('replayedSaleResponse receipt failed: '.$e->getMessage());
+        }
+
+        return $is_direct_sale
+            ? redirect()->action([\App\Http\Controllers\SellController::class, 'index'])->with('status', $output)
+            : $output;
+    }
+
     private function receiptContent(
         $business_id,
         $location_id,
@@ -1302,6 +1669,32 @@ class SellPosController extends Controller
                 }
             }
 
+            //PosInnova: refuse a sale that reached us with fewer lines than the
+            //browser submitted. PHP keeps only the last value of a repeated POST
+            //key, so a duplicated row index - or a payload truncated by
+            //max_input_vars - would otherwise save a short invoice with no error
+            //at all. Checked before anything reads the cart, because a lost line
+            //also makes the totals and the credit-limit check wrong.
+            //Skipped when the count is absent (0), e.g. API clients.
+            $expected_rows = (int) $request->input('expected_product_rows', 0);
+            $received_rows = ! empty($input['products']) && is_array($input['products'])
+                ? count($input['products'])
+                : 0;
+
+            if ($expected_rows > 0 && $received_rows < $expected_rows) {
+                $output = ['success' => 0,
+                    'msg' => __('lang_v1.sell_lines_lost_in_transit', [
+                        'expected' => $expected_rows,
+                        'received' => $received_rows,
+                    ]),
+                ];
+
+                return ! empty($request->input('is_direct_sale'))
+                    ? redirect()->back()->with('status', $output)
+                    : $output;
+            }
+
+
             //status is send as quotation from edit sales screen.
             $input['is_quotation'] = 0;
             if ($input['status'] == 'quotation') {
@@ -1629,6 +2022,12 @@ class SellPosController extends Controller
 
                 $this->transactionUtil->activityLog($transaction, 'edited', $transaction_before);
 
+                //Hospital module: a draft from a prescription that is finalised
+                //now, or edited lines, are linked to the prescription lines.
+                if (! empty($transaction->consultation_id)) {
+                    \App\Utils\Dispensing::allocate($transaction->fresh());
+                }
+
                 SellCreatedOrModified::dispatch($transaction);
 
                 DB::commit();
@@ -1763,10 +2162,31 @@ class SellPosController extends Controller
         if (request()->ajax()) {
             try {
                 $business_id = request()->session()->get('user.business_id');
+                //PosInnova clinic: an invoice split with an insurer goes with its other half
+                if (\App\ClinicInsuranceShare::where('business_id', $business_id)->where('insurer_transaction_id', $id)->exists()) {
+                    return ['success' => false, 'msg' => __('clinic.ins_delete_insurer_invoice')];
+                }
+                $ins_blocker = \App\Utils\ClinicInsurance::voidBlocker($id);
+                if ($ins_blocker) {
+                    return ['success' => false, 'msg' => $ins_blocker];
+                }
+
                 //Begin transaction
                 DB::beginTransaction();
 
+                $ins_void = \App\Utils\ClinicInsurance::voidFor($business_id, $id);
+                if ($ins_void !== true) {
+                    DB::rollBack();
+
+                    return $ins_void;
+                }
+
                 $output = $this->transactionUtil->deleteSale($business_id, $id);
+                if (isset($output['success']) && ! $output['success']) {
+                    DB::rollBack();
+
+                    return $output;
+                }
 
                 DB::commit();
             } catch (\Exception $e) {

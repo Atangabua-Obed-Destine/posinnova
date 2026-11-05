@@ -53,9 +53,11 @@ class PortalController extends Controller
 
         $visits_count = Visit::forBusiness($bid)->where('contact_id', $patient->id)->count();
 
-        $active_rx = ConsultationPrescription::whereHas('consultation', function ($q) use ($bid, $patient) {
+        // lines still waiting to be given (not closed, given less than prescribed)
+        $active_rx = \App\Utils\Dispensing::attach(ConsultationPrescription::whereHas('consultation', function ($q) use ($bid, $patient) {
             $q->where('business_id', $bid)->where('contact_id', $patient->id);
-        })->where('is_dispensed', 0)->count();
+        })->whereNull('closed_at')->get(['id', 'quantity', 'legacy_given', 'closed_at']))
+            ->filter(fn ($rx) => $rx->outstanding_qty > 0)->count();
 
         $pending_labs = LabRequest::forBusiness($bid)->where('contact_id', $patient->id)
             ->whereIn('status', ['pending', 'sample_collected', 'processing'])->count();
@@ -106,8 +108,9 @@ class PortalController extends Controller
         $patient = $this->patient();
         $visit = Visit::forBusiness($patient->business_id)
             ->where('contact_id', $patient->id) // ownership guard
-            ->with(['consultations.consultedBy', 'consultations.prescriptions.product', 'location'])
+            ->with(['consultations.consultedBy', 'consultations.prescriptions.product', 'consultations.prescriptions.variation', 'location'])
             ->findOrFail($id);
+        \App\Utils\Dispensing::attach($visit->consultations->flatMap->prescriptions);
 
         return view('patient_portal.visit_show')->with(compact('patient', 'visit'));
     }
@@ -119,7 +122,8 @@ class PortalController extends Controller
 
         $prescriptions = ConsultationPrescription::whereHas('consultation', function ($q) use ($bid, $patient) {
             $q->where('business_id', $bid)->where('contact_id', $patient->id);
-        })->with(['product', 'consultation'])->orderBy('created_at', 'desc')->paginate(15);
+        })->with(['product', 'variation', 'consultation'])->orderBy('created_at', 'desc')->paginate(15);
+        \App\Utils\Dispensing::attach($prescriptions->getCollection());
 
         return view('patient_portal.prescriptions')->with(compact('patient', 'prescriptions'));
     }
@@ -175,6 +179,29 @@ class PortalController extends Controller
         return view('patient_portal.maternity')->with(compact('patient', 'records'));
     }
 
+    /**
+     * The patient's monthly plan: this month (paid? visits used), next
+     * billing date, and every month billed.
+     */
+    public function plan()
+    {
+        $patient = $this->patient();
+        $bid = $patient->business_id;
+
+        $subscription = \App\ClinicSubscription::forBusiness($bid)->where('contact_id', $patient->id)
+            ->with('package')->orderByRaw("status = 'active' DESC")->orderByDesc('id')->first();
+        $coverage = \App\Utils\ClinicPlans::coverage($bid, $patient->id);
+        $periods = $subscription
+            ? \App\ClinicSubscriptionPeriod::where('subscription_id', $subscription->id)->with('invoice')->orderByDesc('period_start')->limit(12)->get()
+            : collect();
+        foreach ($periods as $p) {
+            $p->used = $p->visitsUsed();
+            $p->paid = \App\Utils\ClinicPlans::periodPaid($p);
+        }
+
+        return view('patient_portal.plan')->with(compact('patient', 'subscription', 'coverage', 'periods'));
+    }
+
     public function bills()
     {
         $patient = $this->patient();
@@ -195,7 +222,13 @@ class PortalController extends Controller
 
         $charges = $charges_base->orderBy('transaction_date', 'desc')->paginate(15);
 
-        return view('patient_portal.bills')->with(compact('patient', 'due', 'charges', 'total_billed', 'total_paid'));
+        // clinic phase 5: what the insurer pays on each invoice, and still owes
+        $insurer_parts = \App\ClinicInsuranceShare::where('business_id', $bid)->where('contact_id', $patient->id)
+            ->whereIn('patient_transaction_id', $charges->pluck('id'))
+            ->with('insurer')->get()->keyBy('patient_transaction_id');
+        $insurer_owes = \App\Utils\ClinicInsurance::openSharesFor($bid, $patient->id)->sum('due');
+
+        return view('patient_portal.bills')->with(compact('patient', 'due', 'charges', 'total_billed', 'total_paid', 'insurer_parts', 'insurer_owes'));
     }
 
     public function profile()

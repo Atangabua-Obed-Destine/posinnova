@@ -12,6 +12,9 @@ class PatientDetail extends Model
 {
     protected $guarded = ['id'];
 
+    //PosInnova: the portal PIN hash never leaves the server in JSON
+    protected $hidden = ['portal_pin'];
+
     protected $casts = [
         'date_of_birth' => 'date',
         'insurance_expiry_date' => 'date',
@@ -26,6 +29,14 @@ class PatientDetail extends Model
     public function business()
     {
         return $this->belongsTo(Business::class, 'business_id');
+    }
+
+    /**
+     * The insurer (clinic phase 5); insurance_provider keeps its name as text.
+     */
+    public function insurer()
+    {
+        return $this->belongsTo(ClinicInsurer::class, 'insurer_id')->withTrashed();
     }
 
     /**
@@ -46,6 +57,26 @@ class PatientDetail extends Model
         }
 
         return $this->date_of_birth->age;
+    }
+
+    /**
+     * PosInnova: is this a valid portal PIN? 4 to 6 digits.
+     */
+    public static function isValidPin($pin)
+    {
+        return is_string($pin) && preg_match('/^\d{4,6}$/', $pin) === 1;
+    }
+
+    /**
+     * PosInnova: set the portal PIN (hashed) and lift any sign-in lock.
+     * Does not save; the caller saves the row.
+     */
+    public function setPortalPin($pin)
+    {
+        $this->portal_pin = \Illuminate\Support\Facades\Hash::make($pin);
+        $this->portal_pin_set_at = now();
+        $this->portal_failed_attempts = 0;
+        $this->portal_locked_until = null;
     }
 
     /**

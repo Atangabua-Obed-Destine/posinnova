@@ -2,6 +2,27 @@
 
 /*
 |--------------------------------------------------------------------------
+| PosInnova: keep this app's .env out of the process-wide environment
+|--------------------------------------------------------------------------
+|
+| Under Apache on Windows PHP runs as threads inside ONE process, and by
+| default Laravel copies every .env value into that process's environment
+| with putenv(). When several Laravel apps share the server, a request here
+| could read another app's APP_KEY - failing to decrypt the session cookie and
+| answering 401 "Unauthenticated" - or, in a narrower window, its DB_DATABASE.
+| Measured on the dev server: 0% failures alone, 50.6% of POS add-product
+| requests failing while another app on the same Apache was busy.
+|
+| With putenv off, .env values live only in this request's $_SERVER/$_ENV
+| (thread-local), so nothing leaks in or out. env() keeps working everywhere;
+| only raw getenv() would stop seeing .env values (config/paystack.php was the
+| one user and now calls env()). Must run before the kernel loads .env.
+|
+*/
+Illuminate\Support\Env::disablePutenv();
+
+/*
+|--------------------------------------------------------------------------
 | Create The Application
 |--------------------------------------------------------------------------
 |

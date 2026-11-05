@@ -4,23 +4,33 @@ namespace App\Http\Controllers\PatientPortal;
 
 use App\Contact;
 use App\Http\Controllers\Controller;
+use App\Utils\ClinicSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * Patient Portal authentication (hospital module).
  *
- * Patients sign in with their FILE NUMBER + MOBILE NUMBER (no password / no OTP
- * for now). On a unique match the contact is logged into the dedicated
- * `patient` guard — fully separate from the staff `web` guard. The flow is
- * structured so an OTP verification step can be inserted later between the
- * match and the guard login without reworking the rest of the portal.
+ * Patients sign in with their FILE NUMBER + a PIN that reception sets (4 to 6
+ * digits, stored hashed in patient_details.portal_pin). The portal faces the
+ * internet through the clinic's tunnel, so:
+ *  - 5 wrong PINs in a row lock that file's sign-in for 15 minutes;
+ *  - one address is throttled to 20 attempts a minute across all files;
+ *  - every attempt, good or bad, is written to patient_portal_logins;
+ *  - the business can switch the portal off in Clinic settings.
+ * On success the contact is logged into the dedicated `patient` guard, fully
+ * separate from the staff `web` guard.
  */
 class AuthController extends Controller
 {
+    const MAX_FAILED = 5;
+
+    const LOCK_MINUTES = 15;
+
     public function showLogin()
     {
-        // Already signed in? Go straight to the portal.
         if (Auth::guard('patient')->check()) {
             return redirect()->route('portal.dashboard');
         }
@@ -31,42 +41,81 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'file_number' => 'required|string',
-            'mobile' => 'required|string',
+            'file_number' => 'required|string|max:50',
+            'pin' => 'required|string|max:12',
         ]);
 
-        // Simple throttle: 5 attempts / minute per IP+file_number.
-        $key = 'portal-login:'.$request->ip().':'.$request->input('file_number');
-        if (\RateLimiter::tooManyAttempts($key, 5)) {
-            return back()->withInput()->with('login_error', __('lang_v1.portal_too_many_attempts'));
-        }
-        \RateLimiter::hit($key, 60);
-
         $file_number = trim($request->input('file_number'));
-        $mobile = trim($request->input('mobile'));
+        $pin = trim($request->input('pin'));
 
-        // Match a patient by file_number + mobile. File numbers are unique per
-        // business, so require exactly ONE matching patient overall to avoid any
-        // cross-tenant ambiguity.
+        // Per-address throttle, whatever file number is tried.
+        $ip_key = 'portal-login-ip:'.$request->ip();
+        if (\RateLimiter::tooManyAttempts($ip_key, 20)) {
+            $this->log(null, null, $file_number, false, 'ip_throttled');
+
+            return back()->withInput($request->only('file_number'))->with('login_error', __('lang_v1.portal_too_many_attempts'));
+        }
+        \RateLimiter::hit($ip_key, 60);
+
+        // File numbers are unique per business: require exactly ONE active
+        // patient with this file number to avoid any cross-tenant ambiguity.
         $matches = Contact::join('patient_details AS pd', 'contacts.id', '=', 'pd.contact_id')
             ->where('contacts.is_patient', 1)
             ->where('contacts.contact_status', '!=', 'inactive')
+            ->whereNull('contacts.deleted_at')
             ->where('pd.file_number', $file_number)
-            ->where('contacts.mobile', $mobile)
-            ->select('contacts.*')
+            ->select('contacts.*', 'pd.id as pd_id', 'pd.portal_pin', 'pd.portal_failed_attempts', 'pd.portal_locked_until')
             ->get();
 
         if ($matches->count() !== 1) {
-            return back()->withInput()->with('login_error', __('lang_v1.portal_login_failed'));
+            $this->log(null, null, $file_number, false, 'no_match');
+
+            return $this->fail($request, __('clinic.portal_pin_login_failed'));
         }
 
         $patient = $matches->first();
 
-        \RateLimiter::clear($key);
+        if (! ClinicSettings::get($patient->business_id, 'portal_enabled')) {
+            $this->log($patient->business_id, $patient->id, $file_number, false, 'portal_disabled');
 
-        // (OTP hook point: send + verify a one-time code here before login.)
-        Auth::guard('patient')->login($patient);
+            return $this->fail($request, __('clinic.portal_disabled'));
+        }
+
+        if (! empty($patient->portal_locked_until) && \Carbon::parse($patient->portal_locked_until)->isFuture()) {
+            $this->log($patient->business_id, $patient->id, $file_number, false, 'locked');
+
+            return $this->fail($request, __('clinic.portal_locked', ['time' => \Carbon::parse($patient->portal_locked_until)->format('H:i')]));
+        }
+
+        if (empty($patient->portal_pin)) {
+            $this->log($patient->business_id, $patient->id, $file_number, false, 'no_pin');
+
+            return $this->fail($request, __('clinic.portal_no_pin'));
+        }
+
+        if (! Hash::check($pin, $patient->portal_pin)) {
+            $failed = (int) $patient->portal_failed_attempts + 1;
+            $update = ['portal_failed_attempts' => $failed];
+            $msg = __('clinic.portal_pin_login_failed');
+            if ($failed >= self::MAX_FAILED) {
+                $until = now()->addMinutes(self::LOCK_MINUTES);
+                $update = ['portal_failed_attempts' => 0, 'portal_locked_until' => $until];
+                $msg = __('clinic.portal_locked', ['time' => $until->format('H:i')]);
+            } else {
+                $msg .= ' '.__('clinic.portal_tries_left', ['count' => self::MAX_FAILED - $failed]);
+            }
+            DB::table('patient_details')->where('id', $patient->pd_id)->update($update);
+            $this->log($patient->business_id, $patient->id, $file_number, false, $failed >= self::MAX_FAILED ? 'wrong_pin_locked' : 'wrong_pin');
+
+            return $this->fail($request, $msg);
+        }
+
+        DB::table('patient_details')->where('id', $patient->pd_id)->update(['portal_failed_attempts' => 0, 'portal_locked_until' => null]);
+        $this->log($patient->business_id, $patient->id, $file_number, true, null);
+
+        Auth::guard('patient')->login(Contact::find($patient->id));
         $request->session()->regenerate();
+        $request->session()->put('portal_last_activity', time());
 
         return redirect()->route('portal.dashboard');
     }
@@ -92,5 +141,27 @@ class AuthController extends Controller
         }
 
         return redirect()->back();
+    }
+
+    private function fail(Request $request, $message)
+    {
+        return back()->withInput($request->only('file_number'))->with('login_error', $message);
+    }
+
+    private function log($business_id, $contact_id, $file_number, $success, $reason)
+    {
+        try {
+            DB::table('patient_portal_logins')->insert([
+                'business_id' => $business_id,
+                'contact_id' => $contact_id,
+                'file_number' => mb_substr((string) $file_number, 0, 50),
+                'ip' => request()->ip(),
+                'success' => $success ? 1 : 0,
+                'reason' => $reason,
+                'created_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('portal login log failed: '.$e->getMessage());
+        }
     }
 }

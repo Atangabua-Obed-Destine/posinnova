@@ -30,6 +30,10 @@ class WardController extends Controller
         if (! is_array($enabled_modules) || ! in_array('hospital', $enabled_modules)) {
             abort(404);
         }
+        //PosInnova: section switched off in Clinic settings
+        if (! \App\Utils\ClinicSettings::sectionOn(request()->session()->get('user.business_id'), 'wards')) {
+            abort(404);
+        }
     }
 
     /**

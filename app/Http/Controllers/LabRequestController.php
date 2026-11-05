@@ -231,7 +231,78 @@ class LabRequestController extends Controller
             ->with(['patient.patientDetails', 'requestedBy', 'validatedBy', 'lines.labTest', 'location'])
             ->findOrFail($id);
 
-        return view('lab.request_show')->with(compact('lab_request'));
+        $amendments = $this->amendmentsFor($lab_request->id);
+
+        return view('lab.request_show')->with(compact('lab_request', 'amendments'));
+    }
+
+    /**
+     * PosInnova: correct a VALIDATED result. The line takes the new value and
+     * flag; lab_result_amendments keeps the old ones, the reason, who and when.
+     */
+    public function amendResult(Request $request, $id)
+    {
+        $this->checkHospitalEnabled();
+
+        if (! auth()->user()->can('lab_result.amend')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = $request->session()->get('user.business_id');
+        $lab_request = LabRequest::forBusiness($business_id)->with('lines')->findOrFail($id);
+        $back = redirect()->action([\App\Http\Controllers\LabRequestController::class, 'show'], [$lab_request->id]);
+
+        $line = $lab_request->lines->firstWhere('id', (int) $request->input('line_id'));
+        $new_value = trim((string) $request->input('new_value'));
+        $reason = trim((string) $request->input('reason'));
+        $new_flag = $request->input('new_flag');
+        $new_flag = in_array($new_flag, ['normal', 'high', 'low', 'critical'], true) ? $new_flag : null;
+
+        if ($lab_request->status !== 'validated' || ! $line || $new_value === '' || $reason === '') {
+            return $back->with('status', ['success' => false, 'msg' => __('clinic.amend_required')]);
+        }
+
+        try {
+            DB::beginTransaction();
+            DB::table('lab_result_amendments')->insert([
+                'business_id' => $business_id,
+                'lab_request_id' => $lab_request->id,
+                'lab_request_line_id' => $line->id,
+                'old_value' => $line->result_value,
+                'old_flag' => $line->result_flag,
+                'new_value' => mb_substr($new_value, 0, 191),
+                'new_flag' => $new_flag,
+                'reason' => $reason,
+                'amended_by' => $request->session()->get('user.id'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $line->result_value = mb_substr($new_value, 0, 191);
+            $line->result_flag = $new_flag;
+            $line->save();
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
+
+            return $back->with('status', ['success' => false, 'msg' => __('messages.something_went_wrong')]);
+        }
+
+        return $back->with('status', ['success' => true, 'msg' => __('clinic.amend_saved')]);
+    }
+
+    /**
+     * PosInnova: the amendment history of one lab request, newest first.
+     */
+    private function amendmentsFor($lab_request_id)
+    {
+        return DB::table('lab_result_amendments as a')
+            ->join('lab_request_lines as l', 'a.lab_request_line_id', '=', 'l.id')
+            ->leftJoin('users as u', 'a.amended_by', '=', 'u.id')
+            ->where('a.lab_request_id', $lab_request_id)
+            ->orderBy('a.id', 'desc')
+            ->select('a.*', 'l.test_name', DB::raw("TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) as amended_by_name"))
+            ->get();
     }
 
     public function enterResult($id)
@@ -248,6 +319,12 @@ class LabRequestController extends Controller
             ->with(['patient.patientDetails', 'lines.labTest'])
             ->findOrFail($id);
 
+        //PosInnova: a validated result is locked; corrections are amendments.
+        if ($lab_request->status === 'validated') {
+            return redirect()->action([\App\Http\Controllers\LabRequestController::class, 'show'], [$lab_request->id])
+                ->with('status', ['success' => false, 'msg' => __('clinic.result_locked')]);
+        }
+
         return view('lab.enter_result')->with(compact('lab_request'));
     }
 
@@ -263,6 +340,13 @@ class LabRequestController extends Controller
             $business_id = $request->session()->get('user.business_id');
 
             $lab_request = LabRequest::forBusiness($business_id)->with('lines')->findOrFail($id);
+
+            //PosInnova: a validated result is locked. Before this, saving here
+            //overwrote a validated value silently and dropped the status back.
+            if ($lab_request->status === 'validated') {
+                return redirect()->action([\App\Http\Controllers\LabRequestController::class, 'show'], [$lab_request->id])
+                    ->with('status', ['success' => false, 'msg' => __('clinic.result_locked')]);
+            }
 
             DB::beginTransaction();
 
@@ -373,6 +457,8 @@ class LabRequestController extends Controller
 
         $business = \App\Business::find($business_id);
 
-        return view('lab.result_print')->with(compact('lab_request', 'business'));
+        $amendments = $this->amendmentsFor($lab_request->id);
+
+        return view('lab.result_print')->with(compact('lab_request', 'business', 'amendments'));
     }
 }

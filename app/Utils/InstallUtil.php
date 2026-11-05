@@ -95,6 +95,11 @@ class InstallUtil extends Util
     public function setSystemInfo($key, $value)
     {
         DB::table('system')->where('key', $key)->update(['value' => $value]);
+
+        //PosInnova: this writes straight through the query builder, so neither
+        //the System helpers nor Eloquent model events fire. Drop the per-request
+        //memo by hand or a later read in this same request returns the old value.
+        \App\System::flushPropertyCache();
     }
 
     /**

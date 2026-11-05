@@ -11,6 +11,11 @@
 <!-- app css -->
 <link rel="stylesheet" href="{{ asset('css/app.css?v='.$asset_v) }}">
 
+{{-- PosInnova: our own styles live outside /public/css because that whole
+     directory is gitignored, so anything added to css/app.css would never
+     reach a deployed machine. Loaded last so it can override app.css. --}}
+<link rel="stylesheet" href="{{ asset('pi-pos.css?v='.$asset_v) }}">
+
 @if(isset($pos_layout) && $pos_layout)
 	<style type="text/css">
 		.content{

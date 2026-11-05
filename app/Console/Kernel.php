@@ -33,6 +33,9 @@ class Kernel extends ConsoleKernel
 
             $schedule->command('pos:generateRecurringExpense')->dailyAt('02:00');
 
+            //PosInnova clinic: monthly plan invoices (also caught up at check-in)
+            $schedule->command('clinic:bill-plans')->dailyAt('00:30');
+
         }
 
         if ($env === 'demo') {

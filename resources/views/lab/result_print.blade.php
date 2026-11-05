@@ -75,6 +75,17 @@
         </tbody>
     </table>
 
+    {{-- PosInnova: corrections made after validation, with the original value --}}
+    @if (($amendments ?? collect())->count())
+        <div style="margin-top:10px; font-size:11px;">
+            <strong>@lang('clinic.amendments')</strong>
+            @foreach ($amendments as $am)
+                <div>{{ __('clinic.amended_from_to', ['test' => $am->test_name, 'from' => $am->old_value ?? '-', 'to' => $am->new_value]) }}
+                    ({{ __('clinic.amended_by_on', ['user' => $am->amended_by_name ?: '-', 'date' => app(\App\Utils\Util::class)->format_date($am->created_at, true)]) }}): {{ $am->reason }}</div>
+            @endforeach
+        </div>
+    @endif
+
     <div class="lab-footer">
         <div class="lab-sign">
             {{ optional($lab_request->validatedBy)->user_full_name ?? optional($lab_request->requestedBy)->user_full_name }}<br>

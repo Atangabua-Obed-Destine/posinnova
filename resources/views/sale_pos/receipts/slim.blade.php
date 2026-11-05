@@ -74,18 +74,26 @@
 					@if(!empty($receipt_details->tax_info2))
 						<b>{{ $receipt_details->tax_label2 }}</b> {{ $receipt_details->tax_info2 }}
 					@endif
-				@endif
 					<!-- Title of receipt -->
 					@if(!empty($receipt_details->invoice_heading))
 						<br/><span class="sub-headings">{!! $receipt_details->invoice_heading !!}</span>
 					@endif
 				</p>
 				</div>
-				@if(!empty($receipt_details->letter_head))
-					<div class="text-box">
-						<img style="width: 100%;margin-bottom: 10px;" src="{{$receipt_details->letter_head}}">
-					</div>
-				@endif
+			@else
+			{{-- PosInnova: letterhead branch. The <div>/<p> above are opened inside the
+			     "no letterhead" branch, so they must be CLOSED inside it too - otherwise
+			     the stray </p></div> closed .ticket early and pushed the whole receipt
+			     body outside it, defeating every .ticket-scoped style. --}}
+			@if(!empty($receipt_details->invoice_heading))
+				<div class="text-box letter-head-heading">
+					<p class="centered"><span class="sub-headings">{!! $receipt_details->invoice_heading !!}</span></p>
+				</div>
+			@endif
+			<div class="text-box letter-head-box">
+				<img class="letter-head-img" src="{{$receipt_details->letter_head}}">
+			</div>
+		@endif
 			{{-- PosInnova: invoice no + date on one compact line --}}
 			<div class="border-top flex-box" style="font-size: 10px; padding-top: 2px;">
 				<p class="width-50" style="text-align: left;">
@@ -231,13 +239,13 @@
 			@endif
 
 	        {{-- PosInnova: customer + mobile on one compact line --}}
-	        <div class="flex-box" style="font-size: 10px; padding-top: 2px;">
-	        	<p class="width-50" style="text-align: left;">
+	        <div class="flex-box" style="font-size: 10px; padding-top: 2px; align-items: flex-start;">
+	        	<p class="width-50 wrap-text" style="text-align: left;">
 	        		<strong>{{$receipt_details->customer_label ?? ''}}</strong>
 	        		<strong>{{$receipt_details->customer_name ?? ''}}</strong>
 	        	</p>
 	        	@if(!empty($receipt_details->customer_mobile))
-	        	<p class="width-50" style="text-align: right;">
+	        	<p class="width-50 wrap-text" style="text-align: right;">
 	        		<strong>{{ __('contact.mobile') }}:</strong> {{$receipt_details->customer_mobile}}
 	        	</p>
 	        	@endif
@@ -828,6 +836,31 @@ img {
 	margin-bottom: 0 !important;
 }
 
+/* PosInnova: letterhead sits flush against the invoice body - no gap at all.
+   display:block removes the baseline gap an inline <img> leaves underneath it,
+   and the 10px margin the image used to carry inline is gone. The adjacent rule
+   also cancels the following row's top padding (an inline style, hence
+   !important) so nothing separates the two. */
+.letter-head-box {
+	margin: 0 !important;
+	padding: 0 !important;
+	line-height: 0;
+}
+.letter-head-img {
+	display: block;
+	width: 100%;
+	margin: 0 !important;
+	padding: 0;
+	vertical-align: bottom;
+}
+.letter-head-box + div {
+	padding-top: 0 !important;
+}
+.letter-head-heading p {
+	margin-top: 0 !important;
+	margin-bottom: 0 !important;
+}
+
 .textbox-info {
 	clear: both;
 }
@@ -842,6 +875,18 @@ img {
 	width: 50%;
 	margin-bottom: 0px;
 	white-space: nowrap;
+}
+
+/* PosInnova: let a long customer name wrap inside its half of the row instead
+   of running over the mobile number. .flex-box p above sets white-space:nowrap
+   for the totals rows, so this is opt-in per row. min-width:0 is what actually
+   lets a flex item shrink below its content width - without it the item keeps
+   its min-content size and overflows its 50%. */
+.flex-box p.wrap-text {
+	white-space: normal;
+	min-width: 0;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
 }
 
 .table-f-12 th, .table-f-12 td {

@@ -251,6 +251,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('/reset-mapping', [SellController::class, 'resetMapping']);
     // pos display screen route
     Route::get('/customer-display', [SellPosController::class, 'posDisplay'])->name('pos_display');
+    Route::get('/customer-display/details', [SellPosController::class, 'posDisplayDetails'])->name('pos_display_details');
 
     Route::get('/pos/variations/bulk', [\App\Http\Controllers\ProductController::class, 'getVariationDetailsBulk']);
     // end pos display screen route
@@ -441,21 +442,24 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::resource('patients', \App\Http\Controllers\PatientController::class);
 
     //Visits / OPD
-    Route::get('visits/{id}/close', [\App\Http\Controllers\VisitController::class, 'close']);
+    //PosInnova: state changes are POST (with CSRF), never plain GET links
+    Route::post('visits/{id}/close', [\App\Http\Controllers\VisitController::class, 'close']);
+    Route::post('visits/{id}/cancel', [\App\Http\Controllers\VisitController::class, 'cancel']);
     Route::resource('visits', \App\Http\Controllers\VisitController::class)->only(['index', 'create', 'store', 'show']);
 
     //Consultations
     Route::get('consultations/create', [\App\Http\Controllers\ConsultationController::class, 'create']);
     Route::post('consultations', [\App\Http\Controllers\ConsultationController::class, 'store']);
     Route::get('consultations/{id}', [\App\Http\Controllers\ConsultationController::class, 'show'])->whereNumber('id');
-    Route::get('consultations/{id}/finalize', [\App\Http\Controllers\ConsultationController::class, 'finalize']);
+    Route::post('consultations/{id}/finalize', [\App\Http\Controllers\ConsultationController::class, 'finalize']);
     Route::get('consultations/{id}/prescription', [\App\Http\Controllers\ConsultationController::class, 'prescription']);
 
     //Laboratory
     Route::resource('lab-tests', \App\Http\Controllers\LabTestController::class)->except(['show']);
     Route::get('lab-requests/{id}/result', [\App\Http\Controllers\LabRequestController::class, 'enterResult']);
     Route::post('lab-requests/{id}/result', [\App\Http\Controllers\LabRequestController::class, 'saveResult']);
-    Route::get('lab-requests/{id}/validate', [\App\Http\Controllers\LabRequestController::class, 'validateResult']);
+    Route::post('lab-requests/{id}/validate', [\App\Http\Controllers\LabRequestController::class, 'validateResult']);
+    Route::post('lab-requests/{id}/amend', [\App\Http\Controllers\LabRequestController::class, 'amendResult']);
     Route::get('lab-requests/{id}/print', [\App\Http\Controllers\LabRequestController::class, 'print']);
     Route::resource('lab-requests', \App\Http\Controllers\LabRequestController::class)->only(['index', 'create', 'store', 'show']);
 
@@ -517,6 +521,53 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('reports/hospital/antenatal', [\App\Http\Controllers\HospitalReportController::class, 'antenatal']);
     Route::get('reports/hospital/morgue', [\App\Http\Controllers\HospitalReportController::class, 'morgue']);
     Route::get('reports/hospital/mutual-claims', [\App\Http\Controllers\HospitalReportController::class, 'mutualClaims']);
+
+    //Clinic settings (hospital module)
+    Route::get('clinic/settings', [\App\Http\Controllers\ClinicSettingsController::class, 'index']);
+    Route::post('clinic/settings', [\App\Http\Controllers\ClinicSettingsController::class, 'update']);
+    //PosInnova clinic phase 2: consultation packages and the doctor's queue
+    Route::get('clinic/packages', [\App\Http\Controllers\ClinicPackageController::class, 'index']);
+    Route::get('clinic/packages/create', [\App\Http\Controllers\ClinicPackageController::class, 'create']);
+    Route::post('clinic/packages', [\App\Http\Controllers\ClinicPackageController::class, 'store']);
+    Route::get('clinic/packages/{id}/edit', [\App\Http\Controllers\ClinicPackageController::class, 'edit']);
+    Route::post('clinic/packages/{id}', [\App\Http\Controllers\ClinicPackageController::class, 'update']);
+    Route::post('clinic/packages/{id}/delete', [\App\Http\Controllers\ClinicPackageController::class, 'destroy']);
+    Route::get('clinic/queue', [\App\Http\Controllers\ClinicQueueController::class, 'index']);
+    Route::post('clinic/queue/{id}/start', [\App\Http\Controllers\ClinicQueueController::class, 'start']);
+    Route::post('clinic/queue/{id}/let-through', [\App\Http\Controllers\ClinicQueueController::class, 'letThrough']);
+    Route::post('clinic/queue/{id}/no-show', [\App\Http\Controllers\ClinicQueueController::class, 'noShow']);
+    Route::post('clinic/queue/{id}/requeue', [\App\Http\Controllers\ClinicQueueController::class, 'requeue']);
+    Route::get('clinic/dispensary', [\App\Http\Controllers\ClinicDispensaryController::class, 'index']);
+    Route::get('clinic/dispensary/{id}', [\App\Http\Controllers\ClinicDispensaryController::class, 'show']);
+    Route::post('clinic/dispensary/line/{id}/close', [\App\Http\Controllers\ClinicDispensaryController::class, 'close']);
+    Route::post('clinic/dispensary/line/{id}/reopen', [\App\Http\Controllers\ClinicDispensaryController::class, 'reopen']);
+    Route::get('clinic/plans', [\App\Http\Controllers\ClinicPlanController::class, 'index']);
+    Route::get('clinic/plans/create', [\App\Http\Controllers\ClinicPlanController::class, 'create']);
+    Route::get('clinic/plans/coverage', [\App\Http\Controllers\ClinicPlanController::class, 'coverage']);
+    Route::post('clinic/plans', [\App\Http\Controllers\ClinicPlanController::class, 'store']);
+    Route::post('clinic/plans/bill-now', [\App\Http\Controllers\ClinicPlanController::class, 'billNow']);
+    Route::get('clinic/plans/{id}', [\App\Http\Controllers\ClinicPlanController::class, 'show']);
+    Route::post('clinic/plans/{id}/cancel', [\App\Http\Controllers\ClinicPlanController::class, 'cancel']);
+    Route::get('clinic/accounts', [\App\Http\Controllers\ClinicAccountController::class, 'index']);
+    Route::get('clinic/accounts/{contact_id}', [\App\Http\Controllers\ClinicAccountController::class, 'show']);
+    Route::post('clinic/accounts/{contact_id}/pay', [\App\Http\Controllers\ClinicAccountController::class, 'pay']);
+    Route::get('clinic/insurers', [\App\Http\Controllers\ClinicInsurerController::class, 'index']);
+    Route::get('clinic/insurers/create', [\App\Http\Controllers\ClinicInsurerController::class, 'create']);
+    Route::post('clinic/insurers', [\App\Http\Controllers\ClinicInsurerController::class, 'store']);
+    Route::get('clinic/insurers/{id}/edit', [\App\Http\Controllers\ClinicInsurerController::class, 'edit']);
+    Route::post('clinic/insurers/{id}', [\App\Http\Controllers\ClinicInsurerController::class, 'update']);
+    Route::post('clinic/insurers/{id}/delete', [\App\Http\Controllers\ClinicInsurerController::class, 'destroy']);
+    Route::get('clinic/claims', [\App\Http\Controllers\ClinicClaimController::class, 'index']);
+    Route::get('clinic/claims/create', [\App\Http\Controllers\ClinicClaimController::class, 'create']);
+    Route::post('clinic/claims', [\App\Http\Controllers\ClinicClaimController::class, 'store']);
+    Route::get('clinic/claims/{id}', [\App\Http\Controllers\ClinicClaimController::class, 'show']);
+    Route::get('clinic/claims/{id}/print', [\App\Http\Controllers\ClinicClaimController::class, 'printClaim']);
+    Route::post('clinic/claims/{id}/refresh', [\App\Http\Controllers\ClinicClaimController::class, 'refresh']);
+    Route::post('clinic/claims/{id}/items/{share_id}/remove', [\App\Http\Controllers\ClinicClaimController::class, 'removeItem']);
+    Route::post('clinic/claims/{id}/submit', [\App\Http\Controllers\ClinicClaimController::class, 'submit']);
+    Route::post('clinic/claims/{id}/reopen', [\App\Http\Controllers\ClinicClaimController::class, 'reopen']);
+    Route::post('clinic/claims/{id}/delete', [\App\Http\Controllers\ClinicClaimController::class, 'destroy']);
+    Route::post('clinic/claims/{id}/settle', [\App\Http\Controllers\ClinicClaimController::class, 'settle']);
 
     //Hospital Departments
     Route::resource('departments', DepartmentController::class);
@@ -689,6 +740,7 @@ Route::middleware(['setData', 'language'])->prefix('portal')->name('portal.')->g
         Route::get('visits', [\App\Http\Controllers\PatientPortal\PortalController::class, 'visits'])->name('visits');
         Route::get('visits/{id}', [\App\Http\Controllers\PatientPortal\PortalController::class, 'visitShow'])->name('visit-show');
         Route::get('prescriptions', [\App\Http\Controllers\PatientPortal\PortalController::class, 'prescriptions'])->name('prescriptions');
+        Route::get('plan', [\App\Http\Controllers\PatientPortal\PortalController::class, 'plan'])->name('plan');
         Route::get('lab-results', [\App\Http\Controllers\PatientPortal\PortalController::class, 'labResults'])->name('lab-results');
         Route::get('lab-results/{id}', [\App\Http\Controllers\PatientPortal\PortalController::class, 'labShow'])->name('lab-show');
         Route::get('imaging', [\App\Http\Controllers\PatientPortal\PortalController::class, 'imaging'])->name('imaging');

@@ -221,7 +221,17 @@
             <div class="col-sm-4">
                 <div class="form-group">
                     {!! Form::label('consultation_fee', __('lang_v1.consultation_fee') . ':') !!}
-                    {!! Form::text('consultation_fee', $default_fee, ['class' => 'form-control input_number']) !!}
+                    @if (! empty($fee_billed))
+                        {{-- PosInnova clinic: billed at check-in, never twice --}}
+                        <p class="form-control-static"><i class="fas fa-check-circle text-success"></i>
+                            @if (! empty($visit->subscription_period_id))
+                                {{ __('clinic.covered_by_plan', ['plan' => optional($visit->package)->name]) }}</p>
+                            @else
+                                {{ __('clinic.billed_at_checkin', ['package' => optional($visit->package)->name ?: __('lang_v1.consultation_fee')]) }}</p>
+                            @endif
+                    @else
+                        {!! Form::text('consultation_fee', $default_fee, ['class' => 'form-control input_number']) !!}
+                    @endif
                 </div>
             </div>
             <div class="col-sm-4">

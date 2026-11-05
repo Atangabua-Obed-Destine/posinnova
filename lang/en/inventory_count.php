@@ -222,4 +222,5 @@ return [
     'edit_product_info_help' => 'Changes the product master record — the new name and SKU apply everywhere (POS, reports, stock), not just this count.',
     'product_info_updated' => 'Product updated successfully',
     'sku_already_exists' => 'SKU ":sku" is already used by another product.',
+    'lot_already_on_sheet' => 'That lot and expiry are already on this count sheet for this product. Count the existing row instead of adding a second one.',
 ];

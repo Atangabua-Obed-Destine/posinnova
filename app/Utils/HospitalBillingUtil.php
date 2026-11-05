@@ -8,8 +8,10 @@ use App\VisitCharge;
  * Hospital billing (hospital module).
  *
  * Posts each hospital fee (consultation, lab, imaging, ward dispense, etc.) as
- * an ordinary line-less `sell` transaction on the PATIENT contact, exactly like
- * any customer invoice. The patient's "bill" is therefore just their normal
+ * an ordinary `sell` transaction on the PATIENT contact, exactly like any
+ * customer invoice. Since the clinic phase 2 each invoice carries real lines on
+ * non-stock service products (App\Utils\ClinicServices), so receipts list what
+ * was paid for and product reports count consultations and tests. The patient's "bill" is therefore just their normal
  * customer due (ContactUtil::getContactInfo), collectable through the existing
  * Pay-due flow and visible on the contact ledger — no parallel billing engine.
  *
@@ -18,9 +20,8 @@ use App\VisitCharge;
  * and reports). The transaction — not the visit_charge — is the source of truth
  * for money owed and paid.
  *
- * Line-less sell transactions are safe: TransactionUtil::mapPurchaseSell()
- * returns early on empty lines, so no stock decrement or accounting side-effects
- * occur.
+ * The service products have enable_stock = 0 and lines are never passed to
+ * mapPurchaseSell(), so no stock decrement or purchase mapping occurs.
  */
 class HospitalBillingUtil extends Util
 {
@@ -38,16 +39,16 @@ class HospitalBillingUtil extends Util
      * @param  array  $opts  keys: business_id, contact_id, amount, charge_type,
      *                        description, location_id, visit_id (null),
      *                        admission_id (null), created_by, reference_type
-     *                        (default 'transaction').
+     *                        (default 'transaction'), lines (optional),
+     *                        no_insurance (true: the patient pays it all),
+     *                        no_index (true: no visit_charge row).
+     *                        An insured patient's charge is split between
+     *                        their invoice (returned) and the insurer's
+     *                        (App\Utils\ClinicInsurance).
      * @return \App\Transaction|null  null when amount <= 0 (nothing to charge)
      */
     public function chargePatientFee(array $opts)
     {
-        $amount = (float) ($opts['amount'] ?? 0);
-        if ($amount <= 0) {
-            return null;
-        }
-
         $business_id = $opts['business_id'];
         $contact_id = $opts['contact_id'];
         $location_id = $opts['location_id'];
@@ -55,6 +56,113 @@ class HospitalBillingUtil extends Util
         $charge_type = $opts['charge_type'] ?? 'other';
         $description = $opts['description'] ?? __('lang_v1.hospital_charge');
 
+        // PosInnova clinic: invoice lines. A caller may pass its own lines
+        // (variation_id, product_id, quantity, unit_price, note); otherwise the
+        // whole fee becomes one line on the generic service of its charge type.
+        $lines = [];
+        foreach (($opts['lines'] ?? []) as $l) {
+            $qty = (float) ($l['quantity'] ?? 1);
+            $price = (float) ($l['unit_price'] ?? 0);
+            if ($qty > 0 && $price > 0) {
+                $lines[] = ['variation_id' => $l['variation_id'], 'product_id' => $l['product_id'],
+                    'quantity' => $qty, 'unit_price' => $price, 'note' => $l['note'] ?? ''];
+            }
+        }
+        if (! empty($lines)) {
+            $amount = round(array_sum(array_map(function ($l) {
+                return $l['quantity'] * $l['unit_price'];
+            }, $lines)), 4);
+        } else {
+            $amount = (float) ($opts['amount'] ?? 0);
+        }
+
+        if ($amount <= 0) {
+            return null;
+        }
+
+        if (empty($lines)) {
+            $service = ClinicServices::generic($business_id, $charge_type, $user_id);
+            $lines[] = ['variation_id' => $service->id, 'product_id' => $service->product_id,
+                'quantity' => 1, 'unit_price' => $amount, 'note' => $description];
+        }
+
+        // Clinic phase 5: an insured patient's charge is split. The patient's
+        // invoice carries the real lines at their part of each price; the
+        // insurer's part is an invoice on the insurer's own account, owed
+        // until the insurer pays (nothing is booked as paid in advance).
+        $cover = empty($opts['no_insurance']) ? ClinicInsurance::coverFor($business_id, $contact_id) : null;
+        $insurer_total = 0;
+        $detail = [];
+        $patient_lines = $lines;
+        if ($cover) {
+            [$patient_lines, $insurer_total, $detail] = ClinicInsurance::split($lines, $cover['pct'], ClinicInsurance::precision($business_id), $cover['insurer']->name);
+            if ($insurer_total <= 0) {
+                $cover = null;
+                $patient_lines = $lines;
+            }
+        }
+        $patient_amount = $cover ? round($amount - $insurer_total, 4) : $amount;
+        $sale_note = $cover ? $description.' · '.__('clinic.ins_sale_note', ['insurer' => $cover['insurer']->name, 'pct' => ClinicInsurance::pct($cover['pct'])]) : $description;
+
+        $transaction = $this->makeInvoice($business_id, $contact_id, $location_id, $user_id, $patient_lines, $patient_amount, $sale_note);
+
+        // Stamp the hospital links (columns added in earlier phases).
+        $transaction->visit_id = $opts['visit_id'] ?? null;
+        $transaction->admission_id = $opts['admission_id'] ?? null;
+        $transaction->save();
+
+        if ($cover) {
+            $insurer = $cover['insurer'];
+            $patient_name = \App\Contact::where('id', $contact_id)->value('name');
+            $insurer_note = $patient_name.' · '.$transaction->invoice_no.' · '.$description;
+            $service = ClinicServices::generic($business_id, 'insurance', $user_id);
+            $insurer_tx = $this->makeInvoice($business_id, $insurer->contact_id, $location_id, $user_id, [[
+                'variation_id' => $service->id, 'product_id' => $service->product_id,
+                'quantity' => 1, 'unit_price' => $insurer_total, 'note' => $insurer_note,
+            ]], $insurer_total, $insurer_note);
+
+            \App\ClinicInsuranceShare::create([
+                'business_id' => $business_id,
+                'insurer_id' => $insurer->id,
+                'contact_id' => $contact_id,
+                'visit_id' => $opts['visit_id'] ?? null,
+                'patient_transaction_id' => $transaction->id,
+                'insurer_transaction_id' => $insurer_tx->id,
+                'pct' => $cover['pct'],
+                'full_amount' => $amount,
+                'amount' => $insurer_total,
+                'lines' => $detail,
+            ]);
+        }
+
+        // Index row for the per-visit/admission running bill + reports.
+        if (empty($opts['no_index'])) {
+            VisitCharge::record([
+                'business_id' => $business_id,
+                'visit_id' => $opts['visit_id'] ?? null,
+                'admission_id' => $opts['admission_id'] ?? null,
+                'contact_id' => $contact_id,
+                'charge_type' => $charge_type,
+                'reference_id' => $transaction->id,
+                'reference_type' => $opts['reference_type'] ?? 'transaction',
+                'description' => $description,
+                'amount' => $amount,
+                'insurance_covered' => $insurer_total,
+                'patient_owes' => max(0, $amount - $insurer_total),
+                'is_paid' => 0,
+                'created_by' => $user_id,
+            ]);
+        }
+
+        return $transaction;
+    }
+
+    /**
+     * A finished, unpaid sell with the given lines on non-stock services. A
+     * zero total (the insurer pays everything) is created as paid.
+     */
+    private function makeInvoice($business_id, $contact_id, $location_id, $user_id, array $lines, $amount, $note)
+    {
         $input = [
             'type' => 'sell',
             'status' => 'final',
@@ -62,63 +170,31 @@ class HospitalBillingUtil extends Util
             'location_id' => $location_id,
             'transaction_date' => \Carbon::now()->toDateTimeString(),
             'discount_amount' => 0,
-            // The fee is the whole invoice; no tax, no lines.
             'final_total' => $amount,
-            'sale_note' => $description,
+            'sale_note' => $note,
         ];
-
-        $invoice_total = [
-            'total_before_tax' => $amount,
-            'tax' => 0,
-            'discount' => 0,
-        ];
+        $invoice_total = ['total_before_tax' => $amount, 'tax' => 0, 'discount' => 0];
 
         // $uf_data = false: amounts are already in DB format (raw floats).
         $transaction = $this->transactionUtil->createSellTransaction($business_id, $input, $invoice_total, $user_id, false);
 
-        // Stamp the hospital links (columns added in earlier phases).
-        $transaction->visit_id = $opts['visit_id'] ?? null;
-        $transaction->admission_id = $opts['admission_id'] ?? null;
-        $transaction->save();
+        // Real lines on non-stock services: no stock or purchase mapping.
+        $this->transactionUtil->createOrUpdateSellLines($transaction, array_map(function ($l) {
+            return [
+                'product_id' => $l['product_id'],
+                'variation_id' => $l['variation_id'],
+                'quantity' => $l['quantity'],
+                'unit_price' => $l['unit_price'],
+                'unit_price_inc_tax' => $l['unit_price'],
+                'item_tax' => 0,
+                'tax_id' => null,
+                'line_discount_type' => null,
+                'line_discount_amount' => 0,
+                'sell_line_note' => $l['note'],
+            ];
+        }, $lines), $location_id, false, null, [], false);
 
-        // No payments yet -> payment_status becomes 'due'.
         $this->transactionUtil->updatePaymentStatus($transaction->id, $transaction->final_total);
-
-        // Insurance auto-split: if the patient has active coverage, the insurer
-        // share is recorded as an advance payment so the patient only owes the
-        // co-pay. Coverage applies only while not expired.
-        $insurance_covered = 0;
-        $pd = \App\PatientDetail::where('contact_id', $contact_id)->first();
-        if ($pd && $pd->insurance_coverage_pct > 0
-            && (empty($pd->insurance_expiry_date) || $pd->insurance_expiry_date->isFuture())) {
-            $insurance_covered = round($amount * ($pd->insurance_coverage_pct / 100), 4);
-            if ($insurance_covered > 0) {
-                $this->transactionUtil->createOrUpdatePaymentLines($transaction, [[
-                    'amount' => $insurance_covered,
-                    'method' => 'other',
-                    'note' => __('lang_v1.insurance_paid', ['provider' => $pd->insurance_provider ?: 'Insurer']),
-                    'paid_on' => \Carbon::now()->toDateTimeString(),
-                ]], $business_id, $user_id, false);
-                $this->transactionUtil->updatePaymentStatus($transaction->id, $transaction->final_total);
-            }
-        }
-
-        // Index row for the per-visit/admission running bill + reports.
-        VisitCharge::record([
-            'business_id' => $business_id,
-            'visit_id' => $opts['visit_id'] ?? null,
-            'admission_id' => $opts['admission_id'] ?? null,
-            'contact_id' => $contact_id,
-            'charge_type' => $charge_type,
-            'reference_id' => $transaction->id,
-            'reference_type' => $opts['reference_type'] ?? 'transaction',
-            'description' => $description,
-            'amount' => $amount,
-            'insurance_covered' => $insurance_covered,
-            'patient_owes' => max(0, $amount - $insurance_covered),
-            'is_paid' => 0,
-            'created_by' => $user_id,
-        ]);
 
         return $transaction;
     }
@@ -147,10 +223,20 @@ class HospitalBillingUtil extends Util
             return;
         }
 
+        // One invoice line per test, on the generic lab service.
+        $service = ClinicServices::generic($lab_request->business_id, 'lab', $created_by ?? $lab_request->requested_by);
+        $lines = [];
+        foreach ($lab_request->lines as $test_line) {
+            $lines[] = ['variation_id' => $service->id, 'product_id' => $service->product_id,
+                'quantity' => 1, 'unit_price' => (float) $test_line->fee,
+                'note' => $test_line->test_name.' · '.$lab_request->ref_no];
+        }
+
         $this->chargePatientFee([
             'business_id' => $lab_request->business_id,
             'contact_id' => $lab_request->contact_id,
             'amount' => (float) $total,
+            'lines' => $lines,
             'charge_type' => 'lab',
             'description' => __('lang_v1.lab_request').' · '.$lab_request->ref_no,
             'location_id' => $location_id,

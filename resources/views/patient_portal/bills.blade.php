@@ -21,8 +21,15 @@
 </div>
 
 @if($due > 0)
-    <div class="tw-rounded-2xl tw-bg-amber-50 tw-ring-1 tw-ring-amber-200 tw-p-3.5 tw-mb-4 tw-text-sm tw-text-amber-800 tw-flex tw-items-center tw-gap-2">
+    {{-- inline colours: the portal's compiled CSS has no amber utilities --}}
+    <div style="border-radius:16px;background:#fffbeb;border:1px solid #fde68a;padding:12px 14px;margin-bottom:16px;font-size:14px;color:#92400e;display:flex;align-items:center;gap:8px;">
         <i class="fas fa-circle-info"></i> <span>@lang('lang_v1.portal_pay_at_cashier')</span>
+    </div>
+@endif
+
+@if($insurer_owes > 0)
+    <div style="border-radius:16px;background:#eff6ff;border:1px solid #bfdbfe;padding:12px 14px;margin-bottom:16px;font-size:14px;color:#1e40af;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-shield-halved"></i> <span>{{ __('clinic.ins_portal_insurer_owes') }} <strong><span class="display_currency" data-currency_symbol="true">{{ $insurer_owes }}</span></strong></span>
     </div>
 @endif
 
@@ -34,10 +41,13 @@
                 <div class="tw-min-w-0">
                     <p class="tw-text-sm tw-font-medium tw-text-gray-800 tw-truncate">{{ $c->additional_notes ?: $c->invoice_no }}</p>
                     <p class="tw-text-xs tw-text-gray-400">{{ @format_date($c->transaction_date) }} · {{ $c->invoice_no }}</p>
+                    @if(isset($insurer_parts[$c->id]))
+                        <p style="font-size:12px;color:#1d4ed8;margin:2px 0 0;">{{ __('clinic.ins_portal_insurer_pays', ['insurer' => optional($insurer_parts[$c->id]->insurer)->name]) }} <span class="display_currency" data-currency_symbol="true">{{ $insurer_parts[$c->id]->amount - $insurer_parts[$c->id]->rebilled_amount }}</span></p>
+                    @endif
                 </div>
                 <div class="tw-text-right tw-shrink-0">
                     <p class="tw-text-sm tw-font-bold tw-text-gray-900"><span class="display_currency" data-currency_symbol="true">{{ $c->final_total }}</span></p>
-                    <span class="tw-text-[10px] tw-px-1.5 tw-py-0.5 tw-rounded-full {{ $c->payment_status == 'paid' ? 'tw-bg-green-100 tw-text-green-700' : ($c->payment_status == 'partial' ? 'tw-bg-blue-100 tw-text-blue-700' : 'tw-bg-amber-100 tw-text-amber-700') }}">
+                    <span style="font-size:10px;padding:2px 8px;border-radius:9999px;{{ $c->payment_status == 'paid' ? 'background:#dcfce7;color:#15803d;' : ($c->payment_status == 'partial' ? 'background:#dbeafe;color:#1d4ed8;' : 'background:#fef3c7;color:#b45309;') }}">
                         {{ $c->payment_status == 'paid' ? __('lang_v1.paid') : ($c->payment_status == 'partial' ? __('lang_v1.partial') : __('lang_v1.due')) }}
                     </span>
                 </div>

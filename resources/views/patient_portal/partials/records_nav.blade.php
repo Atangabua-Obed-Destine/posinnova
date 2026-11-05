@@ -7,6 +7,11 @@
         ['key' => 'imaging', 'route' => 'portal.imaging', 'label' => __('lang_v1.my_imaging'), 'icon' => 'fa-x-ray'],
         ['key' => 'admissions', 'route' => 'portal.admissions', 'label' => __('lang_v1.my_admissions'), 'icon' => 'fa-procedures'],
     ];
+    // "My plan" only for a patient who has (or had) a monthly plan
+    $portal_pid = \Illuminate\Support\Facades\Auth::guard('patient')->id();
+    if ($portal_pid && \App\ClinicSubscription::where('contact_id', $portal_pid)->exists()) {
+        array_splice($items, 1, 0, [['key' => 'plan', 'route' => 'portal.plan', 'label' => __('clinic.portal_my_plan'), 'icon' => 'fa-id-card']]);
+    }
 @endphp
 <div class="portal-chipnav tw-flex tw-gap-2 tw-overflow-x-auto tw-pb-1 tw--mx-1 tw-px-1 tw-mb-4">
     @foreach($items as $it)

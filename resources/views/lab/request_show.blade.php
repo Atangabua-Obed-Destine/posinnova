@@ -30,10 +30,12 @@
                     </a>
                 @endif
                 @if($lr->status == 'resulted' && auth()->user()->can('lab_result.validate'))
-                    <a href="{{ action([\App\Http\Controllers\LabRequestController::class, 'validateResult'], [$lr->id]) }}"
-                        class="tw-dw-btn tw-dw-btn-sm tw-bg-green-600 tw-text-white tw-border-none">
-                        <i class="fas fa-check-double"></i> @lang('lang_v1.validate_result')
-                    </a>
+                    <form method="POST" action="{{ action([\App\Http\Controllers\LabRequestController::class, 'validateResult'], [$lr->id]) }}" style="display:inline;">
+                        @csrf
+                        <button type="submit" class="tw-dw-btn tw-dw-btn-sm tw-bg-green-600 tw-text-white tw-border-none">
+                            <i class="fas fa-check-double"></i> @lang('lang_v1.validate_result')
+                        </button>
+                    </form>
                 @endif
                 @if(in_array($lr->status, ['resulted','validated']))
                     <a href="{{ action([\App\Http\Controllers\LabRequestController::class, 'print'], [$lr->id]) }}" target="_blank"
@@ -76,7 +78,12 @@
                     @foreach($lr->lines as $line)
                         <tr>
                             <td>{{ $line->test_name }}</td>
-                            <td><strong>{{ $line->result_value ?: '-' }}</strong></td>
+                            <td>
+                                <strong>{{ $line->result_value ?: '-' }}</strong>
+                                @if (($amendments ?? collect())->where('lab_request_line_id', $line->id)->count())
+                                    <span class="label label-warning">@lang('clinic.amended')</span>
+                                @endif
+                            </td>
                             <td>{{ $line->normal_range ?: '-' }}</td>
                             <td>{{ $line->unit ?: '-' }}</td>
                             <td>
@@ -99,6 +106,61 @@
             </table>
         </div>
     @endcomponent
+
+    {{-- PosInnova: a validated result is locked; corrections are amendments
+         that keep the original value, the reason, who and when. --}}
+    @if ($lr->status === 'validated')
+        <div class="callout callout-info" style="margin-bottom:15px;">
+            <i class="fas fa-lock"></i> @lang('clinic.result_locked')
+        </div>
+        @if (auth()->user()->can('lab_result.amend'))
+            @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.amend_result')])
+                {!! Form::open(['url' => action([\App\Http\Controllers\LabRequestController::class, 'amendResult'], [$lr->id]), 'method' => 'post', 'id' => 'lab_amend_form']) !!}
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            {!! Form::label('line_id', __('clinic.amend_test') . ':*') !!}
+                            {!! Form::select('line_id', $lr->lines->pluck('test_name', 'id'), null, ['class' => 'form-control', 'required']) !!}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            {!! Form::label('new_value', __('clinic.amend_new_value') . ':*') !!}
+                            {!! Form::text('new_value', null, ['class' => 'form-control', 'required', 'maxlength' => 191]) !!}
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            {!! Form::label('new_flag', __('clinic.amend_new_flag') . ':') !!}
+                            {!! Form::select('new_flag', ['' => '-', 'normal' => __('lang_v1.lab_flag_normal'), 'high' => __('lang_v1.lab_flag_high'), 'low' => __('lang_v1.lab_flag_low'), 'critical' => __('lang_v1.lab_flag_critical')], null, ['class' => 'form-control']) !!}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {!! Form::label('reason', __('clinic.amend_reason') . ':*') !!}
+                            {!! Form::text('reason', null, ['class' => 'form-control', 'required']) !!}
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline">@lang('clinic.amend_save')</button>
+                {!! Form::close() !!}
+            @endcomponent
+        @endif
+    @endif
+
+    @if (($amendments ?? collect())->count())
+        @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.amendments')])
+            <ul class="list-unstyled" style="margin:0;">
+                @foreach ($amendments as $am)
+                    <li style="padding:6px 0; border-bottom:1px solid #eee;">
+                        <strong>{{ __('clinic.amended_from_to', ['test' => $am->test_name, 'from' => $am->old_value ?? '-', 'to' => $am->new_value]) }}</strong>
+                        <span class="text-muted">· {{ __('clinic.amended_by_on', ['user' => $am->amended_by_name ?: '-', 'date' => app(\App\Utils\Util::class)->format_date($am->created_at, true)]) }}</span>
+                        <br>{{ $am->reason }}
+                    </li>
+                @endforeach
+            </ul>
+        @endcomponent
+    @endif
 
 </section>
 @endsection

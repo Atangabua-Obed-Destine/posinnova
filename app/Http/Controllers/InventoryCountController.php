@@ -1121,6 +1121,27 @@ class InventoryCountController extends Controller
             }
         }
 
+        // PosInnova: refuse a lot that is already on this sheet for this product.
+        // Rows added here always carry purchase_line_id = NULL, and MySQL treats
+        // every NULL in a unique index as distinct, so icsl_session_variation_lot_unique
+        // cannot block a repeat - it has to be checked here.
+        $lot_in = $request->input('lot_number') ?: null;
+        $dup_q = InventoryCountSessionLine::where('session_id', $session->id)
+            ->where('variation_id', (int) $request->input('variation_id'));
+        $lot_in === null
+            ? $dup_q->whereNull('lot_number')
+            : $dup_q->where('lot_number', $lot_in);
+        $exp_date === null
+            ? $dup_q->whereNull('exp_date')
+            : $dup_q->whereDate('exp_date', $exp_date);
+
+        if ($dup_q->exists()) {
+            return response()->json([
+                'success' => 0,
+                'msg' => __('inventory_count.lot_already_on_sheet'),
+            ], 422);
+        }
+
         $unit_cost = $request->input('unit_cost');
         if ($unit_cost === null || $unit_cost === '') {
             $unit_cost = (float) $existing->unit_cost;
@@ -2160,6 +2181,27 @@ class InventoryCountController extends Controller
     }
 
     /**
+     * PosInnova: one session line describing a single PurchaseLine batch.
+     *
+     * @param  object  $b  row from fetchActiveBatches()
+     * @return array
+     */
+    protected function sessionLineFromBatch($b, $session_id, $product_id, $variation_id, $default_cost)
+    {
+        return [
+            'session_id' => $session_id,
+            'product_id' => $product_id,
+            'variation_id' => $variation_id,
+            'purchase_line_id' => (int) $b->purchase_line_id,
+            'lot_number' => $b->lot_number,
+            'exp_date' => $b->exp_date,
+            'theoretical_at_start' => (float) $b->qty_available,
+            'unit_cost' => (float) $b->unit_cost > 0 ? (float) $b->unit_cost : $default_cost,
+            'counted_qty' => null,
+        ];
+    }
+
+    /**
      * Build the inventory_count_session_lines insert payload for a set of
      * variation rows. When lot tracking is enabled, fan out one row per
      * active PurchaseLine batch; otherwise one row per variation as before.
@@ -2189,16 +2231,70 @@ class InventoryCountController extends Controller
             $batches = $lot_tracking ? ($batches_by_variation[$variation_id] ?? collect()) : collect();
 
             if ($batches->isNotEmpty()) {
-                foreach ($batches as $b) {
+                // PosInnova: a batch carrying a lot number is always listed on its
+                // own row - the counter can read the lot off the pack and match it.
+                // An unlabelled batch can only be told apart by its expiry date, so
+                // unlabelled batches are grouped by expiry and any group holding
+                // more than one batch is merged into a single countable row.
+                //
+                // Without this, a product received twice with no lot number produced
+                // two byte-identical rows (same name, SKU, unit, expiry, cost and
+                // price - only the expected qty differed). The counter had no way to
+                // split the physical stock between them, and entering the full shelf
+                // count on both rows inflated stock at approval.
+                [$labelled, $unlabelled] = $batches->partition(function ($b) {
+                    return ! is_null($b->lot_number) && $b->lot_number !== '';
+                });
+
+                foreach ($labelled as $b) {
+                    $insert[] = $this->sessionLineFromBatch(
+                        $b, $session_id, $product_id, $variation_id, $default_cost
+                    );
+                }
+
+                $by_expiry = $unlabelled->groupBy(function ($b) {
+                    return (string) ($b->exp_date ?? '');
+                });
+
+                foreach ($by_expiry as $group) {
+                    if ($group->count() === 1) {
+                        // One batch for this expiry - behaviour unchanged, and the row
+                        // keeps its purchase_line_id so a variance is applied to that
+                        // exact batch.
+                        $insert[] = $this->sessionLineFromBatch(
+                            $group->first(), $session_id, $product_id, $variation_id, $default_cost
+                        );
+                        continue;
+                    }
+
+                    $qty = 0.0;
+                    $value = 0.0;
+                    foreach ($group as $b) {
+                        $q = (float) $b->qty_available;
+                        // Apply the same zero-cost fallback an unmerged row gets, so a
+                        // batch is valued identically whether or not it ends up merged.
+                        $batch_cost = (float) $b->unit_cost > 0 ? (float) $b->unit_cost : $default_cost;
+                        $qty += $q;
+                        $value += $q * $batch_cost;
+                    }
+                    // Weighted-average cost, so the merged row values a variance the
+                    // same as the batches it stands for.
+                    $cost = $qty > 0 ? $value / $qty : (float) $group->first()->unit_cost;
+
                     $insert[] = [
                         'session_id' => $session_id,
                         'product_id' => $product_id,
                         'variation_id' => $variation_id,
-                        'purchase_line_id' => (int) $b->purchase_line_id,
-                        'lot_number' => $b->lot_number,
-                        'exp_date' => $b->exp_date,
-                        'theoretical_at_start' => (float) $b->qty_available,
-                        'unit_cost' => (float) $b->unit_cost > 0 ? (float) $b->unit_cost : $default_cost,
+                        // No single batch owns this row. Deliberately null: at approval
+                        // a shortage is then allocated across the real batches by
+                        // mapPurchaseSell (earliest expiry first) rather than being
+                        // forced onto one batch and driving it negative. This is the
+                        // same path already used when lot tracking is off.
+                        'purchase_line_id' => null,
+                        'lot_number' => null,
+                        'exp_date' => $group->first()->exp_date,
+                        'theoretical_at_start' => $qty,
+                        'unit_cost' => $cost > 0 ? $cost : $default_cost,
                         'counted_qty' => null,
                     ];
                 }

@@ -60,7 +60,9 @@
             <li><a href="#patient_prescriptions_tab" data-toggle="tab"><i class="fas fa-prescription"></i> @lang('lang_v1.prescriptions')</a></li>
             <li><a href="#patient_lab_tab" data-toggle="tab"><i class="fas fa-vial"></i> @lang('lang_v1.lab_results')</a></li>
             <li><a href="#patient_admissions_tab" data-toggle="tab"><i class="fas fa-procedures"></i> @lang('lang_v1.admissions')</a></li>
+            @can('patient.view_bill')
             <li><a href="#patient_billing_tab" data-toggle="tab"><i class="fas fa-file-invoice-dollar"></i> @lang('lang_v1.billing')</a></li>
+            @endcan
             <li><a href="#patient_activities_tab" data-toggle="tab"><i class="fas fa-history"></i> @lang('lang_v1.activities')</a></li>
         </ul>
 
@@ -183,18 +185,12 @@
                             @forelse($prescriptions as $rx)
                                 <tr>
                                     <td>{{ @format_date(optional($rx->consultation)->created_at) }}</td>
-                                    <td>{{ optional($rx->product)->name }}</td>
+                                    <td>{{ $rx->displayName() }}</td>
                                     <td>{{ $rx->dosage ?: '-' }}</td>
                                     <td>{{ $rx->frequency ?: '-' }}</td>
                                     <td>{{ $rx->duration ?: '-' }}</td>
                                     <td>{{ $rx->quantity + 0 }}</td>
-                                    <td>
-                                        @if($rx->is_dispensed)
-                                            <span class="label label-success">@lang('lang_v1.dispensed')</span>
-                                        @else
-                                            <span class="label label-default">@lang('lang_v1.pending')</span>
-                                        @endif
-                                    </td>
+                                    <td>@include('clinic.partials.rx_state', ['rx' => $rx])</td>
                                 </tr>
                             @empty
                                 <tr><td colspan="7" class="text-center text-muted">@lang('lang_v1.no_records_found')</td></tr>
@@ -306,7 +302,9 @@
                 </div>
             </div>
 
-            {{-- Billing (reuses the customer due + Pay-due + ledger flow) --}}
+            {{-- Billing (reuses the customer due + Pay-due + ledger flow).
+                 PosInnova: only for roles with "View patient bills". --}}
+            @can('patient.view_bill')
             <div class="tab-pane" id="patient_billing_tab">
                 <div class="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-3 tw-mb-3">
                     <div>
@@ -316,12 +314,12 @@
                         </div>
                     </div>
                     <div class="tw-flex tw-items-center tw-gap-2">
-                        @if(auth()->user()->can('sell.payments') && $total_due > 0)
-                            <a href="{{ action([\App\Http\Controllers\TransactionPaymentController::class, 'getPayContactDue'], [$contact->id]) }}?type=sell"
-                                class="pay_sale_due tw-dw-btn tw-dw-btn-sm tw-bg-green-600 tw-text-white tw-border-none">
-                                <i class="fas fa-money-bill-alt"></i> @lang('contact.pay_due_amount')
-                            </a>
-                        @endif
+                        {{-- PosInnova clinic: payments go through the patient account
+                             screen (receipt + cash register), not the generic pay-due modal. --}}
+                        <a href="{{ action([\App\Http\Controllers\ClinicAccountController::class, 'show'], [$contact->id]) }}"
+                            class="tw-dw-btn tw-dw-btn-sm {{ auth()->user()->can('sell.payments') && $total_due > 0 ? 'tw-bg-green-600 tw-text-white tw-border-none' : 'tw-dw-btn-outline' }}">
+                            <i class="fas fa-wallet"></i> {{ auth()->user()->can('sell.payments') && $total_due > 0 ? __('clinic.acc_receive_payment') : __('clinic.patient_account') }}
+                        </a>
                         <a href="{{ action([\App\Http\Controllers\ContactController::class, 'show'], [$contact->id]) }}?view=ledger"
                             class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline">
                             <i class="fas fa-scroll"></i> @lang('lang_v1.ledger')
@@ -372,6 +370,7 @@
                 </div>
                 <p class="help-block">@lang('lang_v1.patient_billing_note')</p>
             </div>
+            @endcan
 
             {{-- Activities --}}
             <div class="tab-pane" id="patient_activities_tab">

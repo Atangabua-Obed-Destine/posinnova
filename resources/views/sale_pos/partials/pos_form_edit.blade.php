@@ -198,6 +198,10 @@
 		<!-- Keeps count of product rows -->
 		<input type="hidden" id="product_row_count" 
 			value="{{count($sell_details)}}">
+		{{-- PosInnova: how many cart rows the browser actually submitted. The server
+		     rejects the sale if fewer arrive, so a dropped line can never be saved
+		     silently. Left at 0 when JS has not run, which skips the check. --}}
+		<input type="hidden" name="expected_product_rows" id="expected_product_rows" value="0">
 		@php
 			$hide_tax = '';
 			if( session()->get('business.enable_inline_tax') == 0){

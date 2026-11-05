@@ -37,6 +37,10 @@ class AdmissionController extends Controller
         if (! is_array($enabled_modules) || ! in_array('hospital', $enabled_modules)) {
             abort(404);
         }
+        //PosInnova: section switched off in Clinic settings
+        if (! \App\Utils\ClinicSettings::sectionOn(request()->session()->get('user.business_id'), 'wards')) {
+            abort(404);
+        }
     }
 
     public function index()
@@ -268,6 +272,12 @@ class AdmissionController extends Controller
         //Patient's total outstanding due (= customer due across all their charges).
         $info = app(\App\Utils\ContactUtil::class)->getContactInfo($business_id, $admission->contact_id);
         $patient_total_due = ($info->total_invoice ?? 0) - ($info->invoice_received ?? 0);
+
+        //PosInnova: bills only for roles with "View patient bills"
+        if (! auth()->user()->can('patient.view_bill')) {
+            $charges = collect();
+            $patient_total_due = 0;
+        }
 
         //Nursing layer: vitals series + KPIs, MAR, notes, ordered drugs (Phase 12).
         $nursing = \App\Http\Controllers\NursingController::nursingData($admission);

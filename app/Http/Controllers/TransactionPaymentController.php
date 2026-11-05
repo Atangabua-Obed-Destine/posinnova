@@ -123,6 +123,12 @@ class TransactionPaymentController extends Controller
                         $this->transactionUtil->addCashDenominations($tp, $request->input('denominations'));
                     }
 
+                    // PosInnova clinic: a payment taken from a clinic screen goes
+                    // into the cashier's open register like a POS payment does.
+                    if ($request->input('post_to_register') == 1 && $transaction->type == 'sell' && $tp->method != 'advance') {
+                        \App\Utils\ClinicCashier::postToRegister(auth()->user()->id, $transaction->id, $tp->method, $tp->amount);
+                    }
+
                     $inputs['transaction_type'] = $transaction->type;
                     event(new TransactionPaymentAdded($tp, $inputs));
                 }

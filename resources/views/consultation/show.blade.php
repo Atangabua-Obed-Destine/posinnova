@@ -27,13 +27,15 @@
             <div class="tw-flex tw-items-center tw-gap-2">
                 @if($c->status == 'draft')
                     @can('consultation.finalize')
-                        <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'finalize'], [$c->id]) }}"
-                            class="tw-dw-btn tw-dw-btn-sm tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-border-none">
-                            <i class="fas fa-check"></i> @lang('lang_v1.finalize_consultation')
-                        </a>
+                        <form method="POST" action="{{ action([\App\Http\Controllers\ConsultationController::class, 'finalize'], [$c->id]) }}" style="display:inline;">
+                            @csrf
+                            <button type="submit" class="tw-dw-btn tw-dw-btn-sm tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-border-none">
+                                <i class="fas fa-check"></i> @lang('lang_v1.finalize_consultation')
+                            </button>
+                        </form>
                     @endcan
                 @endif
-                @php $pending_rx = $c->prescriptions->where('is_dispensed', 0)->count(); @endphp
+                @php $pending_rx = $c->prescriptions->filter(fn ($rx) => $rx->outstanding_qty > 0)->count(); @endphp
                 @if($pending_rx > 0 && auth()->user()->can('sell.create'))
                     <a href="{{ action([\App\Http\Controllers\SellPosController::class, 'create']) }}?prescription_id={{ $c->id }}"
                         class="tw-dw-btn tw-dw-btn-sm tw-bg-green-600 tw-text-white tw-border-none">
@@ -120,13 +122,7 @@
                                 <td>{{ $rx->duration ?: '-' }}</td>
                                 <td>{{ $rx->quantity + 0 }}</td>
                                 <td>{{ $rx->notes ?: '-' }}</td>
-                                <td>
-                                    @if($rx->is_dispensed)
-                                        <span class="label label-success">@lang('lang_v1.dispensed')</span>
-                                    @else
-                                        <span class="label label-default">@lang('lang_v1.pending')</span>
-                                    @endif
-                                </td>
+                                <td>@include('clinic.partials.rx_state', ['rx' => $rx])</td>
                             </tr>
                         @endforeach
                     </tbody>

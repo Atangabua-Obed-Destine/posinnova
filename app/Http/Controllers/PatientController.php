@@ -203,6 +203,18 @@ class PatientController extends Controller
             $input['business_id'] = $business_id;
             $input['created_by'] = $request->session()->get('user.id');
 
+            //PosInnova: portal PIN. Typed by reception, or generated when left
+            //blank; shown once in the success message to hand to the patient.
+            $portal_pin = trim((string) $request->input('portal_pin'));
+            if ($portal_pin !== '' && ! PatientDetail::isValidPin($portal_pin)) {
+                return $this->pinError($request);
+            }
+            if ($portal_pin === '') {
+                $portal_pin = (string) random_int(1000, 9999);
+            }
+
+            $ins_choice = $request->filled('insurer_id') ? \App\ClinicInsurer::forBusiness($business_id)->find($request->input('insurer_id')) : null;
+
             DB::beginTransaction();
 
             $output = $this->contactUtil->createNewContact($input);
@@ -211,7 +223,7 @@ class PatientController extends Controller
             //Generate file number atomically and create the clinical row.
             $file_number = $this->generateFileNumber($business_id);
 
-            PatientDetail::create([
+            $details = PatientDetail::create([
                 'contact_id' => $contact->id,
                 'business_id' => $business_id,
                 'file_number' => $file_number,
@@ -222,12 +234,15 @@ class PatientController extends Controller
                 'next_of_kin_name' => $request->input('next_of_kin_name') ?: null,
                 'next_of_kin_phone' => $request->input('next_of_kin_phone') ?: null,
                 'next_of_kin_relationship' => $request->input('next_of_kin_relationship') ?: null,
-                'insurance_provider' => $request->input('insurance_provider') ?: null,
+                'insurer_id' => optional($ins_choice)->id,
+                'insurance_provider' => $ins_choice ? $ins_choice->name : (trim((string) $request->input('insurance_provider')) ?: null),
                 'insurance_number' => $request->input('insurance_number') ?: null,
                 'insurance_coverage_pct' => $request->filled('insurance_coverage_pct') ? $this->commonUtil->num_uf($request->input('insurance_coverage_pct')) : null,
                 'insurance_expiry_date' => $request->filled('insurance_expiry_date') ? $request->input('insurance_expiry_date') : null,
                 'notes' => $request->input('notes') ?: null,
             ]);
+            $details->setPortalPin($portal_pin);
+            $details->save();
 
             event(new ContactCreatedOrModified($input, 'added'));
             $this->contactUtil->activityLog($contact, 'added');
@@ -236,7 +251,7 @@ class PatientController extends Controller
 
             $output = [
                 'success' => true,
-                'msg' => __('lang_v1.patient_added_success'),
+                'msg' => __('lang_v1.patient_added_success').' '.__('clinic.portal_pin_saved', ['file' => $file_number, 'pin' => $portal_pin]),
                 'id' => $contact->id,
             ];
         } catch (\Exception $e) {
@@ -295,6 +310,7 @@ class PatientController extends Controller
             ->with(['product', 'variation', 'consultation'])
             ->orderBy('created_at', 'desc')
             ->get();
+        \App\Utils\Dispensing::attach($prescriptions);
 
         $lab_requests = \App\LabRequest::forBusiness($business_id)
             ->where('contact_id', $contact->id)
@@ -341,6 +357,11 @@ class PatientController extends Controller
         }
         foreach ($admissions as $a) {
             $timeline->push(['t' => $a->admission_date, 'icon' => 'fa-procedures', 'cls' => 'green', 'title' => __('lang_v1.admission') . ' · ' . optional($a->ward)->name, 'sub' => $a->discharge_date ? __('lang_v1.admission_status_' . $a->status) : __('lang_v1.currently_admitted'), 'url' => auth()->user()->can('admission.view') ? action([\App\Http\Controllers\AdmissionController::class, 'show'], [$a->id]) : null]);
+        }
+        //PosInnova: bills only for roles with "View patient bills"
+        if (! auth()->user()->can('patient.view_bill')) {
+            $charge_transactions = collect();
+            $total_due = 0;
         }
         foreach ($charge_transactions as $ct) {
             $timeline->push(['t' => $ct->transaction_date, 'icon' => 'fa-file-invoice-dollar', 'cls' => 'rose', 'title' => __('lang_v1.bill') . ' · ' . $ct->invoice_no, 'sub' => $ct->payment_status, 'url' => null]);
@@ -407,6 +428,18 @@ class PatientController extends Controller
             ]);
             $input['name'] = trim(implode(' ', $name_array));
 
+            //PosInnova: a new portal PIN, only for a role allowed to reset one;
+            //a blank field keeps the current PIN.
+            $new_pin = trim((string) $request->input('portal_pin'));
+            if ($new_pin !== '' && ! auth()->user()->can('patient.reset_portal_pin')) {
+                $new_pin = '';
+            }
+            if ($new_pin !== '' && ! PatientDetail::isValidPin($new_pin)) {
+                return $this->pinError($request);
+            }
+
+            $ins_choice = $request->filled('insurer_id') ? \App\ClinicInsurer::forBusiness($business_id)->find($request->input('insurer_id')) : null;
+
             DB::beginTransaction();
 
             foreach ($input as $key => $value) {
@@ -422,7 +455,8 @@ class PatientController extends Controller
                 'next_of_kin_name' => $request->input('next_of_kin_name') ?: null,
                 'next_of_kin_phone' => $request->input('next_of_kin_phone') ?: null,
                 'next_of_kin_relationship' => $request->input('next_of_kin_relationship') ?: null,
-                'insurance_provider' => $request->input('insurance_provider') ?: null,
+                'insurer_id' => optional($ins_choice)->id,
+                'insurance_provider' => $ins_choice ? $ins_choice->name : (trim((string) $request->input('insurance_provider')) ?: null),
                 'insurance_number' => $request->input('insurance_number') ?: null,
                 'insurance_coverage_pct' => $request->filled('insurance_coverage_pct') ? $this->commonUtil->num_uf($request->input('insurance_coverage_pct')) : null,
                 'insurance_expiry_date' => $request->filled('insurance_expiry_date') ? $request->input('insurance_expiry_date') : null,
@@ -438,15 +472,22 @@ class PatientController extends Controller
             foreach ($clinical as $key => $value) {
                 $details->$key = $value;
             }
+            if ($new_pin !== '') {
+                $details->setPortalPin($new_pin);
+            }
             $details->save();
 
             $this->contactUtil->activityLog($contact, 'edited');
+            if ($new_pin !== '') {
+                $this->contactUtil->activityLog($contact, 'portal_pin_reset');
+            }
 
             DB::commit();
 
             $output = [
                 'success' => true,
-                'msg' => __('lang_v1.patient_updated_success'),
+                'msg' => __('lang_v1.patient_updated_success')
+                    .($new_pin !== '' ? ' '.__('clinic.portal_pin_saved', ['file' => $details->file_number, 'pin' => $new_pin]) : ''),
             ];
         } catch (\Exception $e) {
             DB::rollBack();
@@ -564,6 +605,19 @@ class PatientController extends Controller
         });
 
         return response()->json(['results' => $results]);
+    }
+
+    /**
+     * PosInnova: an invalid portal PIN sends the form back with the message.
+     */
+    private function pinError(Request $request)
+    {
+        $output = ['success' => false, 'msg' => __('clinic.portal_pin_invalid')];
+        if ($request->ajax()) {
+            return $output;
+        }
+
+        return redirect()->back()->withInput($request->except('portal_pin'))->with('status', $output);
     }
 
     /**
