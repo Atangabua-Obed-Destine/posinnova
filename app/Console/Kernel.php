@@ -18,7 +18,8 @@ class Kernel extends ConsoleKernel
         $env = config('app.env');
         $email = config('mail.username');
 
-        if ($env === 'live') {
+        // 'production' too: with APP_ENV=live some module providers load test factories in artisan (Faker is dev-only)
+        if (in_array($env, ['live', 'production'])) {
             //Scheduling backup, specify the time when the backup will get cleaned & time when it will run.
             
             $schedule->command('backup:clean')->daily()->at('01:00');
