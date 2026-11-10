@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}">
+<html data-theme="light" lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport">
     <title>@lang('lang_v1.patient_portal')</title>
     <link href="{{ asset('css/tailwind/app.css?v='.$asset_v) }}" rel="stylesheet">
+    <link href="{{ asset('css/tailwind/portal.css?v='.$asset_v) }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
 </head>
 <body class="tw-min-h-screen tw-bg-gradient-to-br tw-from-indigo-600 tw-to-blue-500 tw-flex tw-items-center tw-justify-center tw-p-6">

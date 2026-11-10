@@ -5,10 +5,23 @@
     $pd = $contact->patientDetails;
     $age = optional($pd)->date_of_birth ? \Carbon::parse($pd->date_of_birth)->age : null;
     $has_allergies = ! empty(optional($pd)->known_allergies);
+    $wards_on = \App\Utils\ClinicSettings::sectionOn($contact->business_id, 'wards');
 @endphp
 
 @section('content')
 <section class="content">
+
+    @if (session('patient_created'))
+        @php $pc = session('patient_created'); @endphp
+        <div class="callout callout-success" id="patient_created_box" style="font-size:15px;">
+            <strong><i class="fas fa-check-circle"></i> @lang('clinic.reg_done_title')</strong><br>
+            @if (! empty($pc['pin']))
+                {!! __('clinic.reg_done_tell', ['file' => '<strong style="font-size:18px;">' . e($pc['file']) . '</strong>', 'pin' => '<strong style="font-size:18px;">' . e($pc['pin']) . '</strong>']) !!}
+            @else
+                {!! __('clinic.reg_done_file', ['file' => '<strong style="font-size:18px;">' . e($pc['file']) . '</strong>']) !!}
+            @endif
+        </div>
+    @endif
 
     {{-- Patient header card --}}
     <div class="tw-bg-white tw-shadow-sm tw-rounded-xl tw-ring-1 tw-ring-gray-200 tw-p-4 sm:tw-p-5 tw-mb-4">
@@ -25,16 +38,33 @@
                     </p>
                 </div>
             </div>
-            <div class="tw-flex tw-items-center tw-gap-2">
-                @can('admission.create')
+            <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-2 pos-actions">
+                {{-- PosInnova: the usual next steps for this patient, by permission --}}
+                @can('visit.create')
+                    <a href="{{ action([\App\Http\Controllers\VisitController::class, 'create']) }}?contact_id={{ $contact->id }}"
+                        class="tw-dw-btn tw-dw-btn-sm tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-border-none">
+                        <i class="fas fa-sign-in-alt"></i> @lang('clinic.check_in_patient')
+                    </a>
+                @endcan
+                @can('patient.view_bill')
+                    <a href="{{ action([\App\Http\Controllers\ClinicAccountController::class, 'show'], [$contact->id]) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline">
+                        <i class="fas fa-file-invoice-dollar"></i> @lang('clinic.patient_account')
+                    </a>
+                @endcan
+                @if (\App\Utils\ClinicAppointments::enabled($contact->business_id) && auth()->user()->can('appointment.manage'))
+                    <a href="{{ action([\App\Http\Controllers\ClinicAppointmentController::class, 'index']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline">
+                        <i class="fas fa-calendar-plus"></i> @lang('clinic.dash_book_appointment')
+                    </a>
+                @endif
+                @if ($wards_on && auth()->user()->can('admission.create'))
                     <a href="{{ action([\App\Http\Controllers\AdmissionController::class, 'create']) }}?contact_id={{ $contact->id }}"
                         class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline">
                         <i class="fas fa-procedures"></i> @lang('lang_v1.admit')
                     </a>
-                @endcan
+                @endif
                 @can('patient.update')
                     <a href="{{ action([\App\Http\Controllers\PatientController::class, 'edit'], [$contact->id]) }}"
-                        class="tw-dw-btn tw-dw-btn-sm tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-border-none">
+                        class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline">
                         <i class="fa fa-edit"></i> @lang('messages.edit')
                     </a>
                 @endcan
@@ -53,13 +83,15 @@
     </div>
 
     <div class="nav-tabs-custom">
-        <ul class="nav nav-tabs nav-justified">
+        <ul class="nav nav-tabs nav-justified pos-tabs-scroll">
             <li class="{{ $view_type == 'info' ? 'active' : '' }}"><a href="#patient_info_tab" data-toggle="tab"><i class="fas fa-id-card"></i> @lang('lang_v1.clinical_info')</a></li>
-            <li><a href="#patient_timeline_tab" data-toggle="tab"><i class="fas fa-timeline"></i> @lang('lang_v1.timeline')</a></li>
+            <li><a href="#patient_timeline_tab" data-toggle="tab"><i class="fas fa-stream"></i> @lang('lang_v1.timeline')</a></li>
             <li><a href="#patient_visits_tab" data-toggle="tab"><i class="fas fa-stethoscope"></i> @lang('lang_v1.visits')</a></li>
             <li><a href="#patient_prescriptions_tab" data-toggle="tab"><i class="fas fa-prescription"></i> @lang('lang_v1.prescriptions')</a></li>
             <li><a href="#patient_lab_tab" data-toggle="tab"><i class="fas fa-vial"></i> @lang('lang_v1.lab_results')</a></li>
+            @if ($wards_on)
             <li><a href="#patient_admissions_tab" data-toggle="tab"><i class="fas fa-procedures"></i> @lang('lang_v1.admissions')</a></li>
+            @endif
             @can('patient.view_bill')
             <li><a href="#patient_billing_tab" data-toggle="tab"><i class="fas fa-file-invoice-dollar"></i> @lang('lang_v1.billing')</a></li>
             @endcan
@@ -109,7 +141,7 @@
             {{-- 360° Timeline --}}
             <div class="tab-pane" id="patient_timeline_tab">
                 @if($timeline->isEmpty())
-                    <p class="text-muted tw-text-center tw-py-8"><i class="fas fa-timeline tw-text-2xl tw-text-gray-300"></i><br>@lang('lang_v1.no_recent_activity')</p>
+                    <p class="text-muted tw-text-center tw-py-8"><i class="fas fa-stream tw-text-2xl tw-text-gray-300"></i><br>@lang('lang_v1.no_recent_activity')</p>
                 @else
                     <ul class="tw-relative tw-pl-6 tw-m-0 tw-list-none">
                         <span class="tw-absolute tw-left-2 tw-top-2 tw-bottom-2 tw-w-px tw-bg-gray-200"></span>

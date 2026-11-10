@@ -24,7 +24,7 @@
                     {{ @format_datetime($c->created_at) }}
                 </p>
             </div>
-            <div class="tw-flex tw-items-center tw-gap-2">
+            <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-2 pos-actions">
                 @if($c->status == 'draft')
                     @can('consultation.finalize')
                         <form method="POST" action="{{ action([\App\Http\Controllers\ConsultationController::class, 'finalize'], [$c->id]) }}" style="display:inline;">

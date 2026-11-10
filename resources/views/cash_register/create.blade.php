@@ -29,9 +29,9 @@
           <div class="col-sm-8 col-sm-offset-2">
             <div class="tw-text-center" style="margin-bottom:20px;">
               @if($current_shift == 'morning')
-                <i class="fa fa-sun-o" style="font-size:54px;color:#f39c12;"></i>
+                <i class="fa fa-sun" style="font-size:54px;color:#f39c12;"></i>
               @else
-                <i class="fa fa-moon-o" style="font-size:54px;color:#34495e;"></i>
+                <i class="fa fa-moon" style="font-size:54px;color:#34495e;"></i>
               @endif
               <h2 class="tw-font-bold" style="margin-top:10px;">{{ $current_shift_label }}</h2>
               <p class="text-muted" style="font-size:16px;">

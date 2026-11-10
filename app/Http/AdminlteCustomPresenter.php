@@ -66,7 +66,9 @@ class AdminlteCustomPresenter extends Presenter
      */
     public function getHeaderWrapper($item)
     {
-        return '<div class="tw-px-3 tw-py-2 tw-text-xs tw-font-semibold tw-uppercase tw-tracking-wider">' . $item->title . '</div>';
+        // PosInnova: area headings of the hospital menu (Front desk, Clinical, ...). Inline style:
+        // the compiled Tailwind bundle lacks several of these utilities.
+        return '<div class="side-bar-area-heading" role="presentation" style="padding:14px 12px 0;margin-bottom:-4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#98a2b3;white-space:nowrap;">' . e($item->title) . '</div>';
     }
 
     /**

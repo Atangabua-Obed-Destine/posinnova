@@ -23,6 +23,10 @@
                     {!! Form::label('hospital_file_prefix', __('clinic.file_number_prefix') . ':*') !!}
                     {!! Form::text('hospital_file_prefix', $business->hospital_file_prefix ?: 'PMI', ['class' => 'form-control', 'required', 'maxlength' => 20, 'pattern' => '[A-Za-z0-9]+', 'style' => 'max-width:220px; text-transform:uppercase;']) !!}
                     <p class="help-block">@lang('clinic.file_number_prefix_help', ['example' => $next_file_number])</p>
+                    {{-- PosInnova: "PMI" is the column's default for every business; flag it where it is not this clinic's own --}}
+                    @if (strtoupper((string) $business->hospital_file_prefix) === 'PMI' && stripos((string) session('business.name'), 'PMI') !== 0)
+                        <div class="callout callout-warning" style="margin-bottom:0;" id="prefix_default_warning">@lang('clinic.file_number_prefix_default')</div>
+                    @endif
                 </div>
                 <div class="form-group">
                     {!! Form::label('consultation_fee', __('clinic.consultation_fee_default') . ':') !!}
@@ -93,6 +97,37 @@
                 <div class="checkbox">
                     <label>{!! Form::checkbox('insurance_covers_plans', 1, $s['insurance_covers_plans']) !!} @lang('clinic.insurance_covers_plans')</label>
                     <p class="help-block">@lang('clinic.insurance_covers_plans_help')</p>
+                </div>
+            @endcomponent
+
+            @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.appt_menu')])
+                <div class="checkbox">
+                    <label>{!! Form::checkbox('appointments_enabled', 1, $s['appointments_enabled']) !!} @lang('clinic.appt_setting_enabled')</label>
+                </div>
+                <div class="checkbox">
+                    <label>{!! Form::checkbox('appointments_portal', 1, $s['appointments_portal']) !!} @lang('clinic.appt_setting_portal')</label>
+                </div>
+                <div class="checkbox">
+                    <label>{!! Form::checkbox('appointments_booked_first', 1, $s['appointments_booked_first']) !!} @lang('clinic.appt_setting_booked_first')</label>
+                </div>
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            {!! Form::label('appointments_days_ahead', __('clinic.appt_setting_days_ahead') . ':') !!}
+                            {!! Form::number('appointments_days_ahead', $s['appointments_days_ahead'], ['class' => 'form-control', 'min' => 1, 'max' => 180]) !!}
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            {!! Form::label('appointments_min_notice_hours', __('clinic.appt_setting_notice') . ':') !!}
+                            {!! Form::number('appointments_min_notice_hours', $s['appointments_min_notice_hours'], ['class' => 'form-control', 'min' => 0, 'max' => 72]) !!}
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    {!! Form::label('whatsapp_country_code', __('clinic.appt_setting_cc') . ':') !!}
+                    {!! Form::text('whatsapp_country_code', $s['whatsapp_country_code'], ['class' => 'form-control', 'style' => 'max-width:120px;', 'maxlength' => 5]) !!}
+                    <p class="help-block">@lang('clinic.appt_setting_cc_help')</p>
                 </div>
             @endcomponent
 

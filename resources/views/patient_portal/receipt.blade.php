@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}">
+<html data-theme="light" lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport">
     <title>{{ $charge->invoice_no }} · {{ session('business.name', config('app.name')) }}</title>
     <link href="{{ asset('css/tailwind/app.css?v='.$asset_v) }}" rel="stylesheet">
+    <link href="{{ asset('css/tailwind/portal.css?v='.$asset_v) }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
     <input type="hidden" id="__symbol" value="{{ session('currency')['symbol'] ?? '' }}">
     <input type="hidden" id="__thousand" value="{{ session('currency')['thousand_separator'] ?? ',' }}">
@@ -33,7 +34,7 @@
     <div class="tw-flex tw-justify-between tw-font-bold tw-text-gray-900 tw-border-t tw-pt-2"><span>@lang('lang_v1.total_billed')</span><span class="display_currency" data-currency_symbol="true">{{ $charge->final_total }}</span></div>
     <div class="tw-flex tw-justify-between tw-text-sm tw-text-green-600 tw-mt-1"><span>@lang('lang_v1.paid')</span><span class="display_currency" data-currency_symbol="true">{{ $charge->payment_lines->sum('amount') }}</span></div>
     <button onclick="window.print()" class="no-print tw-w-full tw-mt-4 tw-rounded-xl tw-bg-indigo-600 tw-text-white tw-py-2.5 tw-text-sm tw-font-semibold"><i class="fas fa-print"></i> @lang('messages.print')</button>
-    <a href="{{ route('portal.bills') }}" class="no-print tw-block tw-text-center tw-mt-2 tw-text-sm tw-text-indigo-600">@lang('messages.cancel')</a>
+    <a href="{{ route('portal.bills') }}" class="no-print tw-block tw-text-center tw-mt-2 tw-text-sm tw-text-indigo-600" style="padding:10px 0;"><i class="fas fa-arrow-left"></i> @lang('messages.back')</a>
 </div>
 <script src="{{ asset('js/vendor.js?v='.$asset_v) }}"></script>
 <script src="{{ asset('js/functions.js?v='.$asset_v) }}"></script>

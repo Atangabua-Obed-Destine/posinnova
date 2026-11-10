@@ -3,7 +3,7 @@
 
 @php
     $fmt = function ($n) { return app(\App\Utils\Util::class)->num_f((float) $n); };
-    $old_doctor = old('doctor_id', count($doctors) == 1 ? array_key_first($doctors) : null);
+    $old_doctor = old('doctor_id', ! empty($appointment) ? $appointment->doctor_id : (count($doctors) == 1 ? array_key_first($doctors) : null));
     $old_package = old('package_id', optional($packages->first())->id);
 @endphp
 
@@ -33,6 +33,12 @@
     <section class="content">
         {!! Form::open(['url' => action([\App\Http\Controllers\VisitController::class, 'store']), 'method' => 'post', 'id' => 'visit_form']) !!}
         {!! Form::hidden('type', 'opd', ['id' => 'visit_type_hidden']) !!}
+        @if (! empty($appointment))
+            {!! Form::hidden('appointment_id', $appointment->id) !!}
+            <div class="callout callout-info" style="margin-bottom:12px;">
+                <i class="fas fa-calendar-check"></i> {{ __('clinic.appt_checkin_from', ['time' => $appointment->start, 'doctor' => trim(optional($appointment->doctor)->user_full_name)]) }}
+            </div>
+        @endif
 
         @component('components.widget', ['class' => 'box-solid'])
             <div class="ci-step">1. @lang('lang_v1.patient')</div>
@@ -41,7 +47,7 @@
                     <div class="form-group">
                         <div class="input-group">
                             <span class="input-group-addon"><i class="fas fa-user-injured"></i></span>
-                            <select name="contact_id" id="visit_patient_id" class="form-control" required style="width:100%;">
+                            <select name="contact_id" id="visit_patient_id" class="form-control" required style="width:100%;" aria-label="{{ __('lang_v1.patient') }}">
                                 @if(!empty($preselected_patient))
                                     <option value="{{ $preselected_patient->id }}" selected>
                                         {{ $preselected_patient->name }}
@@ -54,7 +60,7 @@
                         </div>
                         <p class="help-block">
                             @lang('lang_v1.patient_not_found_hint')
-                            <a href="{{ action([\App\Http\Controllers\PatientController::class, 'create']) }}" target="_blank">@lang('lang_v1.add_patient')</a>
+                            <a href="{{ action([\App\Http\Controllers\PatientController::class, 'create']) }}" target="_blank" class="pos-tap-link">@lang('lang_v1.add_patient')</a>
                         </p>
                     </div>
                 </div>
@@ -180,8 +186,9 @@
 
             @if ($has_plans)
             // What the patient's monthly plan covers on the visit date.
-            var planBlocks = false;
+            var planBlocks = false, planSeq = 0; // only the latest answer counts (the patient field can fire twice)
             function loadPlan() {
+                var mine = ++planSeq;
                 var cid = $('#visit_patient_id').val();
                 var $box = $('#plan_box').empty();
                 planBlocks = false;
@@ -189,6 +196,9 @@
                 $('input[name=package_id][value=plan]').closest('.ci-card').remove();
                 if (! cid) { return; }
                 $.getJSON('{{ action([\App\Http\Controllers\ClinicPlanController::class, 'coverage']) }}', { contact_id: cid, date: $('input[name=visit_date]').val() }, function (c) {
+                    if (mine !== planSeq) { return; }
+                    $box.empty();
+                    $('input[name=package_id][value=plan]').closest('.ci-card').remove();
                     if (! c || c.state === 'none') { return; }
                     if (c.covers) {
                         var $card = $('<label class="ci-card is-on" style="max-width:420px;"></label>')

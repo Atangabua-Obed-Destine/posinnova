@@ -42,9 +42,9 @@
                             <td><strong>{{ $line->test_name }}</strong></td>
                             <td>{{ $line->normal_range ?: '-' }}</td>
                             <td>{{ $line->unit ?: '-' }}</td>
-                            <td>{!! Form::text("results[{$line->id}][value]", $line->result_value, ['class' => 'form-control input-sm']) !!}</td>
-                            <td>{!! Form::select("results[{$line->id}][flag]", $flags, $line->result_flag, ['class' => 'form-control input-sm']) !!}</td>
-                            <td>{!! Form::text("results[{$line->id}][notes]", $line->result_notes, ['class' => 'form-control input-sm']) !!}</td>
+                            <td>{!! Form::text("results[{$line->id}][value]", $line->result_value, ['class' => 'form-control input-sm', 'aria-label' => __('lang_v1.result')]) !!}</td>
+                            <td>{!! Form::select("results[{$line->id}][flag]", $flags, $line->result_flag, ['class' => 'form-control input-sm', 'aria-label' => __('lang_v1.flag')]) !!}</td>
+                            <td>{!! Form::text("results[{$line->id}][notes]", $line->result_notes, ['class' => 'form-control input-sm', 'aria-label' => __('lang_v1.notes')]) !!}</td>
                         </tr>
                     @endforeach
                 </tbody>

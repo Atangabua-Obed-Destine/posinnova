@@ -28,7 +28,7 @@
         @component('components.widget', ['class' => 'box-solid'])
             <div class="form-group" style="max-width:520px;">
                 <label for="plan_patient">@lang('lang_v1.patient'):*</label>
-                <select name="contact_id" id="plan_patient" class="form-control" required style="width:100%;">
+                <select name="contact_id" id="plan_patient" class="form-control" required style="width:100%;" aria-label="{{ __('lang_v1.patient') }}">
                     @if ($preselected)
                         <option value="{{ $preselected->id }}" selected>{{ $preselected->name }} @if(optional($preselected->patientDetails)->file_number)({{ $preselected->patientDetails->file_number }})@endif</option>
                     @endif

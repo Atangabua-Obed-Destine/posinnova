@@ -79,8 +79,17 @@ class ConsultationController extends Controller
             ? \App\ImagingCatalogue::forBusiness($business_id)->active()->orderBy('name')->get()
             : collect();
 
+        //PosInnova: the patient's history beside the form - last consultations and lab results.
+        $history = Consultation::forBusiness($business_id)->where('contact_id', $visit->contact_id)
+            ->where('visit_id', '!=', $visit->id)->where('status', 'final')
+            ->with(['consultedBy', 'prescriptions.product', 'prescriptions.variation'])
+            ->orderByDesc('created_at')->limit(5)->get();
+        $history_labs = \App\LabRequest::forBusiness($business_id)->where('contact_id', $visit->contact_id)
+            ->whereIn('status', ['resulted', 'validated'])->with('lines')
+            ->orderByDesc('requested_at')->limit(3)->get();
+
         return view('consultation.create')
-            ->with(compact('visit', 'departments', 'default_fee', 'lab_tests', 'imaging_catalogue', 'fee_billed'));
+            ->with(compact('visit', 'departments', 'default_fee', 'lab_tests', 'imaging_catalogue', 'fee_billed', 'history', 'history_labs'));
     }
 
     public function store(Request $request)
@@ -170,6 +179,37 @@ class ConsultationController extends Controller
                 'msg' => __('messages.something_went_wrong'),
             ]);
         }
+    }
+
+    /**
+     * PosInnova: the list of consultations (the menu's "Consultations"). A doctor with
+     * consultation.view_own sees their own; consultation.view_all sees everyone's.
+     */
+    public function index(Request $request)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('consultation.view_own') && ! auth()->user()->can('consultation.view_all')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $business_id = $request->session()->get('user.business_id');
+        $search = trim((string) $request->input('q'));
+        $query = Consultation::forBusiness($business_id)
+            ->join('contacts as c', 'c.id', '=', 'consultations.contact_id')
+            ->leftJoin('patient_details as pd', 'pd.contact_id', '=', 'consultations.contact_id')
+            ->with('consultedBy')
+            ->select('consultations.*', 'c.name as patient_name', 'pd.file_number');
+        if (! auth()->user()->can('consultation.view_all')) {
+            $query->where('consultations.consulted_by', auth()->user()->id);
+        }
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('c.name', 'like', '%'.$search.'%')->orWhere('pd.file_number', 'like', '%'.$search.'%')
+                    ->orWhere('consultations.diagnosis', 'like', '%'.$search.'%')->orWhere('consultations.ref_no', 'like', '%'.$search.'%');
+            });
+        }
+        $consultations = $query->orderByDesc('consultations.created_at')->paginate(30)->withQueryString();
+
+        return view('consultation.index', compact('consultations', 'search'));
     }
 
     public function show($id)

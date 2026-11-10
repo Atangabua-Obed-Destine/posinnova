@@ -19,4 +19,6 @@
      'due_amount' => 'Montant dû',
      'stock_expiry_alert' => "Alerte d'expiration de stock",
      'todays_profit' => "Le profit d'aujourd'hui",
- ];
+     // ---- PosInnova: French for keys that only existed in English
+    'dashboard' => 'Tableau de bord',
+];

@@ -32,6 +32,10 @@ class ImagingController extends Controller
 
     private function checkHospitalEnabled()
     {
+        //PosInnova: section switched off in Clinic settings
+        if (! \App\Utils\ClinicSettings::sectionOn(request()->session()->get('user.business_id'), 'imaging')) {
+            abort(404);
+        }
         $enabled_modules = request()->session()->get('business.enabled_modules', []);
         if (! is_array($enabled_modules) || ! in_array('hospital', $enabled_modules)) {
             abort(404);

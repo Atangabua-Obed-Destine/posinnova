@@ -28,7 +28,7 @@
             <textarea name="known_allergies" rows="2" class="tw-w-full tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-text-gray-900 tw-px-3 tw-py-3 tw-text-sm focus:tw-ring-2 focus:tw-ring-indigo-500 focus:tw-border-indigo-500">{{ old('known_allergies', optional($pd)->known_allergies) }}</textarea>
         </div>
     </div>
-    <button type="submit" class="login-press portal-press tw-w-full tw-rounded-xl tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-font-semibold tw-py-3 tw-text-sm tw-shadow-lg"><i class="fas fa-floppy-disk"></i> @lang('messages.save')</button>
+    <button type="submit" class="login-press portal-press tw-w-full tw-rounded-xl tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-font-semibold tw-py-3 tw-text-sm tw-shadow-lg"><i class="fas fa-save"></i> @lang('messages.save')</button>
     <p class="tw-text-xs tw-text-gray-400 tw-text-center">@lang('lang_v1.portal_profile_note')</p>
 </form>
 @endsection

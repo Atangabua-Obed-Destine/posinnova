@@ -33,6 +33,44 @@
         @endif
     </div>
 
+    {{-- PosInnova: the patient's history while consulting --}}
+    <details class="tw-bg-white tw-shadow-sm tw-rounded-xl tw-ring-1 tw-ring-gray-200 tw-p-4 tw-mb-4" id="consult_history" {{ $history->isNotEmpty() ? 'open' : '' }}>
+        <summary style="cursor:pointer;font-weight:700;font-size:15px;"><i class="fas fa-history"></i> @lang('clinic.hist_title')
+            <span class="text-muted" style="font-weight:400;font-size:13px;">({{ $history->count() }})</span></summary>
+        @if ($history->isEmpty() && $history_labs->isEmpty())
+            <p class="text-muted" style="margin:10px 0 0;">@lang('clinic.hist_none')</p>
+        @endif
+        @foreach ($history as $h)
+            <div style="border-top:1px solid #f2f4f7;padding:10px 0 4px;margin-top:8px;">
+                <div style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;">
+                    <strong>{{ @format_date($h->created_at) }}</strong>
+                    <span class="text-muted">{{ trim(optional($h->consultedBy)->user_full_name) }}</span>
+                    <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'show'], [$h->id]) }}" target="_blank" style="margin-left:auto;">@lang('clinic.hist_view') <i class="fas fa-external-link-alt"></i></a>
+                </div>
+                @if ($h->chief_complaint)<div><span class="text-muted">@lang('lang_v1.chief_complaint'):</span> {{ $h->chief_complaint }}</div>@endif
+                <div><span class="text-muted">@lang('lang_v1.diagnosis'):</span> <strong>{{ $h->diagnosis ?: '-' }}</strong></div>
+                @if ($h->prescriptions->isNotEmpty())
+                    <div><span class="text-muted">@lang('lang_v1.prescriptions'):</span>
+                        {{ $h->prescriptions->map(fn ($rx) => trim($rx->displayName() . ' ' . collect([$rx->dosage, $rx->frequency, $rx->duration])->filter()->implode(' '))) ->implode('; ') }}</div>
+                @endif
+            </div>
+        @endforeach
+        @if ($history_labs->isNotEmpty())
+            <div style="border-top:1px solid #f2f4f7;padding-top:10px;margin-top:8px;">
+                <strong>@lang('clinic.hist_labs')</strong>
+                @foreach ($history_labs as $lr)
+                    <div style="margin-top:4px;">
+                        <span class="text-muted">{{ @format_date($lr->requested_at) }}:</span>
+                        @foreach ($lr->lines as $line)
+                            <span style="white-space:nowrap;">{{ $line->test_name }} <strong>{{ trim($line->result_value . ' ' . $line->unit) ?: '-' }}</strong>@if (in_array($line->result_flag, ['high', 'low', 'critical'])) <span class="label {{ $line->result_flag == 'critical' ? 'label-danger' : 'label-warning' }}">@lang('lang_v1.lab_flag_' . $line->result_flag)</span>@endif</span>{{ $loop->last ? '' : ' · ' }}
+                        @endforeach
+                        <a href="{{ action([\App\Http\Controllers\LabRequestController::class, 'show'], [$lr->id]) }}" target="_blank">@lang('clinic.hist_view')</a>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </details>
+
     {!! Form::open(['url' => action([\App\Http\Controllers\ConsultationController::class, 'store']), 'method' => 'post', 'id' => 'consultation_form']) !!}
     {!! Form::hidden('visit_id', $visit->id) !!}
 
@@ -191,7 +229,7 @@
     @endif
 
     {{-- Imaging requests --}}
-    @if(auth()->user()->can('imaging_request.create') && $imaging_catalogue->isNotEmpty())
+    @if(\App\Utils\ClinicSettings::sectionOn(session('user.business_id'), 'imaging') && auth()->user()->can('imaging_request.create') && $imaging_catalogue->isNotEmpty())
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.request_imaging')])
         <div class="row">
             @foreach($imaging_catalogue as $study)
@@ -234,6 +272,8 @@
                     @endif
                 </div>
             </div>
+            {{-- admission only makes sense when the clinic uses wards --}}
+            @if (\App\Utils\ClinicSettings::sectionOn(session('user.business_id'), 'wards'))
             <div class="col-sm-4">
                 <div class="form-group">
                     <br>
@@ -243,6 +283,7 @@
                     </label>
                 </div>
             </div>
+            @endif
         </div>
     @endcomponent
 
@@ -297,11 +338,11 @@ $(document).ready(function () {
             '<td>' + item.name +
                 '<input type="hidden" name="prescriptions[' + i + '][product_id]" value="' + item.product_id + '">' +
                 '<input type="hidden" name="prescriptions[' + i + '][variation_id]" value="' + item.variation_id + '"></td>' +
-            '<td><input type="text" name="prescriptions[' + i + '][dosage]" class="form-control input-sm" placeholder="{{ __('lang_v1.dosage_eg') }}"></td>' +
-            '<td><input type="text" name="prescriptions[' + i + '][frequency]" class="form-control input-sm" placeholder="{{ __('lang_v1.frequency_eg') }}"></td>' +
-            '<td><input type="text" name="prescriptions[' + i + '][duration]" class="form-control input-sm" placeholder="{{ __('lang_v1.duration_eg') }}"></td>' +
-            '<td><input type="number" step="0.01" min="0" name="prescriptions[' + i + '][quantity]" class="form-control input-sm" value="1"></td>' +
-            '<td><input type="text" name="prescriptions[' + i + '][notes]" class="form-control input-sm"></td>' +
+            '<td><input type="text" name="prescriptions[' + i + '][dosage]" aria-label="{{ __('lang_v1.dosage') }}" class="form-control input-sm" placeholder="{{ __('lang_v1.dosage_eg') }}"></td>' +
+            '<td><input type="text" name="prescriptions[' + i + '][frequency]" aria-label="{{ __('lang_v1.frequency') }}" class="form-control input-sm" placeholder="{{ __('lang_v1.frequency_eg') }}"></td>' +
+            '<td><input type="text" name="prescriptions[' + i + '][duration]" aria-label="{{ __('lang_v1.duration') }}" class="form-control input-sm" placeholder="{{ __('lang_v1.duration_eg') }}"></td>' +
+            '<td><input type="number" step="0.01" min="0" name="prescriptions[' + i + '][quantity]" aria-label="{{ __('sale.qty') }}" class="form-control input-sm" value="1"></td>' +
+            '<td><input type="text" name="prescriptions[' + i + '][notes]" aria-label="{{ __('lang_v1.notes') }}" class="form-control input-sm"></td>' +
             '<td class="text-center"><a href="#" class="text-danger remove_rx_row"><i class="fa fa-trash"></i></a></td>' +
         '</tr>';
         $('#prescription_rows').append(row);

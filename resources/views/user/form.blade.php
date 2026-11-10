@@ -102,7 +102,7 @@
     {!! Form::text('bank_details[tax_payer_id]', !empty($bank_details['tax_payer_id']) ? $bank_details['tax_payer_id'] : null, ['class' => 'form-control', 'id' => 'tax_payer_id', 'placeholder' => __( 'lang_v1.tax_payer_id') ]); !!}
 </div>
 <script type="text/javascript">
-    $(function () {
+    document.addEventListener('DOMContentLoaded', function () {
         $(document).on('ifChanged change', '#show_user_custom_fields_chk', function () {
             $('.user_custom_fields_div').toggle($(this).is(':checked'));
         });

@@ -35,9 +35,9 @@
 
 <div
     class="  tw-transition-all tw-duration-5000 tw-border-b tw-bg-gradient-to-r tw-from-@if(!empty(session('business.theme_color'))){{session('business.theme_color')}}@else{{'primary'}}@endif-800 tw-to-@if(!empty(session('business.theme_color'))){{session('business.theme_color')}}@else{{'primary'}}@endif-900 tw-shrink-0 lg:tw-h-15 tw-border-primary-500/30 no-print">
-    <div class="tw-px-5 tw-py-3">
-        <div class="tw-flex tw-items-start tw-justify-between tw-gap-6 lg:tw-items-center">
-            <div class="tw-flex tw-items-center tw-gap-3">
+    <div class="tw-px-5 tw-py-3 pos-hdr-pad">
+        <div class="tw-flex tw-items-start tw-justify-between tw-gap-6 lg:tw-items-center pos-hdr-row">
+            <div class="tw-flex tw-items-center tw-gap-3 pos-hdr-left">
                 <button type="button" 
                     class="small-view-button xl:tw-w-20 lg:tw-hidden tw-inline-flex tw-items-center tw-justify-center tw-text-sm tw-font-medium tw-text-white tw-transition-all tw-duration-200 tw-bg-@if(!empty(session('business.theme_color'))){{session('business.theme_color')}}@else{{'primary'}}@endif-800 hover:tw-bg-@if(!empty(session('business.theme_color'))){{session('business.theme_color')}}@else{{'primary'}}@endif-700 tw-p-1.5 tw-rounded-lg tw-ring-1 hover:tw-text-white tw-ring-white/10">
                     <span class="tw-sr-only">
@@ -77,7 +77,7 @@
                         data-ends-at="{{ $hdr_shift_ends_at }}"
                         data-server-now="{{ $hdr_server_now }}"
                         data-extended="{{ !empty($hdr_shift_extended) ? 1 : 0 }}">
-                        @if ($hdr_current_shift == 'morning')<i class="fa fa-sun-o"></i>@else<i class="fa fa-moon-o"></i>@endif
+                        @if ($hdr_current_shift == 'morning')<i class="fa fa-sun"></i>@else<i class="fa fa-moon"></i>@endif
                         <span>{{ $hdr_shift_label }}</span>
                         @if (!empty($hdr_shift_start) && !empty($hdr_shift_end))
                             <span class="tw-hidden sm:tw-inline tw-font-normal tw-opacity-90">{{ $hdr_shift_start }}–{{ $hdr_shift_end }}</span>
@@ -99,7 +99,7 @@
             @endif
 
 
-            <div class="tw-flex tw-flex-wrap tw-items-center tw-justify-end tw-gap-3">
+            <div class="tw-flex tw-flex-wrap tw-items-center tw-justify-end tw-gap-3 pos-hdr-right">
                 @if (Module::has('Essentials'))
                     @includeIf('essentials::layouts.partials.header_part')
                 @endif

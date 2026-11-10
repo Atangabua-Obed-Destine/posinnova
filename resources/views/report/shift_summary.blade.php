@@ -53,7 +53,7 @@
     <div class="col-md-6">
       <div class="box box-solid" style="border-top:3px solid #f39c12;">
         <div class="box-body text-center">
-          <i class="fa fa-sun-o" style="font-size:38px;color:#f39c12;"></i>
+          <i class="fa fa-sun" style="font-size:38px;color:#f39c12;"></i>
           <h3 class="tw-font-bold" style="margin:8px 0;">{{ $shift_labels['morning'] }}</h3>
           <p class="text-muted">{{ $shift_settings['morning_start'] }} &rarr; {{ $shift_settings['morning_end'] }}</p>
           <h2 class="tw-font-bold"><span class="display_currency" data-currency_symbol="true">{{ $morning_sales }}</span></h2>
@@ -64,7 +64,7 @@
     <div class="col-md-6">
       <div class="box box-solid" style="border-top:3px solid #34495e;">
         <div class="box-body text-center">
-          <i class="fa fa-moon-o" style="font-size:38px;color:#34495e;"></i>
+          <i class="fa fa-moon" style="font-size:38px;color:#34495e;"></i>
           <h3 class="tw-font-bold" style="margin:8px 0;">{{ $shift_labels['night'] }}</h3>
           <p class="text-muted">{{ $shift_settings['night_start'] }} &rarr; {{ $shift_settings['night_end'] }}</p>
           <h2 class="tw-font-bold"><span class="display_currency" data-currency_symbol="true">{{ $night_sales }}</span></h2>

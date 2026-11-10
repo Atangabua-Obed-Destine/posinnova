@@ -29,6 +29,13 @@ class AdminSidebarMenu
             $pos_settings = !empty(session('business.pos_settings')) ? json_decode(session('business.pos_settings'), true) : [];
 
             $is_admin = auth()->user()->hasRole('Admin#' . session('business.id')) ? true : false;
+            //PosInnova: hospital module on = the menu is laid out by hospital area. $ord(normal, hospital)
+            //gives an entry its place: 5.1x Front desk, 5.2x Clinical, 5.3x Billing, 5.4x Pharmacy & stock,
+            //5.9 and up Administration (everything not moved keeps its usual number, all above 5.9).
+            $hosp = in_array('hospital', $enabled_modules);
+            $ord = function ($normal, $hospital) use ($hosp) {
+                return $hosp ? $hospital : $normal;
+            };
             //Home
             //     $menu->url(action([\App\Http\Controllers\HomeController::class, 'index']), __('home.home'), ['icon' => '<svg aria-hidden="true" class="tw-size-5 tw-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
             //     <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
@@ -238,7 +245,7 @@ class AdminSidebarMenu
                     <path d="M12 12v9"></path>
                     <path d="M12 12l-8 -4.5"></path>
                   </svg>', 'id' => 'tour_step5']
-                )->order(20);
+                )->order($ord(20, 5.43));
             }
 
             //Purchase dropdown
@@ -290,7 +297,7 @@ class AdminSidebarMenu
                     <path d="M16 11l-4 4l-4 -4"></path>
                     <path d="M3 12a9 9 0 0 0 18 0"></path>
                   </svg>', 'id' => 'tour_step6']
-                )->order(25);
+                )->order($ord(25, 5.44));
             }
             //Sell dropdown
             if ($is_admin || auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping', 'access_sell_return', 'direct_sell.view', 'direct_sell.update', 'access_own_sell_return'])) {
@@ -419,7 +426,7 @@ class AdminSidebarMenu
                     <path d="M16 7l-4 -4l-4 4"></path>
                     <path d="M3 12a9 9 0 0 0 18 0"></path>
                   </svg>', 'id' => 'tour_step7']
-                )->order(30);
+                )->order($ord(30, 5.42));
             }
 
             //Stock transfer dropdown
@@ -450,7 +457,7 @@ class AdminSidebarMenu
                     <path d="M5 17h-2v-4m-1 -8h11v12m-4 0h6m4 0h2v-6h-8m0 -5h5l3 5"></path>
                     <path d="M3 9l4 0"></path>
                   </svg>']
-                )->order(35);
+                )->order($ord(35, 5.45));
             }
 
             //stock adjustment dropdown
@@ -480,196 +487,137 @@ class AdminSidebarMenu
                     <path d="M4 6v6a8 3 0 0 0 16 0v-6"></path>
                     <path d="M4 12v6a8 3 0 0 0 16 0v-6"></path>
                   </svg>']
-                )->order(40);
+                )->order($ord(40, 5.46));
             }
 
-            //Hospital - Department Issues dropdown
-            // Whole Hospital dropdown (incl. Department Issues) is hidden when the
-            // hospital module is disabled in Business Settings → Modules.
-            if (in_array('hospital', $enabled_modules)
-                && (auth()->user()->can('department.view') || auth()->user()->can('department.create') || auth()->user()->can('department_issue.access') || auth()->user()->can('department_issue.create')
-                || auth()->user()->can('patient.view') || auth()->user()->can('patient.create') || auth()->user()->can('visit.view') || auth()->user()->can('visit.create') || auth()->user()->can('consultation.view_own') || auth()->user()->can('consultation.view_all') || auth()->user()->can('lab_request.view') || auth()->user()->can('lab_test.manage_catalogue') || auth()->user()->can('imaging_request.view') || auth()->user()->can('admission.view') || auth()->user()->can('admission.create') || auth()->user()->can('ward.manage') || auth()->user()->can('theatre.view') || auth()->user()->can('theatre.book') || auth()->user()->can('antenatal.view') || auth()->user()->can('delivery.record') || auth()->user()->can('morgue.view') || auth()->user()->can('morgue.receive') || auth()->user()->can('clinic_settings.manage') || auth()->user()->can('clinic_package.manage') || auth()->user()->can('visit.receive_patients') || auth()->user()->can('prescription.dispense') || auth()->user()->can('patient.view_bill') || auth()->user()->can('clinic_plan.manage') || auth()->user()->can('clinic_insurance.manage'))) {
-                $menu->dropdown(
-                    __('lang_v1.hospital'),
-                    function ($sub) use ($enabled_modules) {
-                        //PosInnova: sections switched off in Clinic settings leave the menu
-                        $hosp_biz = request()->session()->get('user.business_id');
-                        $hosp_on = function ($section) use ($hosp_biz) {
-                            return \App\Utils\ClinicSettings::sectionOn($hosp_biz, $section);
-                        };
-                        if (in_array('hospital', $enabled_modules)) {
-                            if (auth()->user()->can('patient.view') || auth()->user()->can('patient.create')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\PatientController::class, 'index']),
-                                    __('lang_v1.patients'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'patients']
-                                );
+            //PosInnova: with the hospital module on, the hospital pages are laid out by hospital
+            //area (Front desk, Clinical, Billing, Pharmacy & stock, Administration). Each page is
+            //its own entry with its own icon; the area headings are added at the end of this
+            //closure, only for areas the user can see something in. Order numbers: see $ord.
+            if ($hosp) {
+                $hosp_biz = request()->session()->get('user.business_id');
+                $hosp_on = function ($section) use ($hosp_biz) {
+                    return \App\Utils\ClinicSettings::sectionOn($hosp_biz, $section);
+                };
+                $u = auth()->user();
+                $seg1 = request()->segment(1);
+                $seg2 = request()->segment(2);
+                $item = function ($url, $title, $icon, $active, $order) use ($menu) {
+                    $menu->url($url, $title, ['icon' => \App\Utils\ClinicIcons::svg($icon), 'active' => $active])->order($order);
+                };
+
+                // ---- Front desk
+                if ($u->can('patient.view') || $u->can('patient.create')) {
+                    $item(action([\App\Http\Controllers\PatientController::class, 'index']), __('lang_v1.patients'), 'users', $seg1 == 'patients', 5.11);
+                }
+                if ($u->can('visit.create')) {
+                    $item(action([\App\Http\Controllers\VisitController::class, 'create']), __('clinic.check_in_patient'), 'door-enter', $seg1 == 'visits' && $seg2 == 'create', 5.12);
+                }
+                if (\App\Utils\ClinicAppointments::enabled($hosp_biz) && ($u->can('appointment.view') || $u->can('appointment.manage') || $u->can('clinic_schedule.manage'))) {
+                    $item(($u->can('appointment.view') || $u->can('appointment.manage'))
+                            ? action([\App\Http\Controllers\ClinicAppointmentController::class, 'index'])
+                            : action([\App\Http\Controllers\ClinicAppointmentController::class, 'hours']),
+                        __('clinic.appt_menu'), 'calendar-event', $seg1 == 'clinic' && $seg2 == 'appointments', 5.13);
+                }
+                if ($u->can('visit.view') || $u->can('visit.create')) {
+                    $item(action([\App\Http\Controllers\VisitController::class, 'index']), __('lang_v1.visits'), 'clipboard-list', $seg1 == 'visits' && $seg2 != 'create', 5.14);
+                }
+
+                // ---- Clinical
+                if ($u->can('visit.receive_patients')) {
+                    $item(action([\App\Http\Controllers\ClinicQueueController::class, 'index']), __('clinic.doctor_queue'), 'list-numbers', $seg1 == 'clinic' && $seg2 == 'queue', 5.21);
+                }
+                if ($u->can('consultation.view_own') || $u->can('consultation.view_all')) {
+                    $item(action([\App\Http\Controllers\ConsultationController::class, 'index']), __('lang_v1.consultations'), 'stethoscope', $seg1 == 'consultations', 5.22);
+                }
+                if ($u->can('lab_request.view')) {
+                    $item(action([\App\Http\Controllers\LabRequestController::class, 'index']), __('clinic.menu_laboratory'), 'microscope', $seg1 == 'lab-requests', 5.23);
+                }
+                if ($hosp_on('imaging') && $u->can('imaging_request.view')) {
+                    $item(action([\App\Http\Controllers\ImagingController::class, 'index']), __('lang_v1.imaging'), 'scan', $seg1 == 'imaging-requests', 5.24);
+                }
+                if ($hosp_on('wards') && ($u->can('admission.view') || $u->can('admission.create'))) {
+                    $item(action([\App\Http\Controllers\AdmissionController::class, 'index']), __('lang_v1.admissions'), 'bed', $seg1 == 'admissions', 5.25);
+                }
+                if ($hosp_on('theatre') && ($u->can('theatre.view') || $u->can('theatre.book'))) {
+                    $item(action([\App\Http\Controllers\TheatreController::class, 'index']), __('lang_v1.theatre'), 'heart-rate-monitor', $seg1 == 'theatre', 5.26);
+                }
+                if ($hosp_on('maternity') && $u->can('antenatal.view')) {
+                    $item(action([\App\Http\Controllers\AntenatalController::class, 'index']), __('lang_v1.antenatal'), 'clipboard-heart', $seg1 == 'antenatal', 5.27);
+                }
+                if ($hosp_on('maternity') && $u->can('delivery.record')) {
+                    $item(action([\App\Http\Controllers\DeliveryController::class, 'index']), __('lang_v1.deliveries'), 'baby-carriage', $seg1 == 'deliveries', 5.28);
+                }
+                if ($hosp_on('morgue') && ($u->can('morgue.view') || $u->can('morgue.receive'))) {
+                    $item(action([\App\Http\Controllers\MorgueController::class, 'index']), __('lang_v1.morgue'), 'cross', $seg1 == 'morgue', 5.29);
+                }
+
+                // ---- Billing
+                if ($u->can('patient.view_bill')) {
+                    $item(action([\App\Http\Controllers\ClinicAccountController::class, 'index']), __('clinic.patient_accounts'), 'cash', $seg1 == 'clinic' && $seg2 == 'accounts', 5.31);
+                }
+                if ($u->can('clinic_plan.manage')) {
+                    $item(action([\App\Http\Controllers\ClinicPlanController::class, 'index']), __('clinic.monthly_plans'), 'calendar-repeat', $seg1 == 'clinic' && $seg2 == 'plans', 5.32);
+                }
+                if ($u->can('clinic_insurance.manage')) {
+                    $item(action([\App\Http\Controllers\ClinicClaimController::class, 'index']), __('clinic.ins_menu'), 'shield-check', $seg1 == 'clinic' && in_array($seg2, ['claims', 'insurers']), 5.33);
+                }
+
+                // ---- Reports
+                if (! empty(\App\Utils\ClinicReports::available($u))) {
+                    $item(action([\App\Http\Controllers\ClinicReportController::class, 'index']), __('clinic.rep_menu'), 'report-medical', $seg1 == 'clinic' && $seg2 == 'reports', 5.36);
+                }
+
+                // ---- Pharmacy & stock (Sell, Products, Purchases, Stock ... are moved here by $ord)
+                if ($u->can('prescription.dispense')) {
+                    $item(action([\App\Http\Controllers\ClinicDispensaryController::class, 'index']), __('clinic.dispensary'), 'pill', $seg1 == 'clinic' && $seg2 == 'dispensary', 5.41);
+                }
+                if ($hosp_on('departments') && ($u->can('department.view') || $u->can('department.create') || $u->can('department_issue.access') || $u->can('department_issue.create'))) {
+                    $menu->dropdown(
+                        __('lang_v1.departments'),
+                        function ($sub) use ($u) {
+                            if ($u->can('department.view') || $u->can('department.create')) {
+                                $sub->url(action([\App\Http\Controllers\DepartmentController::class, 'index']), __('lang_v1.departments'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'departments']);
                             }
-                            if (auth()->user()->can('visit.create')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\VisitController::class, 'create']),
-                                    __('clinic.check_in_patient'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'visits' && request()->segment(2) == 'create']
-                                );
+                            if ($u->can('department_issue.access') || $u->can('department_issue.create')) {
+                                $sub->url(action([\App\Http\Controllers\DepartmentIssueController::class, 'index']), __('lang_v1.department_issues'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'department-issues' && request()->segment(2) == null]);
                             }
-                            if (auth()->user()->can('visit.view') || auth()->user()->can('visit.create')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\VisitController::class, 'index']),
-                                    __('lang_v1.visits'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'visits' && request()->segment(2) != 'create']
-                                );
+                            if ($u->can('department_issue.create')) {
+                                $sub->url(action([\App\Http\Controllers\DepartmentIssueController::class, 'create']), __('lang_v1.new_department_issue'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'department-issues' && request()->segment(2) == 'create']);
                             }
-                            if (auth()->user()->can('visit.receive_patients')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\ClinicQueueController::class, 'index']),
-                                    __('clinic.doctor_queue'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'queue']
-                                );
+                        },
+                        ['icon' => \App\Utils\ClinicIcons::svg('building-community')]
+                    )->order(5.48);
+                }
+
+                // ---- Administration: clinic setup
+                if ($u->can('clinic_settings.manage') || $u->can('clinic_package.manage') || $u->can('lab_test.manage_catalogue') || ($hosp_on('wards') && $u->can('ward.manage'))) {
+                    $menu->dropdown(
+                        __('clinic.menu_clinic_setup'),
+                        function ($sub) use ($u, $hosp_on) {
+                            if ($u->can('clinic_settings.manage')) {
+                                $sub->url(action([\App\Http\Controllers\ClinicSettingsController::class, 'index']), __('clinic.clinic_settings'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'settings']);
                             }
-                            if (auth()->user()->can('prescription.dispense')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\ClinicDispensaryController::class, 'index']),
-                                    __('clinic.dispensary'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'dispensary']
-                                );
+                            if ($u->can('clinic_package.manage')) {
+                                $sub->url(action([\App\Http\Controllers\ClinicPackageController::class, 'index']), __('clinic.packages'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'packages']);
                             }
-                            if (auth()->user()->can('patient.view_bill')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\ClinicAccountController::class, 'index']),
-                                    __('clinic.patient_accounts'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'accounts']
-                                );
+                            if ($u->can('lab_test.manage_catalogue')) {
+                                $sub->url(action([\App\Http\Controllers\LabTestController::class, 'index']), __('lang_v1.lab_test_catalogue'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'lab-tests']);
                             }
-                            if (auth()->user()->can('clinic_plan.manage')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\ClinicPlanController::class, 'index']),
-                                    __('clinic.monthly_plans'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'plans']
-                                );
+                            if ($hosp_on('wards') && $u->can('ward.manage')) {
+                                $sub->url(action([\App\Http\Controllers\WardController::class, 'index']), __('lang_v1.wards'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'wards']);
                             }
-                            if (auth()->user()->can('clinic_insurance.manage')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\ClinicClaimController::class, 'index']),
-                                    __('clinic.ins_menu'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'clinic' && in_array(request()->segment(2), ['claims', 'insurers'])]
-                                );
-                            }
-                            if (auth()->user()->can('consultation.view_own') || auth()->user()->can('consultation.view_all')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\ConsultationController::class, 'create']),
-                                    __('lang_v1.consultations'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'consultations']
-                                );
-                            }
-                            if (auth()->user()->can('lab_request.view')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\LabRequestController::class, 'index']),
-                                    __('lang_v1.lab_requests'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'lab-requests']
-                                );
-                            }
-                            if (auth()->user()->can('lab_test.manage_catalogue')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\LabTestController::class, 'index']),
-                                    __('lang_v1.lab_test_catalogue'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'lab-tests']
-                                );
-                            }
-                            if (auth()->user()->can('imaging_request.view')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\ImagingController::class, 'index']),
-                                    __('lang_v1.imaging'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'imaging-requests']
-                                );
-                            }
-                            if ($hosp_on('wards') && (auth()->user()->can('admission.view') || auth()->user()->can('admission.create'))) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\AdmissionController::class, 'index']),
-                                    __('lang_v1.admissions'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'admissions']
-                                );
-                            }
-                            if ($hosp_on('wards') && auth()->user()->can('ward.manage')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\WardController::class, 'index']),
-                                    __('lang_v1.wards'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'wards']
-                                );
-                            }
-                            if ($hosp_on('theatre') && (auth()->user()->can('theatre.view') || auth()->user()->can('theatre.book'))) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\TheatreController::class, 'index']),
-                                    __('lang_v1.theatre'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'theatre']
-                                );
-                            }
-                            if ($hosp_on('maternity') && auth()->user()->can('antenatal.view')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\AntenatalController::class, 'index']),
-                                    __('lang_v1.antenatal'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'antenatal']
-                                );
-                            }
-                            if ($hosp_on('maternity') && auth()->user()->can('delivery.record')) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\DeliveryController::class, 'index']),
-                                    __('lang_v1.deliveries'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'deliveries']
-                                );
-                            }
-                            if ($hosp_on('morgue') && (auth()->user()->can('morgue.view') || auth()->user()->can('morgue.receive'))) {
-                                $sub->url(
-                                    action([\App\Http\Controllers\MorgueController::class, 'index']),
-                                    __('lang_v1.morgue'),
-                                    ['icon' => '', 'active' => request()->segment(1) == 'morgue']
-                                );
-                            }
-                        }
-                        if (auth()->user()->can('department.view') || auth()->user()->can('department.create')) {
-                            $sub->url(
-                                action([\App\Http\Controllers\DepartmentController::class, 'index']),
-                                __('lang_v1.departments'),
-                                ['icon' => '', 'active' => request()->segment(1) == 'departments']
-                            );
-                        }
-                        if (auth()->user()->can('department_issue.access') || auth()->user()->can('department_issue.create')) {
-                            $sub->url(
-                                action([\App\Http\Controllers\DepartmentIssueController::class, 'index']),
-                                __('lang_v1.department_issues'),
-                                ['icon' => '', 'active' => request()->segment(1) == 'department-issues' && request()->segment(2) == null]
-                            );
-                        }
-                        if (auth()->user()->can('department_issue.create')) {
-                            $sub->url(
-                                action([\App\Http\Controllers\DepartmentIssueController::class, 'create']),
-                                __('lang_v1.new_department_issue'),
-                                ['icon' => '', 'active' => request()->segment(1) == 'department-issues' && request()->segment(2) == 'create']
-                            );
-                        }
-                        if (in_array('hospital', $enabled_modules) && auth()->user()->can('clinic_package.manage')) {
-                            $sub->url(
-                                action([\App\Http\Controllers\ClinicPackageController::class, 'index']),
-                                __('clinic.packages'),
-                                ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'packages']
-                            );
-                        }
-                        if (in_array('hospital', $enabled_modules) && auth()->user()->can('clinic_settings.manage')) {
-                            $sub->url(
-                                action([\App\Http\Controllers\ClinicSettingsController::class, 'index']),
-                                __('clinic.clinic_settings'),
-                                ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'settings']
-                            );
-                        }
-                    },
-                    ['icon' => '<svg aria-hidden="true" class="tw-size-5 tw-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                    <path d="M3 21l18 0"></path>
-                    <path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16"></path>
-                    <path d="M9 21v-4a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v4"></path>
-                    <path d="M10 9l4 0"></path>
-                    <path d="M12 7l0 4"></path>
-                  </svg>']
-                )->order(42);
+                        },
+                        ['icon' => \App\Utils\ClinicIcons::svg('settings-heart')]
+                    )->order(5.91);
+                }
             }
 
             //inventory count dropdown (physical recount – separate workflow)
@@ -684,7 +632,7 @@ class AdminSidebarMenu
                     <path d="M9 12l2 2l4 -4"></path>
                   </svg>',
                     'active' => request()->segment(1) == 'inventory-count']
-                )->order(45);
+                )->order($ord(45, 5.47));
             }
 
             //Expense dropdown
@@ -864,7 +812,7 @@ class AdminSidebarMenu
                                 );
                             }
 
-                            if (auth()->user()->can('department_issue.view_report')) {
+                            if (auth()->user()->can('department_issue.view_report') && \App\Utils\ClinicSettings::sectionOn(request()->session()->get('user.business_id'), 'departments')) {
                                 $sub->url(
                                     action([\App\Http\Controllers\DepartmentIssueReportController::class, 'index']),
                                     __('lang_v1.department_issue_report'),
@@ -992,8 +940,8 @@ class AdminSidebarMenu
                 )->order(55);
             }
 
-            //Backup menu - PosInnova: visible to all authenticated users
-            if (auth()->check()) {
+            //Backup menu - PosInnova: business Admins (and superadmin) only
+            if (auth()->check() && (auth()->user()->can('superadmin') || auth()->user()->hasRole('Admin#'.request()->session()->get('user.business_id')))) {
                 $menu->url(action([\App\Http\Controllers\BackUpController::class, 'index']), __('lang_v1.backup'), ['icon' => '<svg aria-hidden="true" class="tw-size-5 tw-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                 <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                 <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
@@ -1060,6 +1008,14 @@ class AdminSidebarMenu
                                 action([\App\Http\Controllers\BusinessLocationController::class, 'index']),
                                 __('business.business_locations'),
                                 ['icon' => '', 'active' => request()->segment(1) == 'business-location']
+                            );
+                        }
+                        //PosInnova: Repair payments, business Admins only
+                        if (auth()->user()->can('superadmin') || auth()->user()->hasRole('Admin#'.request()->session()->get('user.business_id'))) {
+                            $sub->url(
+                                action([\App\Http\Controllers\PaymentRepairController::class, 'index']),
+                                __('lang_v1.payment_repair'),
+                                ['icon' => '', 'active' => request()->segment(1) == 'payment-repair']
                             );
                         }
                         if (auth()->user()->can('invoice_settings.access')) {
@@ -1131,6 +1087,21 @@ class AdminSidebarMenu
                     <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path>
                   </svg>', 'id' => 'tour_step3']
                 )->order(85);
+            }
+
+            //PosInnova: hospital area headings, only for areas holding at least one entry
+            if ($hosp) {
+                $orders = collect($menu->getItems())->map(function ($i) {
+                    return (float) $i->order;
+                });
+                foreach ([[5.10, 5.20, 'clinic.menu_front_desk'], [5.20, 5.30, 'clinic.menu_clinical'], [5.30, 5.35, 'clinic.menu_billing'], [5.35, 5.40, 'clinic.menu_reports'],
+                    [5.40, 5.90, 'clinic.menu_pharmacy'], [5.90, 1000, 'clinic.menu_admin'], ] as [$from, $to, $key]) {
+                    if ($orders->contains(function ($o) use ($from, $to) {
+                        return $o > $from && $o < $to;
+                    })) {
+                        $menu->addHeader(__($key), $from);
+                    }
+                }
             }
         });
 

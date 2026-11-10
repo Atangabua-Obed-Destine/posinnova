@@ -85,9 +85,15 @@ class HospitalReportController extends Controller
         //Pending lab results.
         $pending_labs = LabRequest::forBusiness($business_id)->whereIn('status', ['pending', 'sample_collected', 'processing'])->count();
 
-        //Today's & month's hospital revenue (visit charges).
-        $revenue_today = DB::table('visit_charges')->where('business_id', $business_id)->whereDate('created_at', $today)->sum('amount');
-        $revenue_month = DB::table('visit_charges')->where('business_id', $business_id)->where('created_at', '>=', $monthStart)->sum('amount');
+        //Today's & month's revenue: what was billed, from the real invoices (PosInnova clinic
+        //reports; the visit_charges index left out medicines and counted insurer shares twice).
+        $billed = function ($from) use ($business_id, $today) {
+            $r = \App\Utils\ClinicReports::income($business_id, ['from' => $from->copy()->startOfDay(), 'to' => $today->copy(), 'doctor_id' => null, 'q' => '']);
+
+            return $r['tiles'][0]['value'];
+        };
+        $revenue_today = $billed($today);
+        $revenue_month = $billed($monthStart);
 
         //Deliveries this month.
         $deliveries_month = DB::table('delivery_records')->where('business_id', $business_id)->whereNull('deleted_at')->where('delivery_date', '>=', $monthStart)->count();
@@ -392,6 +398,12 @@ class HospitalReportController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
+        //PosInnova: replaced by Clinic reports > Income by doctor and service, which reads the real
+        //invoices (this one read visit_charges: every charge "due", medicines missing).
+        if (! $request->ajax()) {
+            return redirect()->action([\App\Http\Controllers\ClinicReportController::class, 'show'], ['income']);
+        }
+
         $business_id = $request->session()->get('user.business_id');
 
         if ($request->ajax()) {
@@ -635,6 +647,12 @@ class HospitalReportController extends Controller
         $this->checkHospitalEnabled();
         if (! auth()->user()->can('hospital_report.revenue')) {
             abort(403, 'Unauthorized action.');
+        }
+
+        //PosInnova: insurance now works through insurers and claims (Billing > Insurance claims,
+        //and Clinic reports > Insurers); this report read the old per-patient insurance fields.
+        if (! $request->ajax()) {
+            return redirect()->action([\App\Http\Controllers\ClinicReportController::class, 'show'], ['insurers']);
         }
 
         $business_id = $request->session()->get('user.business_id');

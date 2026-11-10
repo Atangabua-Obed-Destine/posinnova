@@ -230,8 +230,18 @@ class VisitController extends Controller
         // monthly plans: the screen asks what the chosen patient's plan covers
         $has_plans = \App\ClinicSubscription::forBusiness($business_id)->exists();
 
+        // checking in from the appointments diary
+        $appointment = null;
+        if (request()->filled('appointment_id')) {
+            $appointment = \App\ClinicAppointment::forBusiness($business_id)->open()->with('patient.patientDetails')
+                ->whereDate('date', \Carbon::today()->toDateString())->find(request()->input('appointment_id'));
+            if ($appointment) {
+                $preselected_patient = $appointment->patient;
+            }
+        }
+
         return view('visit.create')->with(compact('business_locations', 'preselected_patient', 'doctors', 'packages',
-            'default_fee', 'wards_on', 'pay_first', 'waiting', 'has_plans'));
+            'default_fee', 'wards_on', 'pay_first', 'waiting', 'has_plans', 'appointment'));
     }
 
     public function store(Request $request)
@@ -305,6 +315,17 @@ class VisitController extends Controller
             }
         }
 
+        // appointments: checking in a booked patient marks the booking as arrived
+        $appointment = null;
+        if ($type == 'opd' && $request->filled('appointment_id')) {
+            $appointment = \App\ClinicAppointment::forBusiness($business_id)->open()
+                ->where('contact_id', $patient->id)->whereDate('date', $visit_date)
+                ->find($request->input('appointment_id'));
+            if (! $appointment) {
+                return $this->fail(__('clinic.appt_not_for_checkin'));
+            }
+        }
+
         $location_id = $request->input('location_id') ?: array_key_first(BusinessLocation::forDropdown($business_id, false)->toArray());
 
         try {
@@ -320,6 +341,7 @@ class VisitController extends Controller
                 'doctor_id' => $doctor_id,
                 'package_id' => optional($package)->id,
                 'subscription_period_id' => optional($plan_period)->id,
+                'appointment_id' => optional($appointment)->id,
                 'queue_no' => $type == 'opd' ? ClinicQueue::nextQueueNo($business_id, $visit_date) : null,
                 'queue_status' => $type == 'opd' ? 'waiting' : null,
                 'checked_in_at' => $type == 'opd' ? now() : null,
@@ -372,6 +394,13 @@ class VisitController extends Controller
             if ($fee_transaction) {
                 $visit->fee_transaction_id = $fee_transaction->id;
                 $visit->save();
+            }
+            if ($appointment) {
+                $appointment->status = 'checked_in';
+                $appointment->visit_id = $visit->id;
+                $appointment->confirmed_at = $appointment->confirmed_at ?? now();
+                $appointment->confirmed_by = $appointment->confirmed_by ?? $user_id;
+                $appointment->save();
             }
 
             DB::commit();
@@ -534,6 +563,11 @@ class VisitController extends Controller
                 VisitCharge::where('business_id', $business_id)->where('reference_id', $transaction->id)
                     ->where('reference_type', 'visit')->delete();
                 $visit->fee_transaction_id = null;
+            }
+
+            if ($visit->appointment_id) {
+                \App\ClinicAppointment::where('id', $visit->appointment_id)->where('status', 'checked_in')
+                    ->update(['status' => 'confirmed', 'visit_id' => null]);
             }
 
             $visit->status = 'cancelled';

@@ -13,6 +13,8 @@
 --}}
 @if (in_array('hospital', $enabled_modules))
 @php
+    // labels are keyed by the permission name, which contains dots: read the array, not __('clinic.perm.x')
+    $hp_labels = (array) __('clinic.perm');
     $hp_business_id = session('user.business_id');
     $hp_has = $role_permissions ?? [];
     $hp_on = function ($section) use ($hp_business_id) {
@@ -20,9 +22,10 @@
     };
     $hp_groups = [
         'reception' => [null, ['patient.view', 'patient.create', 'patient.update', 'patient.delete', 'patient.reset_portal_pin', 'visit.view', 'visit.create', 'visit.close']],
-        'doctor' => [null, ['visit.receive_patients', 'consultation.create', 'consultation.view_own', 'consultation.view_all', 'consultation.prescribe', 'consultation.finalize']],
+        'doctor' => [null, ['visit.receive_patients', 'consultation.create', 'consultation.view_own', 'consultation.view_all', 'consultation.prescribe', 'consultation.finalize', 'clinic_report.my_practice']],
         'lab' => [null, ['lab_test.manage_catalogue', 'lab_request.view', 'lab_request.create', 'lab_result.enter', 'lab_result.view', 'lab_result.validate', 'lab_result.amend']],
-        'imaging' => [null, ['imaging.manage_catalogue', 'imaging_request.view', 'imaging_request.create', 'imaging_result.enter', 'imaging_result.view']],
+        'imaging' => ['imaging', ['imaging.manage_catalogue', 'imaging_request.view', 'imaging_request.create', 'imaging_result.enter', 'imaging_result.view']],
+        'appointments' => [null, ['appointment.view', 'appointment.manage', 'clinic_schedule.manage']],
         'billing' => [null, ['patient.view_bill', 'visit.override_pay_first', 'hospital_charge.void', 'clinic_plan.manage', 'clinic_insurance.manage']],
         'dispensary' => [null, ['prescription.dispense']],
         'admin' => [null, ['clinic_settings.manage', 'clinic_package.manage']],
@@ -30,8 +33,9 @@
         'theatre' => ['theatre', ['theatre.view', 'theatre.book', 'theatre.record_procedure', 'theatre.manage_catalogue']],
         'maternity' => ['maternity', ['antenatal.view', 'antenatal.create', 'antenatal.update', 'delivery.record']],
         'morgue' => ['morgue', ['morgue.view', 'morgue.receive', 'morgue.record_visit', 'morgue.release', 'morgue.manage_slots']],
-        'departments' => [null, ['department.view', 'department.create', 'department.update', 'department.delete', 'department_issue.access', 'department_issue.create', 'department_issue.delete', 'department_issue.view_report']],
+        'departments' => ['departments', ['department.view', 'department.create', 'department.update', 'department.delete', 'department_issue.access', 'department_issue.create', 'department_issue.delete', 'department_issue.view_report']],
         'reports' => [null, array_values(array_filter([
+            'clinic_report.all_doctors', 'clinic_report.finance', 'clinic_report.attendance',
             'hospital_report.dashboard', 'hospital_report.opd', 'hospital_report.lab', 'hospital_report.revenue',
             $hp_on('wards') ? 'hospital_report.admissions' : null, $hp_on('wards') ? 'hospital_report.ward' : null,
             $hp_on('morgue') ? 'hospital_report.mortality' : null, $hp_on('morgue') ? 'hospital_report.morgue' : null,
@@ -71,7 +75,7 @@
                     <div class="checkbox">
                         <label>
                             {!! Form::checkbox('permissions[]', $hp_perm, in_array($hp_perm, $hp_has), ['class' => 'input-icheck']) !!}
-                            {{ __('clinic.perm.' . $hp_perm) }}
+                            {{ $hp_labels[$hp_perm] ?? $hp_perm }}
                         </label>
                     </div>
                 </div>

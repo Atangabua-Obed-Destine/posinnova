@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}">
+<html data-theme="light" lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport">
@@ -14,6 +14,7 @@
     <link rel="apple-touch-icon" href="{{ asset('img/pwa-icon-192.png') }}">
 
     <link href="{{ asset('css/tailwind/app.css?v='.$asset_v) }}" rel="stylesheet">
+    <link href="{{ asset('css/tailwind/portal.css?v='.$asset_v) }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
     <link rel="stylesheet" href="{{ asset('css/app.css?v='.$asset_v) }}">
     <style>
@@ -41,7 +42,7 @@
             <h1 class="tw-text-3xl sm:tw-text-4xl lg:tw-text-5xl tw-font-extrabold tw-leading-tight tw-mb-3" style="color:#fff;">@lang('lang_v1.patient_portal')</h1>
             <p class="tw-text-base sm:tw-text-lg tw-mb-8" style="color:rgba(255,255,255,.8);">@lang('lang_v1.portal_sign_in_sub')</p>
             <div class="tw-flex tw-flex-col tw-gap-4">
-                @php $feat = [['fa-notes-medical', __('lang_v1.records'), __('lang_v1.my_visits').', '.__('lang_v1.my_lab_results').', '.__('lang_v1.my_imaging')],['fa-file-invoice-dollar', __('lang_v1.my_bills'), __('lang_v1.outstanding_balance')],['fa-shield-heart', __('lang_v1.insurance'), __('lang_v1.insurance_covered')]]; @endphp
+                @php $feat = [['fa-notes-medical', __('lang_v1.records'), __('lang_v1.my_visits').', '.__('lang_v1.my_lab_results').', '.__('lang_v1.my_imaging')],['fa-file-invoice-dollar', __('lang_v1.my_bills'), __('lang_v1.outstanding_balance')],['fa-shield-alt', __('lang_v1.insurance'), __('lang_v1.insurance_covered')]]; @endphp
                 @foreach($feat as $f)
                     <div class="tw-flex tw-items-center tw-gap-4 tw-p-4 sm:tw-p-5 tw-rounded-2xl tw-ring-1" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);">
                         <div class="tw-flex-shrink-0 tw-w-14 tw-h-14 tw-rounded-xl tw-flex tw-items-center tw-justify-center tw-text-2xl tw-shadow-md" style="background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;"><i class="fas {{ $f[0] }}"></i></div>
@@ -59,7 +60,7 @@
             @php $locale = app()->getLocale(); @endphp
             <div class="tw-inline-flex tw-rounded-full tw-bg-gray-100 tw-p-0.5 tw-text-xs">
                 @foreach(['en' => 'EN', 'fr' => 'FR'] as $code => $label)
-                    <a href="{{ route('portal.lang', $code) }}" class="tw-px-3 tw-py-1 tw-rounded-full tw-font-semibold {{ $locale === $code ? 'tw-bg-white tw-text-indigo-600 tw-shadow-sm' : 'tw-text-gray-500' }}">{{ $label }}</a>
+                    <a href="{{ route('portal.lang', $code) }}" style="min-width:40px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;" class="tw-px-3 tw-py-1 tw-rounded-full tw-font-semibold {{ $locale === $code ? 'tw-bg-white tw-text-indigo-600 tw-shadow-sm' : 'tw-text-gray-500' }}">{{ $label }}</a>
                 @endforeach
             </div>
         </div>
@@ -75,7 +76,7 @@
             <div class="tw-bg-white tw-rounded-2xl tw-shadow-xl tw-ring-1 tw-ring-gray-100 tw-p-6 sm:tw-p-8">
                 @if(session('login_error'))
                     <div class="tw-mb-4 tw-rounded-xl tw-bg-red-50 tw-ring-1 tw-ring-red-200 tw-px-3 tw-py-2.5 tw-text-sm tw-text-red-700 tw-flex tw-items-center tw-gap-2">
-                        <i class="fas fa-circle-exclamation"></i> <span>{{ session('login_error') }}</span>
+                        <i class="fas fa-exclamation-circle"></i> <span>{{ session('login_error') }}</span>
                     </div>
                 @endif
 
@@ -99,7 +100,7 @@
                         </div>
                     </div>
                     <button type="submit" class="login-press tw-w-full tw-rounded-xl tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-font-semibold tw-py-3 tw-text-sm tw-shadow-lg hover:tw-opacity-95">
-                        <i class="fas fa-arrow-right-to-bracket"></i> @lang('lang_v1.portal_sign_in')
+                        <i class="fas fa-sign-in-alt"></i> @lang('lang_v1.portal_sign_in')
                     </button>
                 </form>
                 <p class="tw-text-xs tw-text-gray-400 tw-text-center tw-mt-5">@lang('lang_v1.portal_help_note')</p>

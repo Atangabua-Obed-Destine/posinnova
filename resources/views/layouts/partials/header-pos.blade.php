@@ -93,7 +93,7 @@
                     data-ends-at="{{ $shift_ends_at }}"
                     data-server-now="{{ $shift_server_now }}"
                     data-extended="{{ !empty($shift_extended) ? 1 : 0 }}">
-                    @if ($current_shift == 'morning')<i class="fa fa-sun-o"></i>@else<i class="fa fa-moon-o"></i>@endif
+                    @if ($current_shift == 'morning')<i class="fa fa-sun"></i>@else<i class="fa fa-moon"></i>@endif
                     <span>{{ $current_shift_label }}</span>
                     @if (!empty($current_shift_start) && !empty($current_shift_end))
                         <span class="pi-tag-sub">{{ $current_shift_start }}–{{ $current_shift_end }}</span>

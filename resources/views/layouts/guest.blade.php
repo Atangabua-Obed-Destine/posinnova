@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="light">
 <html>
 <head>
     <meta charset="utf-8">
@@ -14,6 +14,8 @@
 
     <!-- Tailwind CSS (includes DaisyUI) -->
     <link href="{{ asset('css/tailwind/app.css?v='.$asset_v) }}" rel="stylesheet">
+    <link href="{{ asset('css/tailwind/app-extra.css?v='.$asset_v) }}" rel="stylesheet">
+    <style>:root { color-scheme: light; }</style>
 
     <link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
 

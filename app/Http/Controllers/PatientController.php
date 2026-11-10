@@ -251,7 +251,7 @@ class PatientController extends Controller
 
             $output = [
                 'success' => true,
-                'msg' => __('lang_v1.patient_added_success').' '.__('clinic.portal_pin_saved', ['file' => $file_number, 'pin' => $portal_pin]),
+                'msg' => __('lang_v1.patient_added_success').'. '.__('clinic.portal_pin_saved', ['file' => $file_number, 'pin' => $portal_pin]),
                 'id' => $contact->id,
             ];
         } catch (\Exception $e) {
@@ -266,6 +266,15 @@ class PatientController extends Controller
 
         if ($request->ajax()) {
             return $output;
+        }
+
+        //PosInnova: open the new patient's file, where the file number and PIN stay on screen
+        //(a toast vanished before reception could read them out) next to "Check in patient".
+        if (! empty($output['success']) && ! empty($output['id'])) {
+            return redirect()
+                ->action([\App\Http\Controllers\PatientController::class, 'show'], [$output['id']])
+                ->with('status', $output)
+                ->with('patient_created', ['file' => $file_number, 'pin' => $portal_pin]);
         }
 
         return redirect()
@@ -487,7 +496,7 @@ class PatientController extends Controller
             $output = [
                 'success' => true,
                 'msg' => __('lang_v1.patient_updated_success')
-                    .($new_pin !== '' ? ' '.__('clinic.portal_pin_saved', ['file' => $details->file_number, 'pin' => $new_pin]) : ''),
+                    .($new_pin !== '' ? '. '.__('clinic.portal_pin_saved', ['file' => $details->file_number, 'pin' => $new_pin]) : ''),
             ];
         } catch (\Exception $e) {
             DB::rollBack();

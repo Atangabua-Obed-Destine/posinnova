@@ -5,6 +5,13 @@
 
     <div class="tw-pb-6 tw-bg-gradient-to-r tw-from-@if(!empty(session('business.theme_color'))){{session('business.theme_color')}}@else{{'primary'}}@endif-800 tw-to-@if(!empty(session('business.theme_color'))){{session('business.theme_color')}}@else{{'primary'}}@endif-900 xl:tw-pb-0 ">
         <div class="tw-px-5 tw-pt-3">
+            {{-- PosInnova: hospital module on = this sales dashboard is the "Pharmacy sales" tab of the hospital home --}}
+            @if (in_array('hospital', (array) (session('business.enabled_modules') ?: [])))
+                <div role="tablist" style="display:flex;gap:6px;margin:6px 0 4px;">
+                    <a role="tab" aria-selected="false" href="{{ action([\App\Http\Controllers\HomeController::class, 'index']) }}" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;color:#fff;background:rgba(255,255,255,.12);text-decoration:none;">{!! \App\Utils\ClinicIcons::svg('building-hospital', '') !!} {{ __('clinic.dash_tab_hospital') }}</a>
+                    <a role="tab" aria-selected="true" href="{{ action([\App\Http\Controllers\HomeController::class, 'index'], ['view' => 'sales']) }}" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;color:#101828;background:#fff;text-decoration:none;">{!! \App\Utils\ClinicIcons::svg('building-store', '') !!} {{ __('clinic.dash_tab_sales') }}</a>
+                </div>
+            @endif
             {{-- <div class="sm:tw-flex sm:tw-items-center sm:tw-justify-between sm:tw-gap-12">
                 <h1 class="tw-text-2xl tw-font-medium tw-tracking-tight tw-text-white">
                     {{ __('home.welcome_message', ['name' => trim(preg_replace('/\s+/', ' ', (auth()->user()->surname ?? '') . ' ' . auth()->user()->first_name)), 'business' => session('business.name')]) }}
@@ -1042,14 +1049,13 @@
         </div>
     @endif
 
+    {{-- modals live inside the section: markup outside it is printed before <!DOCTYPE>, which breaks the <head> --}}
+    <div class="modal fade payment_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
+    </div>
+    <div class="modal fade edit_pso_status_modal" tabindex="-1" role="dialog"></div>
+    <div class="modal fade edit_payment_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
+    </div>
 @endsection
-
-
-<div class="modal fade payment_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
-</div>
-<div class="modal fade edit_pso_status_modal" tabindex="-1" role="dialog"></div>
-<div class="modal fade edit_payment_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
-</div>
 
 @section('css')
     <style>

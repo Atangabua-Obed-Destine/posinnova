@@ -47,7 +47,7 @@
 
         @component('components.widget', ['class' => 'box-primary'])
             <form method="GET" class="form-inline" style="margin-bottom:10px;">
-                <select name="insurer_id" class="form-control input-sm" onchange="this.form.submit()">
+                <select name="insurer_id" class="form-control input-sm" onchange="this.form.submit()" aria-label="{{ __('clinic.ins_insurer') }}">
                     <option value="">@lang('clinic.ins_all_insurers')</option>
                     @foreach ($insurers as $i)
                         <option value="{{ $i->id }}" {{ request('insurer_id') == $i->id ? 'selected' : '' }}>{{ $i->name }}</option>

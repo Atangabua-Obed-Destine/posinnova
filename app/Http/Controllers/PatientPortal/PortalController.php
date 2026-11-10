@@ -87,10 +87,16 @@ class PortalController extends Controller
         })->whereNotNull('next_visit_date')->whereDate('next_visit_date', '>=', now())
             ->orderBy('next_visit_date', 'asc')->first();
 
+        // clinic appointments: the next booking
+        $next_booking = \App\Utils\ClinicAppointments::enabled($bid)
+            ? \App\ClinicAppointment::forBusiness($bid)->where('contact_id', $patient->id)->open()
+                ->whereDate('date', '>=', now()->toDateString())->with('doctor')->orderBy('date')->orderBy('start_time')->first()
+            : null;
+
         return view('patient_portal.dashboard')->with(compact(
             'patient', 'due', 'visits_count', 'active_rx', 'pending_labs',
             'active_admission', 'recent_consultations', 'recent_labs',
-            'weight_trend', 'antenatal', 'next_appointment'
+            'weight_trend', 'antenatal', 'next_appointment', 'next_booking'
         ));
     }
 
@@ -150,6 +156,7 @@ class PortalController extends Controller
 
     public function imaging()
     {
+        abort_unless(\App\Utils\ClinicSettings::sectionOn($this->patient()->business_id, 'imaging'), 404);
         $patient = $this->patient();
         $imaging_requests = ImagingRequest::forBusiness($patient->business_id)->where('contact_id', $patient->id)
             ->with('reportedBy')->orderBy('requested_at', 'desc')->paginate(15);
@@ -159,6 +166,7 @@ class PortalController extends Controller
 
     public function admissions()
     {
+        abort_unless(\App\Utils\ClinicSettings::sectionOn($this->patient()->business_id, 'wards'), 404);
         $patient = $this->patient();
         $admissions = Admission::forBusiness($patient->business_id)->where('contact_id', $patient->id)
             ->with(['ward', 'bed'])->orderBy('admission_date', 'desc')->paginate(15);
@@ -168,6 +176,7 @@ class PortalController extends Controller
 
     public function maternity()
     {
+        abort_unless(\App\Utils\ClinicSettings::sectionOn($this->patient()->business_id, 'maternity'), 404);
         $patient = $this->patient();
         $records = AntenatalRecord::forBusiness($patient->business_id)->where('contact_id', $patient->id)
             ->with(['antenatalVisits.attendedBy', 'delivery.baby'])->orderBy('created_at', 'desc')->get();

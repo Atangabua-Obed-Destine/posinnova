@@ -54,16 +54,25 @@ class ClinicQueueController extends Controller
         $query = Visit::forBusiness($business_id)
             ->whereDate('visit_date', $today)
             ->whereNotNull('queue_no')
-            ->with(['patient.patientDetails', 'package', 'feeTransaction', 'doctor']);
+            ->with(['patient.patientDetails', 'package', 'feeTransaction', 'doctor', 'appointment']);
         if ($doctor_id !== 'all') {
             $query->where('doctor_id', (int) $doctor_id);
         }
         $visits = $query->orderBy('queue_no')->get();
 
+        $booked_first = (bool) \App\Utils\ClinicSettings::get($business_id, 'appointments_booked_first');
         $active = $visits->filter(function ($v) {
             return $v->status == 'open' && in_array($v->queue_status, ['with_doctor', 'waiting']);
-        })->sortBy(function ($v) {
-            return ($v->queue_status == 'with_doctor' ? 0 : 1) * 100000 + $v->queue_no;
+        })->sortBy(function ($v) use ($booked_first) {
+            // with the doctor first; then (setting) booked patients by their time; then walk-ins by number
+            if ($v->queue_status == 'with_doctor') {
+                return sprintf('0-%06d', $v->queue_no);
+            }
+            if ($booked_first && $v->appointment) {
+                return '1-'.$v->appointment->start.'-'.sprintf('%06d', $v->queue_no);
+            }
+
+            return sprintf('2-%06d', $v->queue_no);
         })->values();
         $done = $visits->filter(function ($v) {
             return ! ($v->status == 'open' && in_array($v->queue_status, ['with_doctor', 'waiting']));

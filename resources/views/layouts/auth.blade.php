@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}">
+<html data-theme="light" lang="{{ app()->getLocale() }}">
 <html>
 
 <head>

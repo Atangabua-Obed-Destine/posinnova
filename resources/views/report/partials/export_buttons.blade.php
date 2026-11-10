@@ -8,12 +8,12 @@
         data-export-base="{{ url($export_base) }}"
         data-export-format="excel"
         data-export-map="{{ $export_map_id }}">
-        <i class="fa fa-file-excel-o"></i> @lang('report.export_excel')
+        <i class="fa fa-file-excel"></i> @lang('report.export_excel')
     </a>
     <a href="#" class="btn btn-danger btn-sm btn-report-export"
         data-export-base="{{ url($export_base) }}"
         data-export-format="pdf"
         data-export-map="{{ $export_map_id }}">
-        <i class="fa fa-file-pdf-o"></i> @lang('report.export_pdf')
+        <i class="fa fa-file-pdf"></i> @lang('report.export_pdf')
     </a>
 </div>

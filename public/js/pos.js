@@ -1197,6 +1197,11 @@ $(document).ready(function() {
         },
     });
 
+    $(document).on('input', '.payment-amount', function(e) {
+        if (e.originalEvent) {
+            $(this).data('pi-user-typed', true);
+        }
+    });
     $(document).on('change', '.payment-amount', function() {
         calculate_balance_due();
     });
@@ -2906,8 +2911,17 @@ function calculate_billing_details(price_total) {
     $('span.total_payable_span').text(__currency_trans_from_en(total_payable_rounded, true));
 
     //Check if edit form then don't update price.
-    if ($('form#edit_pos_sell_form').length == 0 && $('form#edit_sell_form').length == 0) {
-        __write_number($('.payment-amount').first(), total_payable_rounded);
+    //PosInnova: ...unless the sale has no saved payment yet (an opened draft or quotation)
+    //and the cashier has not typed an amount: then the payment follows the total like on
+    //a new sale. Otherwise a draft of 32,300 cut down to 27,500 kept 32,300 in the cash
+    //field and the screen showed 4,800 of "change" that nobody owed.
+    var pi_is_edit = $('form#edit_pos_sell_form').length > 0 || $('form#edit_sell_form').length > 0;
+    var pi_first_pay = $('.payment-amount').first();
+    var pi_has_saved_payment = $('#payment_rows_div input[name$="[payment_id]"]').filter(function() {
+        return $(this).val();
+    }).length > 0;
+    if (!pi_is_edit || (!pi_has_saved_payment && !pi_first_pay.data('pi-user-typed'))) {
+        __write_number(pi_first_pay, total_payable_rounded);
     }
 
     $(document).trigger('invoice_total_calculated');
@@ -3687,6 +3701,11 @@ function show_pos_preview_for_confirmation() {
     // Switch the preview modal into "confirm before finalize" mode.
     var $modal = $('#invoice_preview_modal');
     $modal.find('#pos-preview-confirm-finalize').removeClass('hide');
+    // The header still said "preview only - nothing saved"; in this mode the sale is about to be saved.
+    var $notice = $modal.find('#invoice_preview_notice');
+    if ($notice.length && $notice.data('confirm')) {
+        $notice.text($notice.data('confirm')).removeClass('text-muted').addClass('text-warning');
+    }
     $modal.find('.modal-title')
         .html('<i class="fa fa-check-circle text-success"></i> ' + (LANG.confirm_and_finalize || 'Confirm & Finalize'));
     // Replace the generic "preview only" alert with a clearer call-to-action.
@@ -3694,7 +3713,7 @@ function show_pos_preview_for_confirmation() {
     if ($alert.length) {
         $alert.removeClass('alert-info').addClass('alert-warning')
             .html('<i class="fa fa-exclamation-triangle"></i> '
-                + (LANG.review_before_finalize_notice || 'Please review the sale below before finalizing the payment.'));
+                + ($notice.data('alert') || LANG.review_before_finalize_notice || 'Please review the sale below before finalizing the payment.'));
     }
 }
 
@@ -3703,6 +3722,10 @@ function show_pos_preview_for_confirmation() {
 // normally next time it is clicked.
 $(document).on('hidden.bs.modal', '#invoice_preview_modal', function() {
     $(this).find('#pos-preview-confirm-finalize').addClass('hide');
+    var $notice = $(this).find('#invoice_preview_notice');
+    if ($notice.length && $notice.data('preview')) {
+        $notice.text($notice.data('preview')).removeClass('text-warning').addClass('text-muted');
+    }
 });
 
 // User clicked "Confirm & Finalize" inside the preview modal: hide the modal,

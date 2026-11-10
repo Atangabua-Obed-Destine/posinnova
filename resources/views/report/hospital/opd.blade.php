@@ -11,10 +11,10 @@
         <div class="col-md-3"><div class="form-group">{!! Form::label('opd_doctor', __('lang_v1.consulted_by') . ':') !!}{!! Form::select('opd_doctor', $doctors, '', ['class' => 'form-control select2', 'id' => 'opd_doctor']) !!}</div></div>
     @endcomponent
 
-    <div class="tw-grid tw-grid-cols-2 sm:tw-grid-cols-3 tw-gap-3 tw-mb-4">
+    <div class="tw-grid tw-grid-cols-2 tw-gap-3 tw-mb-4">
         @include('report.hospital.partials.stat', ['id' => 'opd_total', 'label' => __('lang_v1.total_consultations'), 'icon' => 'fa-stethoscope', 'fg' => 'tw-text-sky-600'])
         @include('report.hospital.partials.stat', ['id' => 'opd_patients', 'label' => __('lang_v1.unique_patients'), 'icon' => 'fa-users', 'fg' => 'tw-text-indigo-600'])
-        @include('report.hospital.partials.stat', ['id' => 'opd_fees', 'label' => __('lang_v1.total_consultation_fees'), 'icon' => 'fa-coins', 'fg' => 'tw-text-green-600', 'money' => true])
+        {{-- PosInnova: fees are billed at check-in (packages), not on the consultation: see Clinic reports > Income --}}
     </div>
 
     @component('components.widget', ['class' => 'box-primary', 'title' => __('lang_v1.opd_report')])
@@ -22,7 +22,7 @@
             <thead><tr>
                 <th>@lang('lang_v1.date')</th><th>@lang('purchase.ref_no')</th><th>@lang('lang_v1.file_number')</th>
                 <th>@lang('lang_v1.patient')</th><th>@lang('lang_v1.consultation_type')</th><th>@lang('lang_v1.doctor')</th>
-                <th>@lang('lang_v1.diagnosis')</th><th class="text-right">@lang('lang_v1.consultation_fee')</th>
+                <th>@lang('lang_v1.diagnosis')</th>
             </tr></thead>
         </table>
     @endcomponent
@@ -48,7 +48,6 @@ $(document).ready(function () {
             { data: 'consultation_type', name: 'consultations.consultation_type' },
             { data: 'doctor_name', name: 'u.first_name' },
             { data: 'diagnosis', name: 'consultations.diagnosis' },
-            { data: 'consultation_fee', name: 'consultations.consultation_fee', className: 'text-right' },
         ],
         fnDrawCallback: function () { __currency_convert_recursively($('#opd_report_table')); },
     });
@@ -56,7 +55,6 @@ $(document).ready(function () {
         if (!json) return;
         $('#opd_total').text(json.total_consultations || 0);
         $('#opd_patients').text(json.unique_patients || 0);
-        $('#opd_fees').text(__currency_trans_from_en(json.total_fees || 0, true));
     });
     $('#opd_type, #opd_doctor').change(function () { opd_report_table.ajax.reload(); });
 });

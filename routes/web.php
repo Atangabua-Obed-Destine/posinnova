@@ -448,6 +448,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::resource('visits', \App\Http\Controllers\VisitController::class)->only(['index', 'create', 'store', 'show']);
 
     //Consultations
+    Route::get('consultations', [\App\Http\Controllers\ConsultationController::class, 'index']);
     Route::get('consultations/create', [\App\Http\Controllers\ConsultationController::class, 'create']);
     Route::post('consultations', [\App\Http\Controllers\ConsultationController::class, 'store']);
     Route::get('consultations/{id}', [\App\Http\Controllers\ConsultationController::class, 'show'])->whereNumber('id');
@@ -522,6 +523,10 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('reports/hospital/morgue', [\App\Http\Controllers\HospitalReportController::class, 'morgue']);
     Route::get('reports/hospital/mutual-claims', [\App\Http\Controllers\HospitalReportController::class, 'mutualClaims']);
 
+    //Clinic reports (hospital module)
+    Route::get('clinic/reports', [\App\Http\Controllers\ClinicReportController::class, 'index']);
+    Route::get('clinic/reports/{key}', [\App\Http\Controllers\ClinicReportController::class, 'show'])->where('key', '[a-z_]+');
+
     //Clinic settings (hospital module)
     Route::get('clinic/settings', [\App\Http\Controllers\ClinicSettingsController::class, 'index']);
     Route::post('clinic/settings', [\App\Http\Controllers\ClinicSettingsController::class, 'update']);
@@ -568,6 +573,18 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('clinic/claims/{id}/reopen', [\App\Http\Controllers\ClinicClaimController::class, 'reopen']);
     Route::post('clinic/claims/{id}/delete', [\App\Http\Controllers\ClinicClaimController::class, 'destroy']);
     Route::post('clinic/claims/{id}/settle', [\App\Http\Controllers\ClinicClaimController::class, 'settle']);
+    Route::get('clinic/appointments', [\App\Http\Controllers\ClinicAppointmentController::class, 'index']);
+    Route::post('clinic/appointments', [\App\Http\Controllers\ClinicAppointmentController::class, 'store']);
+    Route::get('clinic/appointments/hours', [\App\Http\Controllers\ClinicAppointmentController::class, 'hours']);
+    Route::post('clinic/appointments/hours', [\App\Http\Controllers\ClinicAppointmentController::class, 'storeHours']);
+    Route::post('clinic/appointments/hours/{id}/delete', [\App\Http\Controllers\ClinicAppointmentController::class, 'deleteHours']);
+    Route::post('clinic/appointments/days-off', [\App\Http\Controllers\ClinicAppointmentController::class, 'storeDayOff']);
+    Route::post('clinic/appointments/days-off/{id}/delete', [\App\Http\Controllers\ClinicAppointmentController::class, 'deleteDayOff']);
+    Route::post('clinic/appointments/{id}/confirm', [\App\Http\Controllers\ClinicAppointmentController::class, 'confirm']);
+    Route::post('clinic/appointments/{id}/decline', [\App\Http\Controllers\ClinicAppointmentController::class, 'decline']);
+    Route::post('clinic/appointments/{id}/cancel', [\App\Http\Controllers\ClinicAppointmentController::class, 'cancel']);
+    Route::post('clinic/appointments/{id}/no-show', [\App\Http\Controllers\ClinicAppointmentController::class, 'noShow']);
+    Route::post('clinic/appointments/{id}/reminded', [\App\Http\Controllers\ClinicAppointmentController::class, 'reminded']);
 
     //Hospital Departments
     Route::resource('departments', DepartmentController::class);
@@ -605,9 +622,13 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('/sell-return/add/{id}', [SellReturnController::class, 'add']);
 
     //Backup
+    //PosInnova: Settings > Repair payments (sales whose change was subtracted twice)
+    Route::get('payment-repair', [\App\Http\Controllers\PaymentRepairController::class, 'index']);
+    Route::post('payment-repair', [\App\Http\Controllers\PaymentRepairController::class, 'repair']);
     Route::get('backup/download/{file_name}', [BackUpController::class, 'download']);
-    Route::get('backup/{id}/delete', [BackUpController::class, 'delete'])->name('delete_backup');
-    Route::resource('backup', BackUpController::class)->only('index', 'create', 'store');
+    Route::post('backup/{id}/delete', [BackUpController::class, 'delete'])->name('delete_backup');
+    Route::post('backup/run', [BackUpController::class, 'create'])->name('backup.run');
+    Route::resource('backup', BackUpController::class)->only('index');
 
     Route::get('selling-price-group/activate-deactivate/{id}', [SellingPriceGroupController::class, 'activateDeactivate']);
     Route::get('update-product-price', [SellingPriceGroupController::class, 'updateProductPrice'])->name('update-product-price');
@@ -741,6 +762,11 @@ Route::middleware(['setData', 'language'])->prefix('portal')->name('portal.')->g
         Route::get('visits/{id}', [\App\Http\Controllers\PatientPortal\PortalController::class, 'visitShow'])->name('visit-show');
         Route::get('prescriptions', [\App\Http\Controllers\PatientPortal\PortalController::class, 'prescriptions'])->name('prescriptions');
         Route::get('plan', [\App\Http\Controllers\PatientPortal\PortalController::class, 'plan'])->name('plan');
+        Route::get('appointments', [\App\Http\Controllers\PatientPortal\AppointmentController::class, 'index'])->name('appointments');
+        Route::get('appointments/new', [\App\Http\Controllers\PatientPortal\AppointmentController::class, 'create'])->name('appointment-create');
+        Route::get('appointments/slots', [\App\Http\Controllers\PatientPortal\AppointmentController::class, 'slots'])->name('appointment-slots');
+        Route::post('appointments', [\App\Http\Controllers\PatientPortal\AppointmentController::class, 'store'])->name('appointment-store');
+        Route::post('appointments/{id}/cancel', [\App\Http\Controllers\PatientPortal\AppointmentController::class, 'cancel'])->name('appointment-cancel');
         Route::get('lab-results', [\App\Http\Controllers\PatientPortal\PortalController::class, 'labResults'])->name('lab-results');
         Route::get('lab-results/{id}', [\App\Http\Controllers\PatientPortal\PortalController::class, 'labShow'])->name('lab-show');
         Route::get('imaging', [\App\Http\Controllers\PatientPortal\PortalController::class, 'imaging'])->name('imaging');

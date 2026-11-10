@@ -29,6 +29,11 @@
     @if ($consultation->status != 'final')
         <div class="callout callout-warning">@lang('clinic.rx_consultation_draft')</div>
     @endif
+    @php $rx_pos_settings = ! empty(session('business.pos_settings')) ? json_decode(session('business.pos_settings'), true) : []; @endphp
+    @if ($waiting > 0 && ! empty($rx_pos_settings['disable_credit_sale_button']))
+        {{-- all payments go through the cashier: without the POS "Credit sale" button the medicines can only be paid here --}}
+        <div class="callout callout-info"><i class="fas fa-info-circle"></i> @lang('clinic.rx_credit_sale_off')</div>
+    @endif
 
     @component('components.widget', ['class' => 'box-primary', 'title' => __('lang_v1.prescriptions')])
         <div class="table-responsive">
@@ -43,7 +48,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($consultation->prescriptions as $rx)
+                    @forelse ($consultation->prescriptions as $rx)
                         <tr>
                             <td><strong>{{ $rx->displayName() }}</strong>
                                 @if ($rx->notes)<br><small class="text-muted">{{ $rx->notes }}</small>@endif
@@ -59,7 +64,7 @@
                                 @if ($rx->outstanding_qty > 0)
                                     <form method="POST" action="{{ action([\App\Http\Controllers\ClinicDispensaryController::class, 'close'], [$rx->id]) }}" class="form-inline" style="display:flex; gap:4px; flex-wrap:wrap;">
                                         @csrf
-                                        {!! Form::select('reason', $reasons, null, ['class' => 'form-control input-sm', 'required', 'placeholder' => __('clinic.rx_close_reason')]) !!}
+                                        {!! Form::select('reason', $reasons, null, ['class' => 'form-control input-sm', 'required', 'placeholder' => __('clinic.rx_close_reason'), 'aria-label' => __('clinic.rx_close_reason')]) !!}
                                         <input type="text" name="note" class="form-control input-sm" maxlength="120" placeholder="{{ __('clinic.rx_close_note') }}">
                                         <button type="submit" class="btn btn-sm btn-default"><i class="fas fa-ban"></i> @lang('clinic.rx_close')</button>
                                     </form>
@@ -73,7 +78,9 @@
                                 @endif
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr><td colspan="5" class="text-muted">@lang('clinic.rx_none_prescribed')</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

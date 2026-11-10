@@ -1,4 +1,8 @@
 <link href="{{ asset('css/tailwind/app.css?v='.$asset_v) }}" rel="stylesheet">
+<link href="{{ asset('css/tailwind/app-extra.css?v='.$asset_v) }}" rel="stylesheet">
+{{-- The app is styled for light mode only. The bundled daisyUI switches color-scheme to dark when the device prefers dark,
+     which draws native checkboxes, radios and date pickers dark on a white page: keep them light. --}}
+<style>:root { color-scheme: light; }</style>
 
 <link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
 

@@ -144,7 +144,7 @@
             <div class="modal-dialog modal-sm" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h4 class="modal-title"><i class="fa fa-clock-o"></i> @lang('lang_v1.shift_ended_title')</h4>
+                        <h4 class="modal-title"><i class="fa fa-clock"></i> @lang('lang_v1.shift_ended_title')</h4>
                     </div>
                     <div class="modal-body text-center">
                         <p id="shift_handover_message">@lang('lang_v1.shift_ended_message')</p>

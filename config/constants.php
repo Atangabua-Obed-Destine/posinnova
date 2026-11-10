@@ -19,7 +19,7 @@ return [
     'document_size_limit' => '5000000', //in Bytes,
     'image_size_limit' => '5000000', //in Bytes
 
-    'asset_version' => 763,
+    'asset_version' => 768,
 
     // Phase 6 — Inventory count recount queue thresholds.
     // A counted line is flagged for recount when |diff_qty| / theoretical * 100 >= pct

@@ -15,13 +15,13 @@
 
 @php
     $rows = [
-        ['icon' => 'fa-cake-candles', 'label' => __('lang_v1.date_of_birth'), 'value' => optional($pd)->date_of_birth ? \Carbon::parse($pd->date_of_birth)->format('d/m/Y') : '—'],
+        ['icon' => 'fa-birthday-cake', 'label' => __('lang_v1.date_of_birth'), 'value' => optional($pd)->date_of_birth ? \Carbon::parse($pd->date_of_birth)->format('d/m/Y') : '—'],
         ['icon' => 'fa-venus-mars', 'label' => __('lang_v1.sex'), 'value' => optional($pd)->sex ?: '—'],
-        ['icon' => 'fa-droplet', 'label' => __('lang_v1.blood_group'), 'value' => optional($pd)->blood_group ?: '—'],
-        ['icon' => 'fa-mobile-screen', 'label' => __('lang_v1.mobile'), 'value' => $patient->mobile ?: '—'],
-        ['icon' => 'fa-triangle-exclamation', 'label' => __('lang_v1.known_allergies'), 'value' => optional($pd)->known_allergies ?: __('lang_v1.none')],
+        ['icon' => 'fa-tint', 'label' => __('lang_v1.blood_group'), 'value' => optional($pd)->blood_group ?: '—'],
+        ['icon' => 'fa-mobile-alt', 'label' => __('lang_v1.mobile'), 'value' => $patient->mobile ?: '—'],
+        ['icon' => 'fa-exclamation-triangle', 'label' => __('lang_v1.known_allergies'), 'value' => optional($pd)->known_allergies ?: __('lang_v1.none')],
         ['icon' => 'fa-user-shield', 'label' => __('lang_v1.next_of_kin'), 'value' => trim((optional($pd)->next_of_kin_name ?? '').' '.(optional($pd)->next_of_kin_phone ? '('.$pd->next_of_kin_phone.')' : '')) ?: '—'],
-        ['icon' => 'fa-shield-heart', 'label' => __('lang_v1.insurance_provider'), 'value' => optional($pd)->insurance_provider ?: '—'],
+        ['icon' => 'fa-shield-alt', 'label' => __('lang_v1.insurance_provider'), 'value' => optional($pd)->insurance_provider ?: '—'],
         ['icon' => 'fa-hashtag', 'label' => __('lang_v1.insurance_number'), 'value' => optional($pd)->insurance_number ?: '—'],
     ];
 @endphp
@@ -40,7 +40,7 @@
     @include('patient_portal.partials.lang_switch', ['variant' => 'sidebar'])
     <form method="POST" action="{{ route('portal.logout') }}" class="tw-border-t tw-border-gray-50">
         @csrf
-        <button type="submit" class="portal-press tw-w-full tw-flex tw-items-center tw-gap-2 tw-px-4 tw-py-3 tw-text-sm tw-text-red-600"><i class="fas fa-right-from-bracket"></i> @lang('lang_v1.logout')</button>
+        <button type="submit" class="portal-press tw-w-full tw-flex tw-items-center tw-gap-2 tw-px-4 tw-py-3 tw-text-sm tw-text-red-600"><i class="fas fa-sign-out-alt"></i> @lang('lang_v1.logout')</button>
     </form>
 </div>
 

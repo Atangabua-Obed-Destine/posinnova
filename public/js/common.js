@@ -6,6 +6,15 @@ $(document).on('submit', 'form', function (e) {
         return false;
     }
 
+    // PosInnova: a disabled button is not sent with the form, so a form with several submit
+    // buttons (Save draft / Finalize, Save / Save and validate) lost which one was pressed.
+    // Keep the pressed button's name=value as a hidden field before disabling the buttons.
+    var submitter = e.originalEvent && e.originalEvent.submitter;
+    $(this).find('input[type="hidden"][data-pos-submitter]').remove();
+    if (submitter && submitter.name) {
+        $('<input type="hidden" data-pos-submitter="1">').attr('name', submitter.name).val(submitter.value).appendTo(this);
+    }
+
     $(this).find('button[type="submit"]').attr('disabled', true);
 });
 $(document).ready(function () {

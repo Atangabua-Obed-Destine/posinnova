@@ -29,7 +29,7 @@
     @if(isset($critical_labs) && $critical_labs->count())
         <div class="tw-rounded-2xl tw-bg-red-50 tw-ring-1 tw-ring-red-200 tw-p-4 tw-mb-4">
             <div class="tw-flex tw-items-center tw-gap-2 tw-mb-2">
-                <span class="tw-inline-flex tw-items-center tw-justify-center tw-w-8 tw-h-8 tw-rounded-lg tw-bg-red-600 tw-text-white"><i class="fas fa-triangle-exclamation"></i></span>
+                <span class="tw-inline-flex tw-items-center tw-justify-center tw-w-8 tw-h-8 tw-rounded-lg tw-bg-red-600 tw-text-white"><i class="fas fa-exclamation-triangle"></i></span>
                 <span class="tw-font-bold tw-text-red-800">@lang('lang_v1.critical_lab_alerts') ({{ $critical_labs->count() }})</span>
             </div>
             <div class="tw-flex tw-flex-wrap tw-gap-2">
@@ -137,7 +137,7 @@
         @can('hospital_report.lab')<a href="{{ action([\App\Http\Controllers\HospitalReportController::class, 'lab']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-vial"></i> @lang('lang_v1.lab_report')</a>@endcan
         @can('hospital_report.ward')<a href="{{ action([\App\Http\Controllers\HospitalReportController::class, 'ward']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-pills"></i> @lang('lang_v1.ward_consumption_report')</a>@endcan
         @can('hospital_report.revenue')<a href="{{ action([\App\Http\Controllers\HospitalReportController::class, 'revenue']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-coins"></i> @lang('lang_v1.revenue_report')</a>@endcan
-        @can('hospital_report.revenue')<a href="{{ action([\App\Http\Controllers\HospitalReportController::class, 'mutualClaims']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-shield-heart"></i> @lang('lang_v1.insurance_claims')</a>@endcan
+        @can('hospital_report.revenue')<a href="{{ action([\App\Http\Controllers\HospitalReportController::class, 'mutualClaims']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-shield-alt"></i> @lang('lang_v1.insurance_claims')</a>@endcan
         @can('hospital_report.mortality')<a href="{{ action([\App\Http\Controllers\HospitalReportController::class, 'mortality']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-book-dead"></i> @lang('lang_v1.mortality_register')</a>@endcan
         @can('hospital_report.antenatal')<a href="{{ action([\App\Http\Controllers\HospitalReportController::class, 'antenatal']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-baby"></i> @lang('lang_v1.antenatal_report')</a>@endcan
         @can('hospital_report.morgue')<a href="{{ action([\App\Http\Controllers\HospitalReportController::class, 'morgue']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-snowflake"></i> @lang('lang_v1.morgue_register')</a>@endcan

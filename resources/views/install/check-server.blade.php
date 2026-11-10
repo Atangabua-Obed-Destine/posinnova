@@ -18,9 +18,9 @@
                   <td>PHP >= 7.1</td>
                   <td>
                     @if($output['php'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>
@@ -29,9 +29,9 @@
                   <td>OpenSSL PHP Extension</td>
                   <td>
                     @if($output['openssl'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>
@@ -40,9 +40,9 @@
                   <td>PDO PHP Extension</td>
                   <td>
                     @if($output['pdo'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>
@@ -51,9 +51,9 @@
                   <td>Mbstring PHP Extension</td>
                   <td>
                     @if($output['mbstring'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>
@@ -62,9 +62,9 @@
                   <td>Tokenizer PHP Extension</td>
                   <td>
                     @if($output['tokenizer'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>
@@ -73,9 +73,9 @@
                   <td>XML PHP Extension</td>
                   <td>
                     @if($output['xml'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>
@@ -84,9 +84,9 @@
                   <td>cURL PHP Extension</td>
                   <td>
                     @if($output['curl'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>
@@ -95,9 +95,9 @@
                   <td>zip PHP Extension</td>
                   <td>
                     @if($output['zip'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>
@@ -106,9 +106,9 @@
                   <td>gd PHP Extension</td>
                   <td>
                     @if($output['gd'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>
@@ -121,9 +121,9 @@
                   <td><b>{{storage_path()}}</b> is writable?</td>
                   <td>
                     @if($output['storage_writable'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>
@@ -132,9 +132,9 @@
                   <td><b>{{base_path('bootstrap/cache')}}</b> is writable?</td>
                   <td>
                     @if($output['cache_writable'])
-                      <i class="fa fa-check-circle-o text-success" aria-hidden="true"></i>
+                      <i class="fa fa-check-circle text-success" aria-hidden="true"></i>
                     @else
-                      <i class="fa fa-close text-danger" aria-hidden="true"></i>
+                      <i class="fa fa-times text-danger" aria-hidden="true"></i>
                     @endif
                   </td>
                 </tr>

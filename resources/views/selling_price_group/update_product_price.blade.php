@@ -8,7 +8,7 @@
     <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">@lang( 'lang_v1.update_product_price' )
     </h1>
     <!-- <ol class="breadcrumb">
-        <li><a href="#"><i class="fa fa-dashboard"></i> Level</a></li>
+        <li><a href="#"><i class="fa fa-tachometer-alt"></i> Level</a></li>
         <li class="active">Here</li>
     </ol> -->
 </section>

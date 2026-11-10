@@ -15,6 +15,12 @@ class Visit extends Model
 
     protected $guarded = ['id'];
 
+    /** The appointment this check-in came from (clinic appointments). */
+    public function appointment()
+    {
+        return $this->belongsTo(ClinicAppointment::class, 'appointment_id');
+    }
+
     protected $casts = [
         'visit_date' => 'date',
         'closed_at' => 'datetime',

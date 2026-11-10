@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}">
+<html data-theme="light" lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -18,6 +18,7 @@
     <link rel="apple-touch-icon" href="{{ asset('img/pwa-icon-192.png') }}">
 
     <link href="{{ asset('css/tailwind/app.css?v='.$asset_v) }}" rel="stylesheet">
+    <link href="{{ asset('css/tailwind/portal.css?v='.$asset_v) }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
     <link rel="stylesheet" href="{{ asset('css/app.css?v='.$asset_v) }}">
     @include('patient_portal.partials.styles')
@@ -28,7 +29,7 @@
     $pd = optional($p)->patientDetails;
     $currentGroup = $portal_group ?? 'home';
     $nav = [
-        ['route' => 'portal.dashboard', 'icon' => 'fa-house', 'label' => __('lang_v1.portal_home'), 'group' => 'home'],
+        ['route' => 'portal.dashboard', 'icon' => 'fa-home', 'label' => __('lang_v1.portal_home'), 'group' => 'home'],
         ['route' => 'portal.visits', 'icon' => 'fa-stethoscope', 'label' => __('lang_v1.my_visits'), 'group' => 'records'],
         ['route' => 'portal.prescriptions', 'icon' => 'fa-prescription', 'label' => __('lang_v1.my_prescriptions'), 'group' => 'records'],
         ['route' => 'portal.lab-results', 'icon' => 'fa-vial', 'label' => __('lang_v1.my_lab_results'), 'group' => 'records'],
@@ -39,11 +40,21 @@
     ];
     // Bottom tab bar: four primary destinations; "Records" stays active across all record sub-pages.
     $tabs = [
-        ['route' => 'portal.dashboard', 'icon' => 'fa-house', 'label' => __('lang_v1.portal_home'), 'group' => 'home'],
+        ['route' => 'portal.dashboard', 'icon' => 'fa-home', 'label' => __('lang_v1.portal_home'), 'group' => 'home'],
         ['route' => 'portal.visits', 'icon' => 'fa-notes-medical', 'label' => __('lang_v1.records'), 'group' => 'records'],
         ['route' => 'portal.bills', 'icon' => 'fa-file-invoice-dollar', 'label' => __('lang_v1.bills'), 'group' => 'bills'],
         ['route' => 'portal.profile', 'icon' => 'fa-user', 'label' => __('lang_v1.profile'), 'group' => 'profile'],
     ];
+    // sections the clinic switched off are not offered to patients either
+    if ($p) {
+        $off = array_filter(['portal.imaging' => 'imaging', 'portal.admissions' => 'wards', 'portal.maternity' => 'maternity'], fn ($sec) => ! \App\Utils\ClinicSettings::sectionOn($p->business_id, $sec));
+        $nav = array_values(array_filter($nav, fn ($i) => ! isset($off[$i['route']])));
+    }
+    // clinic appointments: a tab when the clinic uses them
+    if ($p && \App\Utils\ClinicAppointments::enabled($p->business_id)) {
+        array_splice($nav, 1, 0, [['route' => 'portal.appointments', 'icon' => 'fa-calendar-check', 'label' => __('clinic.appt_portal_title'), 'group' => 'appointments']]);
+        array_splice($tabs, 1, 0, [['route' => 'portal.appointments', 'icon' => 'fa-calendar-check', 'label' => __('clinic.appt_portal_tab'), 'group' => 'appointments']]);
+    }
     $businessLogo = session('business.logo');
 @endphp
 
@@ -59,7 +70,7 @@
 
     {{-- Pull-to-refresh indicator --}}
     <div id="portal-ptr" class="tw-fixed tw-top-0 tw-inset-x-0 tw-z-40 tw-flex tw-justify-center tw-pt-2 tw-pointer-events-none" style="opacity:0;transition:transform .2s,opacity .2s;">
-        <span class="tw-inline-flex tw-items-center tw-justify-center tw-w-9 tw-h-9 tw-rounded-full tw-bg-white tw-shadow tw-text-indigo-600"><i class="fas fa-arrows-rotate"></i></span>
+        <span class="tw-inline-flex tw-items-center tw-justify-center tw-w-9 tw-h-9 tw-rounded-full tw-bg-white tw-shadow tw-text-indigo-600"><i class="fas fa-sync-alt"></i></span>
     </div>
 
     {{-- Desktop sidebar --}}
@@ -101,7 +112,7 @@
             <form method="POST" action="{{ route('portal.logout') }}">
                 @csrf
                 <button type="submit" aria-label="@lang('lang_v1.logout')" class="portal-press tw-w-full tw-flex tw-items-center tw-gap-2 tw-px-3 tw-py-2.5 tw-rounded-xl tw-text-sm tw-text-red-600 hover:tw-bg-red-50">
-                    <i class="fas fa-right-from-bracket tw-w-4 tw-text-center"></i> @lang('lang_v1.logout')
+                    <i class="fas fa-sign-out-alt tw-w-4 tw-text-center"></i> @lang('lang_v1.logout')
                 </button>
             </form>
         </div>
@@ -143,7 +154,7 @@
                 </span>
                 <form method="POST" action="{{ route('portal.logout') }}" class="md:tw-hidden">
                     @csrf
-                    <button type="submit" aria-label="@lang('lang_v1.logout')" class="tw-text-red-500 tw-w-9 tw-h-9 tw-inline-flex tw-items-center tw-justify-center"><i class="fas fa-right-from-bracket"></i></button>
+                    <button type="submit" aria-label="@lang('lang_v1.logout')" class="tw-text-red-500 tw-w-9 tw-h-9 tw-inline-flex tw-items-center tw-justify-center"><i class="fas fa-sign-out-alt"></i></button>
                 </form>
             </div>
         </header>
@@ -156,7 +167,7 @@
 
 {{-- Install (A2HS) banner --}}
 <div id="portal-install" class="portal-install tw-hidden md:tw-hidden">
-    <i class="fas fa-mobile-screen-button tw-text-lg"></i>
+    <i class="fas fa-mobile-alt tw-text-lg"></i>
     <span class="tw-flex-1 tw-text-sm tw-font-medium">@lang('lang_v1.portal_install_app')</span>
     <button id="portal-install-btn" class="portal-press tw-rounded-lg tw-px-3 tw-py-1.5 tw-text-xs tw-font-bold" style="background:#fff;color:#4f46e5;">@lang('lang_v1.install')</button>
     <button id="portal-install-x" aria-label="close" style="color:rgba(255,255,255,.8);padding:0 4px;">&times;</button>

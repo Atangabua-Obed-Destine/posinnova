@@ -23,13 +23,13 @@
 @if($due > 0)
     {{-- inline colours: the portal's compiled CSS has no amber utilities --}}
     <div style="border-radius:16px;background:#fffbeb;border:1px solid #fde68a;padding:12px 14px;margin-bottom:16px;font-size:14px;color:#92400e;display:flex;align-items:center;gap:8px;">
-        <i class="fas fa-circle-info"></i> <span>@lang('lang_v1.portal_pay_at_cashier')</span>
+        <i class="fas fa-info-circle"></i> <span>@lang('lang_v1.portal_pay_at_cashier')</span>
     </div>
 @endif
 
 @if($insurer_owes > 0)
     <div style="border-radius:16px;background:#eff6ff;border:1px solid #bfdbfe;padding:12px 14px;margin-bottom:16px;font-size:14px;color:#1e40af;display:flex;align-items:center;gap:8px;">
-        <i class="fas fa-shield-halved"></i> <span>{{ __('clinic.ins_portal_insurer_owes') }} <strong><span class="display_currency" data-currency_symbol="true">{{ $insurer_owes }}</span></strong></span>
+        <i class="fas fa-shield-alt"></i> <span>{{ __('clinic.ins_portal_insurer_owes') }} <strong><span class="display_currency" data-currency_symbol="true">{{ $insurer_owes }}</span></strong></span>
     </div>
 @endif
 

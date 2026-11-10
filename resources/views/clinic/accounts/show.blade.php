@@ -23,6 +23,7 @@
 </section>
 
 <section class="content">
+    @include('clinic.accounts.partials.register_bar')
     <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
         <a href="{{ action([\App\Http\Controllers\ClinicAccountController::class, 'index']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-arrow-left"></i> @lang('clinic.patient_accounts')</a>
         @can('patient.view')
@@ -50,9 +51,6 @@
             @if ($can_pay && $balance > 0)
                 <div class="acc-balance acc-pay">
                     <h4 style="margin-top:0;"><i class="fas fa-money-bill-alt"></i> @lang('clinic.acc_receive_payment')</h4>
-                    @if (! $register_open)
-                        <div class="callout callout-warning" style="padding:8px 12px;">@lang('clinic.acc_register_closed')</div>
-                    @endif
                     <form method="POST" action="{{ action([\App\Http\Controllers\ClinicAccountController::class, 'pay'], [$patient->id]) }}" id="acc_pay_form">
                         @csrf
                         <div class="form-group">
@@ -105,7 +103,7 @@
                                         <td class="text-right"><span class="display_currency" data-currency_symbol="true">{{ $inv->final_total }}</span></td>
                                         <td class="text-right text-danger"><span class="display_currency" data-currency_symbol="true">{{ $inv->due }}</span></td>
                                         @if ($can_pay)
-                                            <td class="text-right"><input type="text" class="form-control input-sm input_number alloc" value="0"></td>
+                                            <td class="text-right"><input type="text" class="form-control input-sm input_number alloc" value="0" aria-label="{{ __('clinic.ins_paid_now') }}"></td>
                                         @endif
                                     </tr>
                                 @endforeach
@@ -145,6 +143,7 @@
                 @if ($payments->isEmpty())
                     <p class="text-muted">@lang('clinic.acc_no_payments')</p>
                 @else
+                    <div class="table-responsive">
                     <table class="table table-condensed">
                         <thead><tr><th>@lang('messages.date')</th><th>@lang('purchase.ref_no')</th><th>@lang('lang_v1.payment_method')</th><th>@lang('clinic.acc_received_by')</th><th class="text-right">@lang('sale.amount')</th><th></th></tr></thead>
                         <tbody>
@@ -160,10 +159,12 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 @endif
             @endcomponent
 
             @component('components.widget', ['class' => 'box-default', 'title' => __('clinic.acc_recent_invoices')])
+                <div class="table-responsive">
                 <table class="table table-condensed">
                     <thead><tr><th>@lang('messages.date')</th><th>@lang('sale.invoice_no')</th><th>@lang('clinic.acc_for')</th><th>@lang('sale.payment_status')</th><th class="text-right">@lang('sale.total')</th><th></th></tr></thead>
                     <tbody>
@@ -174,13 +175,14 @@
                                 <td>{{ \App\Utils\ClinicCashier::describe($inv) }}</td>
                                 <td>{{ __('lang_v1.' . $inv->payment_status) }}</td>
                                 <td class="text-right"><span class="display_currency" data-currency_symbol="true">{{ $inv->final_total }}</span></td>
-                                <td class="text-right"><a href="#" data-href="{{ route('sell.printInvoice', [$inv->id]) }}" class="print-invoice tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline"><i class="fas fa-print"></i></a></td>
+                                <td class="text-right"><a href="#" data-href="{{ route('sell.printInvoice', [$inv->id]) }}" class="print-invoice tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline" title="@lang('messages.print')" aria-label="@lang('messages.print') {{ $inv->invoice_no }}"><i class="fas fa-print"></i></a></td>
                             </tr>
                         @empty
                             <tr><td colspan="6" class="text-muted">@lang('lang_v1.no_records_found')</td></tr>
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             @endcomponent
         </div>
     </div>

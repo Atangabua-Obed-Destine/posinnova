@@ -73,7 +73,7 @@
                             @endphp
                             @if($occupant && auth()->user()->can('admission.view'))
                             <a href="{{ action([\App\Http\Controllers\AdmissionController::class, 'show'], [$occupant->id]) }}" class="{{ $tile }} tw-relative hover:tw-brightness-95" title="{{ $title }}">
-                                @if($lowDeposit)<span class="tw-absolute tw-top-0.5 tw-right-1 tw-text-amber-500" title="@lang('lang_v1.low_deposit')"><i class="fas fa-circle-exclamation"></i></span>@endif
+                                @if($lowDeposit)<span class="tw-absolute tw-top-0.5 tw-right-1 tw-text-amber-500" title="@lang('lang_v1.low_deposit')"><i class="fas fa-exclamation-circle"></i></span>@endif
                                 <i class="fas fa-bed"></i>
                                 <span class="tw-text-xs tw-font-semibold tw-mt-1">{{ $bed->bed_number }}</span>
                                 <span class="tw-text-[10px] tw-truncate tw-max-w-[72px]">{{ \Illuminate\Support\Str::limit(optional($occupant->patient)->name, 10) }}</span>

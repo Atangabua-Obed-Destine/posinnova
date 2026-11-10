@@ -52,6 +52,9 @@ class ClinicSettingsController extends Controller
             'plan_fixed_day' => 'nullable|integer|min:1|max:28',
             'plan_grace_days' => 'nullable|integer|min:0|max:60',
             'portal_idle_minutes' => 'nullable|integer|min:5|max:240',
+            'appointments_days_ahead' => 'nullable|integer|min:1|max:180',
+            'appointments_min_notice_hours' => 'nullable|integer|min:0|max:72',
+            'whatsapp_country_code' => 'nullable|regex:/^\+?\d{1,4}$/',
         ]);
 
         $business_id = $request->session()->get('user.business_id');
@@ -66,6 +69,7 @@ class ClinicSettingsController extends Controller
 
         $input = $request->only([
             'pay_first', 'plan_billing_anchor', 'plan_fixed_day', 'plan_grace_days', 'plan_unpaid_rule', 'insurance_covers_plans',
+            'appointments_enabled', 'appointments_portal', 'appointments_days_ahead', 'appointments_min_notice_hours', 'appointments_booked_first', 'whatsapp_country_code',
             'sections', 'portal_enabled', 'portal_idle_minutes', 'portal_consultation_detail',
         ]);
         // only real Admins of this business can be ticked as also seeing patients

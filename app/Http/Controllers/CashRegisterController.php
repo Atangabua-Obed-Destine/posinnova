@@ -48,10 +48,14 @@ class CashRegisterController extends Controller
     {
         //like:repair
         $sub_type = request()->get('sub_type');
+        //PosInnova: opened from Patient accounts -> go back there afterwards
+        if (request()->get('return_to') == 'accounts') {
+            request()->session()->put('register_return_to', 'accounts');
+        }
 
         //Check if there is a open register, if yes then redirect to POS screen.
         if ($this->cashRegisterUtil->countOpenedRegister() != 0) {
-            return redirect()->action([\App\Http\Controllers\SellPosController::class, 'create'], ['sub_type' => $sub_type]);
+            return $this->afterOpenRedirect($sub_type);
         }
         $business_id = request()->session()->get('user.business_id');
         $business_locations = BusinessLocation::forDropdown($business_id);
@@ -67,6 +71,32 @@ class CashRegisterController extends Controller
             'business_locations', 'sub_type',
             'shift_enabled', 'shift_settings', 'current_shift', 'current_shift_label'
         ));
+    }
+
+    /**
+     * PosInnova: where to go once the register is open. The POS for those who sell;
+     * a clinic cashier without POS access goes to the patient accounts instead of
+     * landing on an "Unauthorized" page right after starting the shift.
+     */
+    private function afterOpenRedirect($sub_type)
+    {
+        $user = auth()->user();
+        $business_id = request()->session()->get('user.business_id');
+        $return_to = request()->session()->pull('register_return_to');
+        if ($return_to == 'accounts' && in_array('hospital', (array) request()->session()->get('business.enabled_modules', [])) && $user->can('patient.view_bill')) {
+            return redirect()->action([\App\Http\Controllers\ClinicAccountController::class, 'index']);
+        }
+        $can_pos = $user->can('superadmin') || $user->can('sell.create')
+            || ($this->moduleUtil->hasThePermissionInSubscription($business_id, 'repair_module') && $user->can('repair.create'));
+        if ($can_pos) {
+            return redirect()->action([\App\Http\Controllers\SellPosController::class, 'create'], ['sub_type' => $sub_type]);
+        }
+        $enabled_modules = (array) request()->session()->get('business.enabled_modules', []);
+        if (in_array('hospital', $enabled_modules) && $user->can('patient.view_bill')) {
+            return redirect()->action([\App\Http\Controllers\ClinicAccountController::class, 'index']);
+        }
+
+        return redirect('/home');
     }
 
     /**
@@ -125,7 +155,7 @@ class CashRegisterController extends Controller
             \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
         }
 
-        $redirect = redirect()->action([\App\Http\Controllers\SellPosController::class, 'create'], ['sub_type' => $sub_type]);
+        $redirect = $this->afterOpenRedirect($sub_type);
         if (! empty($shift_welcome)) {
             $redirect->with('status', $shift_welcome);
         }

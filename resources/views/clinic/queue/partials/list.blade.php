@@ -11,12 +11,16 @@
             <div class="dq-main">
                 <div class="dq-name">{{ optional($v->patient)->name }}
                     @if (optional($pd)->file_number)<small class="text-muted">· {{ $pd->file_number }}</small>@endif
+                    @if ($v->appointment)<span class="label label-info" style="margin-left:4px;"><i class="fas fa-calendar-check"></i> {{ __('clinic.appt_booked_at', ['time' => $v->appointment->start]) }}</span>@endif
                 </div>
                 <div class="dq-meta">
                     {{ optional($v->package)->name ?: '-' }}
                     @if ($show_doctor) · <i class="fas fa-user-md"></i> {{ optional($v->doctor)->user_full_name ?: '-' }}@endif
                     · @lang('clinic.checked_in_at') {{ optional($v->checked_in_at)->format('H:i') }}
-                    @if ($v->checked_in_at) ({{ __('clinic.waited_min', ['n' => $v->checked_in_at->diffInMinutes(now())]) }})@endif
+                    @if ($v->checked_in_at)
+                        @php $waited = $v->checked_in_at->diffInMinutes(now()); @endphp
+                        ({{ $waited < 60 ? __('clinic.waited_min', ['n' => $waited]) : __('clinic.rep_h_min', ['h' => intdiv($waited, 60), 'm' => sprintf('%02d', $waited % 60)]) }})
+                    @endif
                     @if ($v->notes) · <em>{{ $v->notes }}</em>@endif
                 </div>
                 <div style="margin-top:4px;">

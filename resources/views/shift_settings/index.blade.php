@@ -44,7 +44,7 @@
               </div>
             </div>
             <div class="callout callout-info tw-mt-2">
-              <h4><i class="fa fa-moon-o"></i> @lang('lang_v1.night_shift')</h4>
+              <h4><i class="fa fa-moon"></i> @lang('lang_v1.night_shift')</h4>
               <p>
                 <strong id="night_window_display"></strong>
                 <br><small>@lang('lang_v1.night_shift_auto_help')</small>

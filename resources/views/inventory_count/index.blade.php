@@ -84,7 +84,7 @@
                     <div class="col-md-2 form-group">
                         <label>&nbsp;</label>
                         <button type="submit" class="btn btn-primary form-control"
-                            onclick="return confirm(@json(__('inventory_count.start_new_count') . '?'))">
+                            onclick="return confirm({{ json_encode(__('inventory_count.start_new_count') . '?') }})">
                             <i class="fa fa-plus"></i> @lang('inventory_count.start_new_count')
                         </button>
                     </div>
@@ -98,7 +98,7 @@
         <div class="tw-mb-3 tw-flex tw-flex-wrap tw-gap-2">
             <a href="{{ url('inventory-count/blank-pdf?location_id='.$location_id) }}"
                class="btn btn-default" target="_blank">
-                <i class="fa fa-file-pdf-o"></i> @lang('inventory_count.download_blank_pdf')
+                <i class="fa fa-file-pdf"></i> @lang('inventory_count.download_blank_pdf')
             </a>
 
             <a href="{{ url('inventory-count/blank-pdf?location_id='.$location_id.'&blind=1') }}"
@@ -204,7 +204,7 @@
                                     <td class="text-right">
                                         <a href="{{ url('inventory-count/'.$p->id.'/variance-pdf') }}"
                                            class="btn btn-sm btn-info" target="_blank" title="@lang('inventory_count.variance_report')">
-                                            <i class="fa fa-file-pdf-o"></i>
+                                            <i class="fa fa-file-pdf"></i>
                                         </a>
                                         <a href="{{ url('inventory-count/'.$p->id) }}" class="btn btn-sm btn-primary">
                                             <i class="fa fa-eye"></i>
@@ -307,7 +307,7 @@
                                                 <button type="button" class="btn btn-xs btn-default ic-toggle-purpose"
                                                     data-id="{{ $r->id }}"
                                                     title="@lang('inventory_count.toggle_purpose_help')">
-                                                    <i class="fa fa-exchange"></i>
+                                                    <i class="fa fa-exchange-alt"></i>
                                                 </button>
                                             @endcan
                                         @else — @endif
@@ -320,7 +320,7 @@
                                             <a href="{{ url('inventory-count/'.$r->id.'/variance-pdf') }}"
                                                class="btn btn-xs btn-info" target="_blank"
                                                title="@lang('inventory_count.download_variance_report')">
-                                                <i class="fa fa-file-pdf-o"></i>
+                                                <i class="fa fa-file-pdf"></i>
                                             </a>
                                         @endif
                                     </td>

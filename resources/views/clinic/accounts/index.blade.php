@@ -9,6 +9,7 @@
 </section>
 
 <section class="content">
+    @include('clinic.accounts.partials.register_bar')
     <form method="GET" class="row" style="margin-bottom:12px;">
         <div class="col-sm-6">
             <div class="input-group">

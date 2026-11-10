@@ -7,6 +7,12 @@
         ['key' => 'imaging', 'route' => 'portal.imaging', 'label' => __('lang_v1.my_imaging'), 'icon' => 'fa-x-ray'],
         ['key' => 'admissions', 'route' => 'portal.admissions', 'label' => __('lang_v1.my_admissions'), 'icon' => 'fa-procedures'],
     ];
+    // sections the clinic switched off are not offered
+    $portal_user = \Illuminate\Support\Facades\Auth::guard('patient')->user();
+    if ($portal_user) {
+        $items = array_values(array_filter($items, fn ($i) => ! (($i['key'] == 'imaging' && ! \App\Utils\ClinicSettings::sectionOn($portal_user->business_id, 'imaging'))
+            || ($i['key'] == 'admissions' && ! \App\Utils\ClinicSettings::sectionOn($portal_user->business_id, 'wards')))));
+    }
     // "My plan" only for a patient who has (or had) a monthly plan
     $portal_pid = \Illuminate\Support\Facades\Auth::guard('patient')->id();
     if ($portal_pid && \App\ClinicSubscription::where('contact_id', $portal_pid)->exists()) {

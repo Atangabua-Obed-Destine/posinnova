@@ -25,17 +25,24 @@ class ClinicSettings
         'plan_fixed_day' => 1,             // 1-28, used when anchor = fixed
         'plan_grace_days' => 0,            // an unpaid period still covers visits this many days
         'plan_unpaid_rule' => 'charge',    // after grace: 'charge' per-visit fee | 'block' check-in | 'cover' anyway
+        // Appointments
+        'appointments_enabled' => true,
+        'appointments_portal' => true,     // patients may ask for a slot from the portal (reception confirms)
+        'appointments_days_ahead' => 30,   // how far ahead the portal offers slots
+        'appointments_min_notice_hours' => 2, // the portal offers no slot starting sooner than this
+        'appointments_booked_first' => true, // booked patients are seen before walk-ins in the doctor queue
+        'whatsapp_country_code' => '237',  // added to local numbers in WhatsApp reminder links
         // Insurance
         'insurance_covers_plans' => false, // true: an insured patient's monthly plan invoice is split with the insurer too
         // Hospital sections shown in the menu (a consultation centre turns these off)
-        'sections' => ['wards' => true, 'theatre' => true, 'maternity' => true, 'morgue' => true],
+        'sections' => ['wards' => true, 'theatre' => true, 'maternity' => true, 'morgue' => true, 'imaging' => true, 'departments' => true],
         // Patient portal
         'portal_enabled' => true,
         'portal_idle_minutes' => 30,       // signed out after this long without activity
         'portal_consultation_detail' => 'diagnosis', // 'diagnosis' only, or 'full' notes
     ];
 
-    const SECTIONS = ['wards', 'theatre', 'maternity', 'morgue'];
+    const SECTIONS = ['wards', 'theatre', 'maternity', 'morgue', 'imaging', 'departments'];
 
     private static $cache = [];
 
@@ -86,6 +93,13 @@ class ClinicSettings
         $s['plan_grace_days'] = max(0, min(60, (int) ($input['plan_grace_days'] ?? 0)));
         $s['plan_unpaid_rule'] = in_array($input['plan_unpaid_rule'] ?? '', ['charge', 'block', 'cover']) ? $input['plan_unpaid_rule'] : 'charge';
         $s['insurance_covers_plans'] = ! empty($input['insurance_covers_plans']);
+        $s['appointments_enabled'] = ! empty($input['appointments_enabled']);
+        $s['appointments_portal'] = ! empty($input['appointments_portal']);
+        $s['appointments_days_ahead'] = max(1, min(180, (int) ($input['appointments_days_ahead'] ?? 30)));
+        $s['appointments_min_notice_hours'] = max(0, min(72, (int) ($input['appointments_min_notice_hours'] ?? 2)));
+        $s['appointments_booked_first'] = ! empty($input['appointments_booked_first']);
+        $cc = preg_replace('/\D+/', '', (string) ($input['whatsapp_country_code'] ?? ''));
+        $s['whatsapp_country_code'] = substr($cc, 0, 4);
         foreach (self::SECTIONS as $sec) {
             $s['sections'][$sec] = ! empty($input['sections'][$sec]);
         }

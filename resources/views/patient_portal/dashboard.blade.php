@@ -32,7 +32,7 @@
             </div>
             @if($hasAllergies)
                 <div class="tw-mt-3 tw-rounded-xl tw-bg-red-500/25 tw-ring-1 tw-ring-red-300/40 tw-px-3 tw-py-2 tw-text-sm">
-                    <i class="fas fa-triangle-exclamation"></i> <strong>@lang('lang_v1.known_allergies'):</strong> {{ $pd->known_allergies }}
+                    <i class="fas fa-exclamation-triangle"></i> <strong>@lang('lang_v1.known_allergies'):</strong> {{ $pd->known_allergies }}
                 </div>
             @endif
         </div>
@@ -63,6 +63,17 @@
             </div>
         @endif
 
+        {{-- Next booked appointment (inline colours: the portal CSS lacks sky/amber utilities) --}}
+        @if(!empty($next_booking))
+            <a href="{{ route('portal.appointments') }}" style="display:flex;align-items:center;gap:12px;border-radius:16px;background:#eff6ff;border:1px solid #bfdbfe;padding:14px 16px;text-decoration:none;">
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:#dbeafe;color:#1d4ed8;flex-shrink:0;"><i class="fas fa-calendar-check"></i></span>
+                <span style="min-width:0;">
+                    <span style="display:block;font-size:14px;font-weight:700;color:#1e3a8a;">{{ $next_booking->status == 'requested' ? __('clinic.appt_portal_next_requested') : __('clinic.appt_portal_next') }}</span>
+                    <span style="display:block;font-size:13px;color:#1d4ed8;">{{ @format_date($next_booking->date) }} · {{ $next_booking->start }} · {{ trim(optional($next_booking->doctor)->user_full_name) }}</span>
+                </span>
+            </a>
+        @endif
+
         {{-- Next appointment --}}
         @if(!empty($next_appointment))
             <div class="tw-rounded-2xl tw-bg-sky-50 tw-ring-1 tw-ring-sky-200 tw-p-4 tw-flex tw-items-center tw-gap-3">
@@ -83,6 +94,13 @@
                     ['route'=>'portal.lab-results','icon'=>'fa-vial','grad'=>'#f59e0b,#d97706','val'=>$pending_labs,'label'=>__('lang_v1.pending_labs')],
                     ['route'=>'portal.admissions','icon'=>'fa-procedures','grad'=>'#22c55e,#16a34a','val'=>($active_admission ? __('lang_v1.admitted') : __('lang_v1.none')),'label'=>__('lang_v1.admission')],
                 ];
+                // no wards at this clinic: show the next useful thing instead of an "Admission: none" tile
+                $dash_patient = \Illuminate\Support\Facades\Auth::guard('patient')->user();
+                if ($dash_patient && ! \App\Utils\ClinicSettings::sectionOn($dash_patient->business_id, 'wards')) {
+                    $stats[3] = \App\Utils\ClinicAppointments::enabled($dash_patient->business_id)
+                        ? ['route'=>'portal.appointments','icon'=>'fa-calendar-check','grad'=>'#22c55e,#16a34a','val'=>\App\ClinicAppointment::where('contact_id', $dash_patient->id)->open()->whereDate('date', '>=', \Carbon::today())->count(),'label'=>__('clinic.appt_portal_title')]
+                        : ['route'=>'portal.bills','icon'=>'fa-file-invoice-dollar','grad'=>'#22c55e,#16a34a','val'=>'','label'=>__('lang_v1.my_bills')];
+                }
             @endphp
             @foreach($stats as $s)
                 <a href="{{ route($s['route']) }}" class="portal-card tw-rounded-2xl tw-bg-white tw-ring-1 tw-ring-gray-200 tw-p-4 tw-shadow-sm tw-block">
@@ -107,7 +125,7 @@
                 </div>
                 <span class="tw-inline-flex tw-items-center tw-justify-center tw-w-12 tw-h-12 tw-rounded-2xl tw-bg-amber-100 tw-text-amber-600"><i class="fas fa-file-invoice-dollar tw-text-lg"></i></span>
             </div>
-            @if($due > 0)<p class="tw-text-xs tw-text-gray-400 tw-mt-2"><i class="fas fa-circle-info"></i> @lang('lang_v1.portal_pay_at_cashier')</p>@endif
+            @if($due > 0)<p class="tw-text-xs tw-text-gray-400 tw-mt-2"><i class="fas fa-info-circle"></i> @lang('lang_v1.portal_pay_at_cashier')</p>@endif
         </a>
 
         {{-- Weight trend sparkline --}}

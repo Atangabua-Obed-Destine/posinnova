@@ -883,24 +883,28 @@ class TransactionUtil extends Util
             }
         }
 
-        // Guard: for sell transactions, never record more in payments than
-        // the transaction's final_total. The cashier-tendered amount can
-        // exceed final_total (the surplus is "change to return") but UltimatePOS
-        // historically stored the full tendered amount as the payment, which
-        // accumulated phantom credits on contacts (especially Walk-In). Cap
-        // the new (non-advance, non-return) payments so their sum, combined
-        // with already-existing payment_lines kept via $edit_ids, never
-        // exceeds final_total. Any excess is treated as change_return.
+        // Guard: for sell transactions the NET payment (payments minus change handed
+        // back) must never exceed final_total. The cashier-tendered amount may
+        // exceed final_total only by the change actually returned (that change is
+        // its own is_return line, which the receipt prints). Without a change line
+        // the surplus would become phantom credit on the contact (especially
+        // Walk-In), so it is capped. A change line larger than the real overpayment
+        // is trimmed. The old guard capped the tendered amount AND kept the change
+        // line, subtracting the change twice: a draft of 32,300 edited down to
+        // 27,500 and paid in cash ended up "partial" (27,500 - 4,800).
         if ($transaction->type === 'sell' && ! empty($payments_formatted)) {
-            $existing_paid = (float) $transaction->payment_lines()
-                ->whereIn('id', $edit_ids)
-                ->where('is_return', 0)
-                ->sum('amount');
-            $remaining = (float) $transaction->final_total - $existing_paid;
-            if ($remaining < 0) {
-                $remaining = 0;
+            $kept = $transaction->payment_lines()->whereIn('id', $edit_ids)->get();
+            $existing_paid = (float) $kept->where('is_return', 0)->sum('amount');
+            $existing_change = (float) $kept->where('is_return', 1)->sum('amount');
+            $new_change = 0.0;
+            foreach ($payments_formatted as $pf) {
+                if (! empty($pf->is_return)) {
+                    $new_change += (float) $pf->amount;
+                }
             }
 
+            // 1. new (non-advance, non-return) payments: up to what is due plus the change handed back
+            $remaining = max(0, (float) $transaction->final_total - $existing_paid + $existing_change + $new_change);
             $running = 0.0;
             foreach ($payments_formatted as $idx => $pf) {
                 if (! empty($pf->is_return) || $pf->method === 'advance') {
@@ -916,6 +920,36 @@ class TransactionUtil extends Util
                 }
                 $running += (float) $pf->amount;
             }
+
+            // 2. change can only give back what was really overpaid
+            $paid_total = $existing_paid;
+            foreach ($payments_formatted as $pf) {
+                if (empty($pf->is_return)) {
+                    $paid_total += (float) $pf->amount;
+                }
+            }
+            $excess_change = ($existing_change + $new_change) - max(0, $paid_total - (float) $transaction->final_total);
+            if ($excess_change > 0.0001) {
+                foreach ($payments_formatted as $idx => $pf) {
+                    if (empty($pf->is_return) || $excess_change <= 0.0001) {
+                        continue;
+                    }
+                    $cut = min((float) $pf->amount, $excess_change);
+                    $pf->amount = (float) $pf->amount - $cut;
+                    $excess_change -= $cut;
+                    if (isset($account_transactions[$idx])) {
+                        $account_transactions[$idx]['amount'] = $pf->amount;
+                    }
+                }
+            }
+
+            // a line reduced to nothing is not recorded at all
+            foreach ($payments_formatted as $idx => $pf) {
+                if ((float) $pf->amount <= 0.0001) {
+                    unset($payments_formatted[$idx], $account_transactions[$idx]);
+                }
+            }
+            $payments_formatted = array_values($payments_formatted);
         }
 
         if (! empty($payments_formatted)) {

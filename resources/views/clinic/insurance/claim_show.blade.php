@@ -111,7 +111,7 @@
                             @if ($can_settle)
                                 <td>
                                     @if ($it->due > 0.0001)
-                                        <input type="text" name="items[{{ $it->id }}][paid]" class="form-control input-sm input_number js-paid" value="{{ $fmt($it->due) }}" data-due="{{ $it->due }}">
+                                        <input type="text" name="items[{{ $it->id }}][paid]" class="form-control input-sm input_number js-paid" value="{{ $fmt($it->due) }}" aria-label="{{ __('clinic.ins_paid_now') }}" data-due="{{ $it->due }}">
                                     @endif
                                 </td>
                                 <td class="text-center">
@@ -122,7 +122,7 @@
                             @elseif ($claim->status == 'draft')
                                 <td class="text-right">
                                     <form method="POST" action="{{ action([$C, 'removeItem'], [$claim->id, $it->id]) }}" style="display:inline;">@csrf
-                                        <button type="submit" class="btn btn-xs btn-link text-danger" title="{{ __('clinic.ins_remove_item') }}"><i class="fas fa-times"></i> @lang('clinic.ins_remove_item')</button>
+                                        <button type="submit" class="btn btn-xs btn-link text-danger" title="{{ __('clinic.ins_remove_item') }}"><i class="fas fa-minus-circle"></i> @lang('clinic.ins_remove_item')</button>
                                     </form>
                                 </td>
                             @else

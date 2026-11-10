@@ -14,6 +14,14 @@ class DepartmentController extends Controller
 
     public function __construct(ModuleUtil $moduleUtil)
     {
+        //PosInnova: section switched off in Clinic settings
+        $this->middleware(function ($request, $next) {
+            if (! \App\Utils\ClinicSettings::sectionOn($request->session()->get('user.business_id'), 'departments')) {
+                abort(404);
+            }
+
+            return $next($request);
+        });
         $this->moduleUtil = $moduleUtil;
     }
 

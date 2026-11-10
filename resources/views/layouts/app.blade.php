@@ -17,7 +17,7 @@
 @endphp
 
 <!DOCTYPE html>
-<html class="tw-bg-white tw-scroll-smooth" lang="{{ app()->getLocale() }}"
+<html data-theme="light" class="tw-bg-white tw-scroll-smooth" lang="{{ app()->getLocale() }}"
     dir="{{ in_array(session()->get('user.language', config('app.locale')), config('constants.langs_rtl')) ? 'rtl' : 'ltr' }}">
 <head>
     <!-- Tell the browser to be responsive to screen width -->
@@ -165,7 +165,9 @@
 </style>
 <style>
     .small-view-side-active {
-        display: grid !important;
+        /* PosInnova: a column like on a computer (a grid spread the logo and the menu apart, leaving a gap) */
+        display: flex !important;
+        flex-direction: column;
         z-index: 1000;
         position: absolute;
     }

@@ -66,7 +66,7 @@
                 <a href="{{ url('inventory-count/blank-pdf?session_id='.$session->id) }}"
                    class="btn btn-default btn-sm ic_blank_pdf_btn" target="_blank"
                    title="@lang('inventory_count.download_blank_pdf')">
-                    <i class="fa fa-file-pdf-o"></i> @lang('inventory_count.download_blank_pdf')
+                    <i class="fa fa-file-pdf"></i> @lang('inventory_count.download_blank_pdf')
                 </a>
                 <a href="{{ url('inventory-count/blank-pdf?session_id='.$session->id.'&blind=1') }}"
                    class="btn btn-default btn-sm ic_blank_pdf_btn" data-blind="1" target="_blank"
@@ -76,7 +76,7 @@
                 @if(in_array($session->status, ['posted', 'pending_approval']))
                     <a href="{{ url('inventory-count/'.$session->id.'/variance-pdf') }}"
                        class="btn btn-info btn-sm" target="_blank">
-                        <i class="fa fa-file-pdf-o"></i> @lang('inventory_count.download_variance_report')
+                        <i class="fa fa-file-pdf"></i> @lang('inventory_count.download_variance_report')
                     </a>
                 @endif
             </div>
@@ -262,7 +262,7 @@
             @if($is_editable)
                 <button type="button" id="ic_btn_add_lot" class="btn btn-warning btn-sm"
                         title="@lang('inventory_count.add_lot_help')">
-                    <i class="fa fa-calendar-plus-o"></i> @lang('inventory_count.add_lot')
+                    <i class="fa fa-calendar-plus"></i> @lang('inventory_count.add_lot')
                 </button>
             @endif
             @if(in_array($session->status, ['draft', 'pending_approval']) && $can_cancel)
@@ -468,7 +468,7 @@
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
                 <h4 class="modal-title">
-                    <i class="fa fa-calendar-plus-o"></i> @lang('inventory_count.add_lot')
+                    <i class="fa fa-calendar-plus"></i> @lang('inventory_count.add_lot')
                 </h4>
             </div>
             <div class="modal-body">
@@ -524,7 +524,7 @@
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
                 <h4 class="modal-title">
-                    <i class="fa fa-pencil"></i> @lang('inventory_count.edit_lot_exp_title')
+                    <i class="fa fa-pencil-alt"></i> @lang('inventory_count.edit_lot_exp_title')
                 </h4>
             </div>
             <div class="modal-body">

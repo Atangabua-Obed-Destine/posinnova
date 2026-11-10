@@ -71,6 +71,16 @@ class HomeController extends Controller
 
         $business_id = request()->session()->get('user.business_id');
 
+        //PosInnova: with the hospital module on, home is the hospital dashboard; people who
+        //may see sales figures get a "Pharmacy sales" tab (?view=sales) for the usual one.
+        $enabled_modules = (array) (session('business.enabled_modules') ?: []);
+        $hospital_home = in_array('hospital', $enabled_modules);
+        if ($hospital_home && ! (request()->input('view') == 'sales' && \App\Utils\ClinicDashboard::canSeeSales(auth()->user(), $business_id))) {
+            $dash = \App\Utils\ClinicDashboard::build($business_id, auth()->user());
+
+            return view('home.hospital', compact('dash'));
+        }
+
         $is_admin = $this->businessUtil->is_admin(auth()->user());
 
         if (! auth()->user()->can('dashboard.data')) {
