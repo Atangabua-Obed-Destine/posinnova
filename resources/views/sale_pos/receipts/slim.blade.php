@@ -74,18 +74,26 @@
 					@if(!empty($receipt_details->tax_info2))
 						<b>{{ $receipt_details->tax_label2 }}</b> {{ $receipt_details->tax_info2 }}
 					@endif
-				@endif
 					<!-- Title of receipt -->
 					@if(!empty($receipt_details->invoice_heading))
 						<br/><span class="sub-headings">{!! $receipt_details->invoice_heading !!}</span>
 					@endif
 				</p>
 				</div>
-				@if(!empty($receipt_details->letter_head))
-					<div class="text-box">
-						<img style="width: 100%;margin-bottom: 10px;" src="{{$receipt_details->letter_head}}">
-					</div>
-				@endif
+			@else
+			{{-- PosInnova: letterhead branch. The <div>/<p> above are opened inside the
+			     "no letterhead" branch, so they must be CLOSED inside it too - otherwise
+			     the stray </p></div> closed .ticket early and pushed the whole receipt
+			     body outside it, defeating every .ticket-scoped style. --}}
+			@if(!empty($receipt_details->invoice_heading))
+				<div class="text-box letter-head-heading">
+					<p class="centered"><span class="sub-headings">{!! $receipt_details->invoice_heading !!}</span></p>
+				</div>
+			@endif
+			<div class="text-box letter-head-box">
+				<img class="letter-head-img" src="{{$receipt_details->letter_head}}">
+			</div>
+		@endif
 			{{-- PosInnova: invoice no + date on one compact line --}}
 			<div class="border-top flex-box" style="font-size: 10px; padding-top: 2px;">
 				<p class="width-50" style="text-align: left;">
@@ -231,13 +239,13 @@
 			@endif
 
 	        {{-- PosInnova: customer + mobile on one compact line --}}
-	        <div class="flex-box" style="font-size: 10px; padding-top: 2px;">
-	        	<p class="width-50" style="text-align: left;">
+	        <div class="flex-box" style="font-size: 10px; padding-top: 2px; align-items: flex-start;">
+	        	<p class="width-50 wrap-text" style="text-align: left;">
 	        		<strong>{{$receipt_details->customer_label ?? ''}}</strong>
-	        		{{$receipt_details->customer_name ?? ''}}
+	        		<strong>{{$receipt_details->customer_name ?? ''}}</strong>
 	        	</p>
 	        	@if(!empty($receipt_details->customer_mobile))
-	        	<p class="width-50" style="text-align: right;">
+	        	<p class="width-50 wrap-text" style="text-align: right;">
 	        		<strong>{{ __('contact.mobile') }}:</strong> {{$receipt_details->customer_mobile}}
 	        	</p>
 	        	@endif
@@ -357,8 +365,7 @@
             <table style="margin-top: 25px !important" class="border-bottom width-100 table-f-12 mb-10 slim-products-compact">
                 <thead class="border-bottom-dotted">
                     <tr>
-                        <th class="serial_number">#</th>
-                        <th class="description" width="30%">
+                        <th class="description">
                         	{{$receipt_details->table_product_label}}
                         </th>
                         <th class="quantity text-right">
@@ -383,9 +390,6 @@
                 <tbody>
                 	@forelse($receipt_details->lines as $line)
 	                    <tr>
-	                        <td class="serial_number" style="vertical-align: top;">
-	                        	{{$loop->iteration}}
-	                        </td>
 	                        <td class="description">
 	                        	{{$line['name']}} {{$line['product_variation']}} {{$line['variation']}} 
 	                        	@if(!empty($line['sub_sku'])), {{$line['sub_sku']}} @endif @if(!empty($line['brand'])), {{$line['brand']}} @endif @if(!empty($line['cat_code'])), {{$line['cat_code']}}@endif
@@ -752,33 +756,28 @@ body {
 	border-bottom: 1px dotted darkgray;
 }
 
-td.serial_number, th.serial_number{
-	width: 5%;
-    max-width: 5%;
-}
-
 td.description,
 th.description {
-    width: 35%;
-    max-width: 35%;
+    width: 40%;
+    max-width: 40%;
 }
 
 td.quantity,
 th.quantity {
-    width: 15%;
-    max-width: 15%;
+    width: 18%;
+    max-width: 18%;
     word-break: break-all;
 }
 td.unit_price, th.unit_price{
-	width: 25%;
-    max-width: 25%;
+	width: 20%;
+    max-width: 20%;
     word-break: break-all;
 }
 
 td.price,
 th.price {
-    width: 20%;
-    max-width: 20%;
+    width: 22%;
+    max-width: 22%;
     word-break: break-all;
 }
 
@@ -837,6 +836,31 @@ img {
 	margin-bottom: 0 !important;
 }
 
+/* PosInnova: letterhead sits flush against the invoice body - no gap at all.
+   display:block removes the baseline gap an inline <img> leaves underneath it,
+   and the 10px margin the image used to carry inline is gone. The adjacent rule
+   also cancels the following row's top padding (an inline style, hence
+   !important) so nothing separates the two. */
+.letter-head-box {
+	margin: 0 !important;
+	padding: 0 !important;
+	line-height: 0;
+}
+.letter-head-img {
+	display: block;
+	width: 100%;
+	margin: 0 !important;
+	padding: 0;
+	vertical-align: bottom;
+}
+.letter-head-box + div {
+	padding-top: 0 !important;
+}
+.letter-head-heading p {
+	margin-top: 0 !important;
+	margin-bottom: 0 !important;
+}
+
 .textbox-info {
 	clear: both;
 }
@@ -853,6 +877,18 @@ img {
 	white-space: nowrap;
 }
 
+/* PosInnova: let a long customer name wrap inside its half of the row instead
+   of running over the mobile number. .flex-box p above sets white-space:nowrap
+   for the totals rows, so this is opt-in per row. min-width:0 is what actually
+   lets a flex item shrink below its content width - without it the item keeps
+   its min-content size and overflows its 50%. */
+.flex-box p.wrap-text {
+	white-space: normal;
+	min-width: 0;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+}
+
 .table-f-12 th, .table-f-12 td {
 	font-size: 12px;
 	word-break: break-word;
@@ -861,10 +897,23 @@ img {
 /* PosInnova: compact product table on slim receipt so more items fit on 80mm paper */
 .slim-products-compact th,
 .slim-products-compact td {
-	font-size: 9px !important;
+	font-size: 11px !important;
 	line-height: 1.15 !important;
 	padding: 1px 2px !important;
 	word-break: break-word;
+}
+/* PosInnova: bold + wider Product column on slim receipt */
+.slim-products-compact th.description,
+.slim-products-compact td.description,
+.slim-products-compact th.quantity,
+.slim-products-compact td.quantity,
+.slim-products-compact th.unit_price,
+.slim-products-compact td.unit_price,
+.slim-products-compact th.price,
+.slim-products-compact td.price {
+	font-weight: bold !important;
+	word-break: normal;
+	overflow-wrap: break-word;
 }
 .slim-products-compact .f-8 {
 	font-size: 8px !important;
@@ -878,7 +927,7 @@ img {
 	.slim-products-compact td,
 	.slim-products-compact th *,
 	.slim-products-compact td * {
-		font-size: 9px !important;
+		font-size: 11px !important;
 		line-height: 1.15 !important;
 	}
 	.slim-products-compact th,

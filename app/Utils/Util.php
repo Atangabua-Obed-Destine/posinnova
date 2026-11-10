@@ -312,23 +312,45 @@ class Util
             $business_id = request()->session()->get('user.business_id');
         }
 
-        $ref = ReferenceCount::where('ref_type', $type)
-            ->where('business_id', $business_id)
-            ->first();
-        if (! empty($ref)) {
+        // PosInnova: this used to read the counter, add one in PHP, then save.
+        // Two cashiers hitting it at the same moment both read the same value
+        // and both received the same number (measured: 50 requests returned 26
+        // distinct numbers). SELECT ... FOR UPDATE serialises the read and the
+        // write, so each caller sees the previous caller's increment.
+        $issue = function () use ($type, $business_id) {
+            $ref = ReferenceCount::where('ref_type', $type)
+                ->where('business_id', $business_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (empty($ref)) {
+                // First use for this type. A concurrent first-use loses the
+                // race on the unique index and retries against the winner.
+                try {
+                    ReferenceCount::create([
+                        'ref_type' => $type,
+                        'business_id' => $business_id,
+                        'ref_count' => 0,
+                    ]);
+                } catch (\Illuminate\Database\QueryException $e) {
+                    // row already created by the other caller - fall through
+                }
+
+                $ref = ReferenceCount::where('ref_type', $type)
+                    ->where('business_id', $business_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+            }
+
             $ref->ref_count += 1;
             $ref->save();
 
             return $ref->ref_count;
-        } else {
-            $new_ref = ReferenceCount::create([
-                'ref_type' => $type,
-                'business_id' => $business_id,
-                'ref_count' => 1,
-            ]);
+        };
 
-            return $new_ref->ref_count;
-        }
+        // Already inside the caller's transaction? Reuse it - opening a nested
+        // one here would only create a savepoint and release nothing early.
+        return DB::transaction($issue);
     }
 
     /**
@@ -590,21 +612,29 @@ class Util
 
         //Find related subunits for the product.
         $related_sub_units = [];
+        $product_scoped = false;
         if (! empty($product_id)) {
             $product = Product::where('business_id', $business_id)->findOrFail($product_id);
-            $related_sub_units = $product->sub_unit_ids;
+            $raw = $product->sub_unit_ids;
+            if (is_array($raw)) {
+                $related_sub_units = array_values(array_filter(array_map('intval', $raw), fn($v) => $v > 0));
+            }
+            $product_scoped = true;
         }
 
         $sub_units = [];
 
-        //Add main unit as per given parameter or conditions.
-        if (($return_main_unit_if_empty && count($unit->sub_units) == 0)) {
-            $sub_units[$unit->id] = [
-                'name' => $unit->actual_name,
-                'multiplier' => 1,
-                'allow_decimal' => $unit->allow_decimal,
-            ];
-        } elseif (empty($related_sub_units) || in_array($unit->id, $related_sub_units)) {
+        // PosInnova: when a product is supplied, treat an empty sub_unit_ids
+        // as "no related sub-units" (base unit only). The upstream behavior
+        // of "empty == all related units" caused the POS / price-list to
+        // show sub-units (e.g. card-10) for products that explicitly have
+        // none mapped on their edit page.
+        $include_main = ($return_main_unit_if_empty && count($unit->sub_units) == 0)
+            || ! $product_scoped
+            || empty($related_sub_units)
+            || in_array((int) $unit->id, $related_sub_units, true);
+
+        if ($include_main) {
             $sub_units[$unit->id] = [
                 'name' => $unit->actual_name,
                 'multiplier' => 1,
@@ -614,8 +644,12 @@ class Util
 
         if (count($unit->sub_units) > 0) {
             foreach ($unit->sub_units as $sub_unit) {
-                //Check if subunit is related to the product or not.
-                if (empty($related_sub_units) || in_array($sub_unit->id, $related_sub_units)) {
+                // Without a product context, keep legacy behavior (return all
+                // sub-units of the base unit). With a product context, only
+                // include sub-units explicitly mapped in sub_unit_ids.
+                $allowed = ! $product_scoped
+                    || in_array((int) $sub_unit->id, $related_sub_units, true);
+                if ($allowed) {
                     $sub_units[$sub_unit->id] = [
                         'name' => $sub_unit->actual_name,
                         'multiplier' => $sub_unit->base_unit_multiplier,
@@ -1882,4 +1916,323 @@ class Util
         return $result;
     }
 
+    /**
+     * ============================================================
+     * PosInnova hospital shifts
+     * ------------------------------------------------------------
+     * Single source of truth for the morning/night shift rule.
+     * Lives on the base Util so every *Util (Cash, Transaction,
+     * Business…) shares the exact same logic.
+     *
+     * Two contiguous shifts: morning is the intra-day block
+     * [morning_start, morning_end); night is everything else and
+     * therefore wraps past midnight. When the feature is disabled
+     * every method here returns the "off" value so callers stay on
+     * the original code path.
+     * ============================================================
+     */
+
+    /**
+     * Resolve a Business model for shift lookups. Accepts a Business
+     * model, an id, or null (falls back to the session business / the
+     * current user's business).
+     */
+    protected function resolveShiftBusiness($business = null)
+    {
+        if ($business instanceof Business) {
+            return $business;
+        }
+        if (! empty($business) && is_numeric($business)) {
+            return Business::find($business);
+        }
+        $session_business = session('business');
+        if ($session_business instanceof Business) {
+            return $session_business;
+        }
+        $business_id = session('user.business_id');
+
+        return ! empty($business_id) ? Business::find($business_id) : null;
+    }
+
+    /**
+     * Whether the shift feature is turned on for the business.
+     */
+    public function isShiftEnabled($business = null)
+    {
+        $business = $this->resolveShiftBusiness($business);
+
+        return ! empty($business) && ! empty($business->enable_shift);
+    }
+
+    /**
+     * Returns ['enabled', 'morning_start', 'morning_end', 'night_start',
+     * 'night_end'] with HH:MM values, applying sane defaults.
+     */
+    public function getShiftSettings($business = null)
+    {
+        $business = $this->resolveShiftBusiness($business);
+
+        $morning_start = ! empty($business->shift_morning_start) ? substr($business->shift_morning_start, 0, 5) : '06:00';
+        $morning_end = ! empty($business->shift_morning_end) ? substr($business->shift_morning_end, 0, 5) : '18:00';
+
+        return [
+            'enabled' => ! empty($business) && ! empty($business->enable_shift),
+            'morning_start' => $morning_start,
+            'morning_end' => $morning_end,
+            // night is the contiguous complement
+            'night_start' => $morning_end,
+            'night_end' => $morning_start,
+        ];
+    }
+
+    /**
+     * Which shift a given moment belongs to: 'morning' | 'night' | null.
+     * null means the feature is disabled (caller should ignore shifts).
+     */
+    public function shiftFor($business = null, $datetime = null)
+    {
+        $settings = $this->getShiftSettings($business);
+        if (! $settings['enabled']) {
+            return null;
+        }
+
+        $hm = ! empty($datetime)
+            ? \Carbon::parse($datetime)->format('H:i')
+            : \Carbon::now()->format('H:i');
+
+        // Zero-padded HH:MM strings compare correctly lexicographically.
+        if ($hm >= $settings['morning_start'] && $hm < $settings['morning_end']) {
+            return 'morning';
+        }
+
+        return 'night';
+    }
+
+    /**
+     * Human label map for shift keys.
+     */
+    public static function shiftLabels()
+    {
+        return [
+            'morning' => __('lang_v1.morning_shift'),
+            'night' => __('lang_v1.night_shift'),
+        ];
+    }
+
+    /**
+     * Label for a single shift key (empty string if unknown/null).
+     */
+    public function shiftLabel($shift)
+    {
+        if (empty($shift)) {
+            return '';
+        }
+        $labels = self::shiftLabels();
+
+        return $labels[$shift] ?? ucfirst($shift);
+    }
+
+    /**
+     * SQL CASE expression that buckets a datetime column into 'morning'
+     * or 'night' using the business's configured window. Used by reports
+     * so each sale is classified by when it actually happened.
+     *
+     * @param  string  $column  fully-qualified datetime column
+     * @return string  raw SQL expression (already escaped values)
+     */
+    public function shiftSqlExpression($column, $business = null)
+    {
+        $settings = $this->getShiftSettings($business);
+        $start = $settings['morning_start'] . ':00';
+        $end = $settings['morning_end'] . ':00';
+
+        return "CASE WHEN TIME($column) >= '$start' AND TIME($column) < '$end' THEN 'morning' ELSE 'night' END";
+    }
+
+    /**
+     * Reporting bucket: prefer the shift stamped on the row (honours an
+     * extended shift / the cashier's choice), falling back to the wall-clock
+     * window for rows that were never stamped (legacy or non-POS sales).
+     */
+    public function shiftBucketExpression($stamp_column, $time_column, $business = null)
+    {
+        $case = $this->shiftSqlExpression($time_column, $business);
+
+        return "COALESCE($stamp_column, $case)";
+    }
+
+    /**
+     * When does the shift this register was opened in actually end?
+     * Anchored to the register's open time + its own shift (NOT the current
+     * clock), so an extended morning register still reports "morning ended"
+     * even after the wall clock has moved into the night window.
+     *
+     * @return \Carbon\Carbon|null
+     */
+    public function shiftEndsAtForRegister($register, $business = null)
+    {
+        $settings = $this->getShiftSettings($business);
+        if (! $settings['enabled'] || empty($register) || empty($register->shift)) {
+            return null;
+        }
+
+        $open = \Carbon::parse($register->created_at);
+        [$mh, $mm] = array_map('intval', explode(':', $settings['morning_start']));
+        [$eh, $em] = array_map('intval', explode(':', $settings['morning_end']));
+
+        if ($register->shift === 'morning') {
+            // Morning ends at morning_end on the day it opened.
+            return $open->copy()->setTime($eh, $em, 0);
+        }
+
+        // Night ends at the next morning_start at or after the open time.
+        $end = $open->copy()->setTime($mh, $mm, 0);
+        if ($end->lte($open)) {
+            $end->addDay();
+        }
+
+        return $end;
+    }
+
+    /**
+     * When the given shift (the one containing $datetime) ends — anchored to
+     * that moment rather than a register. Fallback for the POS countdown when
+     * the open register has no stamped shift (e.g. opened before the feature
+     * was enabled).
+     *
+     * @return \Carbon\Carbon|null
+     */
+    public function shiftEndsAt($shift, $datetime = null, $business = null)
+    {
+        $settings = $this->getShiftSettings($business);
+        if (! $settings['enabled'] || empty($shift)) {
+            return null;
+        }
+
+        $now = $datetime ? \Carbon::parse($datetime) : \Carbon::now();
+        [$mh, $mm] = array_map('intval', explode(':', $settings['morning_start']));
+        [$eh, $em] = array_map('intval', explode(':', $settings['morning_end']));
+
+        if ($shift === 'morning') {
+            return $now->copy()->setTime($eh, $em, 0);
+        }
+
+        // Night ends at the next morning_start at/after now.
+        $end = $now->copy()->setTime($mh, $mm, 0);
+        if ($end->lte($now)) {
+            $end->addDay();
+        }
+
+        return $end;
+    }
+
+    /**
+     * The shift that follows the given one (two-shift cycle).
+     */
+    public function nextShift($shift)
+    {
+        return $shift === 'morning' ? 'night' : 'morning';
+    }
+
+    /**
+     * PosInnova hospital shifts — precise datetime window of the CURRENT (or most
+     * recent) instance of $shift relative to $now: from when that shift instance
+     * began, through $now.
+     *
+     * Combined with the shift stamp (shiftBucketExpression) this captures a shift
+     * completely across a midnight wrap AND any extension up to now, while
+     * excluding a previous same-shift instance (whose sales fall before the
+     * instance start). The end is "now" so nothing in the future is included and
+     * in-progress/extended sales are.
+     *
+     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}  [start, end(=now)]
+     */
+    public function shiftWindow($shift, $business = null, $now = null)
+    {
+        $settings = $this->getShiftSettings($business);
+        $now = $now ? \Carbon::parse($now) : \Carbon::now();
+        [$msH, $msM] = array_map('intval', explode(':', $settings['morning_start']));
+        [$meH, $meM] = array_map('intval', explode(':', $settings['morning_end']));
+        $today_ms = $now->copy()->setTime($msH, $msM, 0);
+        $today_me = $now->copy()->setTime($meH, $meM, 0);
+
+        if ($shift === 'morning') {
+            // Morning began at the most recent morning_start at/at-or-before now.
+            $start = $now->gte($today_ms)
+                ? $today_ms
+                : $now->copy()->subDay()->setTime($msH, $msM, 0);
+        } else {
+            // Night began at the most recent morning_end at/at-or-before now.
+            $start = $now->gte($today_me)
+                ? $today_me
+                : $now->copy()->subDay()->setTime($meH, $meM, 0);
+        }
+
+        return [$start, $now->copy()];
+    }
+
+    /**
+     * PosInnova hospital shifts — the "shift day" of $now: the calendar date on
+     * which the shift instance currently containing $now began. A night seen in
+     * the small hours belongs to the previous day's shift-day. Used so a date
+     * picker can be read as "which shift-day".
+     */
+    public function shiftDayFor($business = null, $now = null)
+    {
+        $now = $now ? \Carbon::parse($now) : \Carbon::now();
+        $cur = $this->shiftFor($business, $now);
+        if (empty($cur)) {
+            return $now->toDateString();
+        }
+        [$start] = $this->shiftWindow($cur, $business, $now);
+
+        return $start->toDateString();
+    }
+
+    /**
+     * PosInnova hospital shifts — turn a selected date range into the precise
+     * datetime window for the instances of $shift that STARTED within it.
+     *
+     * The range is read as shift START days. A shift-day runs from that shift's
+     * start until the SAME shift starts again the next day, so the whole shift is
+     * counted — across midnight and including any extension that bled into the
+     * following hours — while a previous instance's sales fall before the start:
+     *
+     *  - $shift = 'morning' → [D1 morning_start, (D2+1) morning_start]
+     *  - $shift = 'night'   → [D1 morning_end,   (D2+1) morning_end]
+     *
+     * Pair with a `shift_bucket = $shift` filter so only that shift's stamped
+     * sales inside the window are kept. When the range reaches the current
+     * shift-day and the shift runs past even that boundary, the end is pushed to
+     * "now".
+     *
+     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}  [start, end]
+     */
+    public function shiftDateWindow($shift, $start_date, $end_date, $business = null, $now = null)
+    {
+        $settings = $this->getShiftSettings($business);
+        $now = $now ? \Carbon::parse($now) : \Carbon::now();
+        [$msH, $msM] = array_map('intval', explode(':', $settings['morning_start']));
+        [$meH, $meM] = array_map('intval', explode(':', $settings['morning_end']));
+        $d1 = \Carbon::parse($start_date);
+        $d2 = \Carbon::parse($end_date);
+
+        if ($shift === 'night') {
+            // Night-day = from night start (morning_end) to the next night start.
+            $start = $d1->copy()->setTime($meH, $meM, 0);
+            $end = $d2->copy()->addDay()->setTime($meH, $meM, 0);
+        } else {
+            // Morning-day = from morning start to the next morning start.
+            $start = $d1->copy()->setTime($msH, $msM, 0);
+            $end = $d2->copy()->addDay()->setTime($msH, $msM, 0);
+        }
+
+        // Safety net for a current shift extended beyond even the next start.
+        $shift_day = $this->shiftDayFor($business, $now);
+        if ($end_date >= $shift_day && $now->gt($end)) {
+            $end = $now->copy();
+        }
+
+        return [$start, $end];
+    }
 }

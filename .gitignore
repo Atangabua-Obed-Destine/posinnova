@@ -17,7 +17,12 @@ npm-debug.log
 /public/uploads/invoice_logos
 /public/uploads/UltimatePOS
 /public/uploads/temp
-/public/css/
+/public/css/*
+!/public/css/tailwind/
+/public/css/tailwind/*
+# PosInnova: utilities the shipped tailwind bundle lacks (staff screens + patient portal)
+!/public/css/tailwind/app-extra.css
+!/public/css/tailwind/portal.css
 /public/fonts/
 /public/images/
 /public/modules/

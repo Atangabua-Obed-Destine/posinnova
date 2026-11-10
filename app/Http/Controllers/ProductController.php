@@ -1273,8 +1273,12 @@ class ProductController extends Controller
             $price_group_id = request()->input('price_group', '');
             $product_types = request()->get('product_types', []);
 
-            // Multi-location sale: search across all permitted locations
+            // Multi-location sale: search across all permitted locations, but the
+            // tile/autocomplete still shows the **register session location's** stock
+            // (per-location, not summed). The per-line location picker handles
+            // letting the cashier sell from a different location.
             $is_multi_location_search = (request()->input('multi_location_search') == '1' || request()->input('multi_location_search') === 'true');
+            $register_location_id = $location_id;
             if ($is_multi_location_search) {
                 $location_id = null;
                 $check_qty = false;
@@ -1314,8 +1318,15 @@ class ProductController extends Controller
 
                 foreach ($result as $item) {
                     $rows = $vld_rows->get($item->variation_id, collect());
-                    $total = (float) $rows->sum('qty_available');
-                    $item->qty_available = $total;
+
+                    //PosInnova: show register location's qty (not the sum) so the tile
+                    //matches what the cashier is selling from by default.
+                    $register_qty = 0.0;
+                    if (! empty($register_location_id)) {
+                        $reg_row = $rows->firstWhere('location_id', (int) $register_location_id);
+                        $register_qty = $reg_row ? (float) $reg_row->qty_available : 0.0;
+                    }
+                    $item->qty_available = $register_qty;
 
                     $breakdown = [];
                     foreach ($rows as $r) {
@@ -1339,7 +1350,20 @@ class ProductController extends Controller
 
             // If only one result and location_id is provided (POS context), auto-fetch the product row
             if (count($result) == 1 && !empty($location_id) && request()->get('auto_add_single', false)) {
-                
+
+                //PosInnova: when `Disable Auto-Add Product on Search` is enabled, only auto-add
+                //if the typed term exactly matches the product's SKU or sub_sku (i.e. a barcode
+                //scan). For substring/name matches the cashier must click the suggestion.
+                if (request()->get('auto_add_only_exact_sku', false)) {
+                    $only = $result[0];
+                    $term_norm = trim((string) $search_term);
+                    $sku_match = isset($only->sku) && strcasecmp($term_norm, (string) $only->sku) === 0;
+                    $sub_match = isset($only->sub_sku) && strcasecmp($term_norm, (string) $only->sub_sku) === 0;
+                    if (! $sku_match && ! $sub_match) {
+                        return json_encode($result);
+                    }
+                }
+
                 $variation_id = $result[0]->variation_id;
                         
                 $row_data = $this->productUtil->getPosProductRow($variation_id, $location_id);

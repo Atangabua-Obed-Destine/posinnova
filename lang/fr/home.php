@@ -2,7 +2,7 @@
 
  return [
      'home' => 'Accueil',
-     'welcome_message' => 'Bienvenue :name,',
+     'welcome_message' => 'Bienvenue chez :business, :name 👋',
      'total_sell' => 'Total des ventes',
      'total_purchase' => 'Total des achats',
      'invoice_due' => 'Factures impayées',
@@ -19,4 +19,6 @@
      'due_amount' => 'Montant dû',
      'stock_expiry_alert' => "Alerte d'expiration de stock",
      'todays_profit' => "Le profit d'aujourd'hui",
- ];
+     // ---- PosInnova: French for keys that only existed in English
+    'dashboard' => 'Tableau de bord',
+];

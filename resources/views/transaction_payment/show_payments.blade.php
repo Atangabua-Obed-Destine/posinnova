@@ -107,7 +107,7 @@
                     <div class="col-sm-4 invoice-col">
                         @lang('contact.customer'):
                         <address>
-                            <strong>{{ $transaction->contact->name }}</strong>
+                            <strong>@if(!empty($transaction->walk_in_customer_name) && !empty($transaction->contact->is_default)){{ $transaction->walk_in_customer_name }}@else{{ $transaction->contact->name }}@endif</strong>
 
                             {!! $transaction->contact->contact_address !!}
                             @if(!empty($transaction->contact->tax_number))
@@ -221,7 +221,7 @@
                                 <a href="{{$payment->document_path}}" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-accent" download="{{$payment->document_name}}"><i class="fa fa-download" data-toggle="tooltip" title="{{__('purchase.download_document')}}"></i></a>
                                 @if(isFileImage($payment->document_name))
                                 &nbsp;
-                                  <button data-href="{{$payment->document_path}}" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-info view_uploaded_document" data-toggle="tooltip" title="{{__('lang_v1.view_document')}}"><i class="fa fa-picture-o"></i></button>
+                                  <button data-href="{{$payment->document_path}}" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-info view_uploaded_document" data-toggle="tooltip" title="{{__('lang_v1.view_document')}}"><i class="fa fa-image"></i></button>
                                 @endif
 
                               @endif

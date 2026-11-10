@@ -32,8 +32,8 @@
       @component('components.widget', ['class' => 'box-primary'])
         @slot('tool')
           <div class="box-tools">
-            <a class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full pull-right btn-modal-coupon"
-                    href="{{ url('backup/create') }}" id="create-new-backup-button" style="margin-bottom:2em;">
+            <form method="POST" action="{{ route('backup.run') }}" style="display:inline;">@csrf
+            <button type="submit" class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full pull-right btn-modal-coupon" id="create-new-backup-button" style="margin-bottom:2em;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                         class="icon icon-tabler icons-tabler-outline icon-tabler-plus">
@@ -41,7 +41,8 @@
                         <path d="M12 5l0 14" />
                         <path d="M5 12l14 0" />
                     </svg> @lang('messages.add')
-              </a>
+              </button>
+            </form>
           </div>
         @endslot
         @if (count($backups))
@@ -69,10 +70,12 @@
                             <td>
                               <a class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-accent"
                                    href="{{action([\App\Http\Controllers\BackUpController::class, 'download'], [$backup['file_name']])}}"><i
-                                        class="fa fa-cloud-download"></i> @lang('lang_v1.download')</a>
-                                <a class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error link_confirmation" data-button-type="delete"
-                                   href="{{ route('delete_backup', $backup['file_name']) }}"><i class="fa fa-trash-o"></i>
-                                    @lang('messages.delete') </a>
+                                        class="fa fa-cloud-download-alt"></i> @lang('lang_v1.download')</a>
+                                <form method="POST" action="{{ route('delete_backup', $backup['file_name']) }}" style="display:inline;"
+                                    onsubmit="return confirm({{ json_encode(__('lang_v1.sure_to_delete')) }});">@csrf
+                                    <button type="submit" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error"><i class="fa fa-trash-alt"></i>
+                                    @lang('messages.delete')</button>
+                                </form>
                             </td>
                         </tr>
                     @endforeach

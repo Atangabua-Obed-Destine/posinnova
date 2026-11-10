@@ -45,6 +45,34 @@ class AppServiceProvider extends ServiceProvider
             \URL::forceScheme('https');
         }
 
+        // When behind a proxy / Cloudflare Tunnel, generate URLs using the
+        // request's actual host & scheme so assets work on both LAN
+        // (http://localhost/...) and the public tunnel (https://*.trycloudflare.com/...).
+        if ($this->app->runningInConsole() === false) {
+            $request = request();
+            $host = $request->getHttpHost();
+            if (! empty($host)) {
+                // AppServiceProvider boots before TrustProxies, so $request->isSecure()
+                // can't be trusted yet. Look at the forwarded-proto header directly,
+                // and treat anything that isn't a local hostname as HTTPS by default.
+                $fwdProto = $request->headers->get('X-Forwarded-Proto');
+                $cfVisitor = $request->headers->get('Cf-Visitor');
+                $isLocal = in_array($host, ['localhost', '127.0.0.1'], true)
+                    || preg_match('/^(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/', $host);
+
+                if ($fwdProto === 'https' || ($cfVisitor && str_contains($cfVisitor, '"https"')) || ! $isLocal) {
+                    $scheme = 'https';
+                } else {
+                    $scheme = $request->getScheme();
+                }
+                $base = rtrim($request->getBaseUrl(), '/');
+                \URL::forceRootUrl($scheme.'://'.$host.$base);
+                if ($scheme === 'https') {
+                    \URL::forceScheme('https');
+                }
+            }
+        }
+
         if (request()->has('lang')) {
             \App::setLocale(request()->get('lang'));
         }

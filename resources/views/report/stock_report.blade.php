@@ -61,6 +61,8 @@
             @endcomponent
         </div>
     </div>
+    @include('report.partials.export_buttons', ['export_base' => '/reports/export/stock-report', 'export_map_id' => 'stockReport'])
+
     @can('view_product_stock_value')
     <div class="row">
         <div class="col-md-12">
@@ -97,4 +99,18 @@
 
 @section('javascript')
     <script src="{{ asset('js/report.js?v=' . $asset_v) }}"></script>
+    <script>
+    $(document).on('click.stockExport', '.btn-report-export[data-export-map="stockReport"]', function(e) {
+        e.stopImmediatePropagation(); e.preventDefault();
+        var params = {
+            format:       $(this).data('export-format'),
+            location_id:  $('#location_id').val() || '',
+            category_id:  $('#category_id').val() || '',
+            sub_category_id: $('#sub_category_id').val() || '',
+            brand_id:     $('#brand_id').val() || '',
+            unit_id:      $('#unit_id').val() || '',
+        };
+        window.location.href = $(this).data('export-base') + '?' + $.param(params);
+    });
+    </script>
 @endsection

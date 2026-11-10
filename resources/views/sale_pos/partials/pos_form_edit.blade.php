@@ -10,6 +10,8 @@
 				</span>
 				<input type="hidden" id="default_customer_id" 
 				value="{{ $transaction->contact->id }}" >
+				<input type="hidden" id="walk_in_customer_contact_id" 
+				value="{{ $walk_in_customer['id'] ?? ''}}" >
 				<input type="hidden" id="default_customer_name" 
 				value="{{ $transaction->contact->name }}" >
 				<input type="hidden" id="default_customer_balance" 
@@ -25,6 +27,15 @@
 			</div>
 			<small class="text-danger @if(empty($customer_due)) hide @endif contact_due_text"><strong>@lang('account.customer_due'):</strong> <span>{{$customer_due ?? ''}}</span></small>
 		</div>
+		<div class="form-group walk_in_customer_name_wrap" @if(empty($transaction->contact->is_default)) style="display:none;" @endif>
+			<div class="input-group">
+				<span class="input-group-addon" title="@lang('lang_v1.walk_in_customer_name_help')">
+					<i class="fa fa-id-badge"></i>
+				</span>
+				{!! Form::text('walk_in_customer_name', $transaction->walk_in_customer_name, ['class' => 'form-control', 'id' => 'walk_in_customer_name', 'placeholder' => __('lang_v1.walk_in_customer_name_placeholder'), 'maxlength' => 191, 'autocomplete' => 'off']) !!}
+			</div>
+			<small class="text-muted">@lang('lang_v1.walk_in_customer_name_help')</small>
+		</div>
 	</div>
 	<div class="col-md-8">
 		<div class="form-group">
@@ -33,6 +44,8 @@
 					<button type="button" class="btn btn-default bg-white btn-flat" data-toggle="modal" data-target="#configure_search_modal" title="{{__('lang_v1.configure_product_search')}}"><i class="fas fa-search-plus"></i></button>
 				</div>
                 {{-- Removed mousetrap class as it was causing issue with barcode scanning --}}
+				<input type="hidden" id="pos_disable_auto_add" value="{{ !empty($pos_settings['disable_auto_add_product']) ? 1 : 0 }}">
+				<input type="hidden" id="is_custom_customer_name_required" value="{{ !empty($pos_settings['is_custom_customer_name_required']) ? 1 : 0 }}">
 				{!! Form::text('search_product', null, ['class' => 'form-control', 'id' => 'search_product', 'placeholder' => __('lang_v1.search_product_placeholder'),
 				'autofocus' => true,
 				]); !!}
@@ -185,6 +198,10 @@
 		<!-- Keeps count of product rows -->
 		<input type="hidden" id="product_row_count" 
 			value="{{count($sell_details)}}">
+		{{-- PosInnova: how many cart rows the browser actually submitted. The server
+		     rejects the sale if fewer arrive, so a dropped line can never be saved
+		     silently. Left at 0 when JS has not run, which skips the check. --}}
+		<input type="hidden" name="expected_product_rows" id="expected_product_rows" value="0">
 		@php
 			$hide_tax = '';
 			if( session()->get('business.enable_inline_tax') == 0){

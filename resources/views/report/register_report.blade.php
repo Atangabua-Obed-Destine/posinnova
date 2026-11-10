@@ -26,6 +26,14 @@
                         {!! Form::select('register_status', ['open' => __('cash_register.open'), 'close' => __('cash_register.close')], null, ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('report.all')]); !!}
                     </div>
                 </div>
+                @if(!empty($shift_enabled))
+                <div class="col-md-4">
+                    <div class="form-group">
+                        {!! Form::label('register_shift',  __('lang_v1.shift') . ':') !!}
+                        {!! Form::select('register_shift', $shifts, null, ['class' => 'form-control select2', 'id' => 'register_shift', 'style' => 'width:100%', 'placeholder' => __('report.all')]); !!}
+                    </div>
+                </div>
+                @endif
                 <div class="col-md-4">
                     <div class="form-group">
                         {!! Form::label('register_report_date_range', __('report.date_range') . ':') !!}
@@ -36,6 +44,8 @@
             @endcomponent
         </div>
     </div>
+    @include('report.partials.export_buttons', ['export_base' => '/reports/export/register-report', 'export_map_id' => 'registerReport'])
+
     <div class="row">
         <div class="col-md-12">
             @component('components.widget', ['class' => 'box-primary'])
@@ -48,6 +58,7 @@
                             <th>@lang('report.close_time')</th>
                             <th>@lang('sale.location')</th>
                             <th>@lang('report.user')</th>
+                            @if(!empty($shift_enabled))<th>@lang('lang_v1.shift')</th>@endif
                             <th>@lang('cash_register.total_card_slips')</th>
                             <th>@lang('cash_register.total_cheques')</th>
                             <th>@lang('cash_register.total_cash')</th>
@@ -67,7 +78,7 @@
                     </thead>
                     <tfoot>
                         <tr class="bg-gray font-17 text-center footer-total">
-                            <td colspan="4"><strong>@lang('sale.total'):</strong></td>
+                            <td colspan="{{ !empty($shift_enabled) ? 5 : 4 }}"><strong>@lang('sale.total'):</strong></td>
                             <td class="footer_total_card_payment"></td>
                             <td class="footer_total_cheque_payment"></td>
                             <td class="footer_total_cash_payment"></td>
@@ -98,5 +109,19 @@
 @endsection
 
 @section('javascript')
+    <script>window.register_report_shift_enabled = {{ !empty($shift_enabled) ? 'true' : 'false' }};</script>
     <script src="{{ asset('js/report.js?v=' . $asset_v) }}"></script>
+    <script>
+    $(document).on('click.registerExport', '.btn-report-export[data-export-map="registerReport"]', function(e) {
+        e.stopImmediatePropagation(); e.preventDefault();
+        var dr = $('#register_report_date_range').data('daterangepicker');
+        var params = {
+            format:     $(this).data('export-format'),
+            user_id:    $('#register_user_id').val() || '',
+            start_date: (dr && $('#register_report_date_range').val()) ? dr.startDate.format('YYYY-MM-DD') : '',
+            end_date:   (dr && $('#register_report_date_range').val()) ? dr.endDate.format('YYYY-MM-DD') : '',
+        };
+        window.location.href = $(this).data('export-base') + '?' + $.param(params);
+    });
+    </script>
 @endsection

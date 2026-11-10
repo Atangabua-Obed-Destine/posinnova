@@ -33,4 +33,14 @@
      'print_detailed' => 'Imprimer en Détail',
     'print_mini' => 'Imprimer Mini',
     'opening' => 'Ouverture',
- ];
+ 
+    // Report export strings (auto-added)
+    'by' => 'Par',
+    'status' => 'Statut',
+    // ---- PosInnova: French for keys that only existed in English
+    'back' => 'Retour',
+    'name' => 'Nom',
+    'price' => 'Prix',
+    'activate' => 'Activer',
+    'deactivate' => 'Désactiver',
+];

@@ -16,8 +16,22 @@
             min-height: 100vh;
             font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-        /* Parent row: stretch children so the brand panel always matches the form's height */
-        .auth-split { align-items: stretch; }
+        /* Parent row: stretch children so the brand panel always matches the form's height.
+           NOTE: tw-flex-col-reverse / lg:tw-w-1/2 are NOT in the compiled tailwind build,
+           so we explicitly drive the responsive layout here. */
+        .auth-split {
+            display: flex;
+            flex-direction: column-reverse; /* mobile/tablet: brand panel BELOW form */
+            align-items: stretch;
+            min-height: 100vh;
+        }
+        .auth-split__left,
+        .auth-split__right { width: 100%; }
+        @media (min-width: 1024px) {
+            .auth-split { flex-direction: row; }
+            .auth-split__left,
+            .auth-split__right { width: 50%; }
+        }
         /* Form widths (Tailwind max-w utilities aren't compiled in this build) */
         .auth-form-wrap { width: 100%; margin-left: auto; margin-right: auto; }
         .auth-form--sm { max-width: 24rem; }   /* 384px - login / password */

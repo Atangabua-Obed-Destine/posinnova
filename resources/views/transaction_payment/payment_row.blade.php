@@ -3,6 +3,10 @@
 
     {!! Form::open(['url' => action([\App\Http\Controllers\TransactionPaymentController::class, 'store']), 'method' => 'post', 'id' => 'transaction_payment_add_form', 'files' => true ]) !!}
     {!! Form::hidden('transaction_id', $transaction->id); !!}
+    @if(request()->get('post_to_register') == 1)
+      {{-- PosInnova clinic: opened from a clinic screen; the payment also goes into the open cash register --}}
+      {!! Form::hidden('post_to_register', 1) !!}
+    @endif
     @if(!empty($transaction->location))
       {!! Form::hidden('default_payment_accounts', $transaction->location->default_payment_accounts, ['id' => 'default_payment_accounts']); !!}
     @endif

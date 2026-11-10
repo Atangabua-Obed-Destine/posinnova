@@ -36,6 +36,9 @@
             @endcomponent
         </div>
     </div>
+
+    @include('report.partials.export_buttons', ['export_base' => '/reports/export/tax-report', 'export_map_id' => 'taxReport'])
+
     {{--<div class="row">
         <div class="col-md-4 col-sm-12">
             @component('components.widget')
@@ -65,7 +68,7 @@
                     {{ __('lang_v1.expense_tax') }} @show_tooltip(__('lang_v1.expense_tax_tooltip'))
                 @endslot
                 <div class="expense_tax">
-                    <i class="fa fa-refresh fa-spin fa-fw"></i>
+                    <i class="fa fa-sync fa-spin fa-fw"></i>
                 </div>
             @endcomponent
         </div>
@@ -442,4 +445,18 @@
     @endforeach
 @endif
 <script src="{{ asset('js/report.js?v=' . $asset_v) }}"></script>
+<script>
+$(document).on('click.taxExport', '.btn-report-export[data-export-map="taxReport"]', function(e) {
+    e.stopImmediatePropagation(); e.preventDefault();
+    var dr = $('#tax_report_date_range').data('daterangepicker');
+    var params = {
+        format:      $(this).data('export-format'),
+        location_id: $('#tax_report_location_id').val() || '',
+        contact_id:  $('#tax_report_contact_id').val() || '',
+        start_date:  (dr && $('#tax_report_date_range').val()) ? dr.startDate.format('YYYY-MM-DD') : '',
+        end_date:    (dr && $('#tax_report_date_range').val()) ? dr.endDate.format('YYYY-MM-DD') : '',
+    };
+    window.location.href = $(this).data('export-base') + '?' + $.param(params);
+});
+</script>
 @endsection

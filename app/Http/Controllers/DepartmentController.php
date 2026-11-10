@@ -14,6 +14,14 @@ class DepartmentController extends Controller
 
     public function __construct(ModuleUtil $moduleUtil)
     {
+        //PosInnova: section switched off in Clinic settings
+        $this->middleware(function ($request, $next) {
+            if (! \App\Utils\ClinicSettings::sectionOn($request->session()->get('user.business_id'), 'departments')) {
+                abort(404);
+            }
+
+            return $next($request);
+        });
         $this->moduleUtil = $moduleUtil;
     }
 
@@ -60,7 +68,10 @@ class DepartmentController extends Controller
 
         $quick_add = ! empty(request()->input('quick_add'));
 
-        return view('department.create')->with(compact('quick_add'));
+        $business_id = request()->session()->get('user.business_id');
+        $business_locations = \App\BusinessLocation::forDropdown($business_id, true);
+
+        return view('department.create')->with(compact('quick_add', 'business_locations'));
     }
 
     public function store(Request $request)
@@ -82,6 +93,9 @@ class DepartmentController extends Controller
             $validated['business_id'] = $business_id;
             $validated['created_by'] = $request->session()->get('user.id');
             $validated['is_active'] = $request->has('is_active') ? 1 : 1;
+            //Hospital module: optional location mapping + department type.
+            $validated['location_id'] = $request->input('location_id') ?: null;
+            $validated['department_type'] = $request->input('department_type') ?: 'other';
 
             $department = Department::create($validated);
 
@@ -115,8 +129,9 @@ class DepartmentController extends Controller
         if (request()->ajax()) {
             $business_id = request()->session()->get('user.business_id');
             $department = Department::where('business_id', $business_id)->findOrFail($id);
+            $business_locations = \App\BusinessLocation::forDropdown($business_id, true);
 
-            return view('department.edit')->with(compact('department'));
+            return view('department.edit')->with(compact('department', 'business_locations'));
         }
     }
 
@@ -146,6 +161,9 @@ class DepartmentController extends Controller
             $department->hod_name = $validated['hod_name'] ?? null;
             $department->description = $validated['description'] ?? null;
             $department->is_active = $request->has('is_active') ? 1 : 0;
+            //Hospital module: optional location mapping + department type.
+            $department->location_id = $request->input('location_id') ?: null;
+            $department->department_type = $request->input('department_type') ?: 'other';
             $department->save();
 
             $output = [

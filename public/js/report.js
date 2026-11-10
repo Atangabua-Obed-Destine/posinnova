@@ -289,6 +289,35 @@ $(document).ready(function() {
     }
 
     //Register report
+    // PosInnova hospital shifts: the Shift column is inserted only when the
+    // feature is enabled (flag set inline by the blade before this file loads).
+    var register_report_columns = [
+        { data: 'created_at', name: 'created_at' },
+        { data: 'closed_at', name: 'closed_at' },
+        { data: 'location_name', name: 'bl.name' },
+        { data: 'user_name', name: 'user_name' },
+    ];
+    if (window.register_report_shift_enabled) {
+        register_report_columns.push({ data: 'shift_label', name: 'cash_registers.shift', orderable: false, searchable: false });
+    }
+    register_report_columns.push(
+        { data: 'total_card_payment', name: 'total_card_payment', searchable: false },
+        { data: 'total_cheque_payment', name: 'total_cheque_payment', searchable: false },
+        { data: 'total_cash_payment', name: 'total_cash_payment', searchable: false },
+        { data: 'total_bank_transfer_payment', name: 'total_bank_transfer_payment', searchable: false },
+        { data: 'total_advance_payment', name: 'total_advance_payment', searchable: false },
+        { data: 'total_custom_pay_1', name: 'total_custom_pay_1', searchable: false },
+        { data: 'total_custom_pay_2', name: 'total_custom_pay_2', searchable: false },
+        { data: 'total_custom_pay_3', name: 'total_custom_pay_3', searchable: false },
+        { data: 'total_custom_pay_4', name: 'total_custom_pay_4', searchable: false },
+        { data: 'total_custom_pay_5', name: 'total_custom_pay_5', searchable: false },
+        { data: 'total_custom_pay_6', name: 'total_custom_pay_6', searchable: false },
+        { data: 'total_custom_pay_7', name: 'total_custom_pay_7', searchable: false },
+        { data: 'total_other_payment', name: 'total_other_payment', searchable: false },
+        { data: 'total', name: 'total', orderable: false, searchable: false },
+        { data: 'action', name: 'action', orderable: false, searchable: false }
+    );
+
     register_report_table = $('#register_report_table').DataTable({
         processing: true,
         serverSide: true,
@@ -297,27 +326,7 @@ $(document).ready(function() {
         scrollCollapse: true,
         fixedHeader:false,
         ajax: '/reports/register-report',
-        columns: [
-            { data: 'created_at', name: 'created_at' },
-            { data: 'closed_at', name: 'closed_at' },
-            { data: 'location_name', name: 'bl.name' },
-            { data: 'user_name', name: 'user_name' },
-            { data: 'total_card_payment', name: 'total_card_payment', searchable: false },
-            { data: 'total_cheque_payment', name: 'total_cheque_payment', searchable: false },
-            { data: 'total_cash_payment', name: 'total_cash_payment', searchable: false },
-            { data: 'total_bank_transfer_payment', name: 'total_bank_transfer_payment', searchable: false },
-            { data: 'total_advance_payment', name: 'total_advance_payment', searchable: false },
-            { data: 'total_custom_pay_1', name: 'total_custom_pay_1', searchable: false },
-            { data: 'total_custom_pay_2', name: 'total_custom_pay_2', searchable: false },
-            { data: 'total_custom_pay_3', name: 'total_custom_pay_3', searchable: false },
-            { data: 'total_custom_pay_4', name: 'total_custom_pay_4', searchable: false },
-            { data: 'total_custom_pay_5', name: 'total_custom_pay_5', searchable: false },
-            { data: 'total_custom_pay_6', name: 'total_custom_pay_6', searchable: false },
-            { data: 'total_custom_pay_7', name: 'total_custom_pay_7', searchable: false },
-            { data: 'total_other_payment', name: 'total_other_payment', searchable: false },
-            { data: 'total', name: 'total', orderable: false, searchable: false },
-            { data: 'action', name: 'action', orderable: false, searchable: false },
-        ],
+        columns: register_report_columns,
         "footerCallback": function ( row, data, start, end, display ) {
             var total_card_payment = 0;
             var total_cheque_payment = 0;
@@ -401,7 +410,7 @@ $(document).ready(function() {
         updateRegisterReport();
     });
 
-    $('#register_user_id, #register_status').change(function() {
+    $('#register_user_id, #register_status, #register_shift').change(function() {
         updateRegisterReport();
     });
 
@@ -1567,6 +1576,8 @@ function updateStockAdjustmentReport() {
     $('.total_recovered').html(loader);
     $('.total_normal').html(loader);
     $('.total_abnormal').html(loader);
+    $('.total_recount_shortage').html(loader);
+    $('.total_reconciliation').html(loader);
 
     $.ajax({
         method: 'GET',
@@ -1578,6 +1589,8 @@ function updateStockAdjustmentReport() {
             $('.total_recovered').html(__currency_trans_from_en(data.total_recovered, true));
             $('.total_normal').html(__currency_trans_from_en(data.total_normal, true));
             $('.total_abnormal').html(__currency_trans_from_en(data.total_abnormal, true));
+            $('.total_recount_shortage').html(__currency_trans_from_en(data.total_recount_shortage, true));
+            $('.total_reconciliation').html(__currency_trans_from_en(data.total_reconciliation, true));
         },
     });
 
@@ -1607,6 +1620,10 @@ function updateRegisterReport() {
         start_date: start,
         end_date: end
     };
+    // Only send the shift filter when the control exists (feature enabled).
+    if ($('#register_shift').length) {
+        data.shift = $('#register_shift').val();
+    }
     var out = [];
 
     for (var key in data) {
@@ -1818,3 +1835,33 @@ function updateTaxReport() {
         },
     });
 }
+
+/**
+ * Build an export URL from a base path and a map of { queryParam: '#selectorOrValue' }.
+ * If the value starts with '#' it reads the DOM element's current value; otherwise uses the value directly.
+ * Adds format=excel or format=pdf based on the btn clicked.
+ */
+function buildReportExportUrl(baseUrl, filterMap, format) {
+    var params = { format: format };
+    $.each(filterMap, function(paramName, source) {
+        var val = '';
+        if (typeof source === 'string' && source.charAt(0) === '#') {
+            val = $(source).val() || '';
+        } else {
+            val = source || '';
+        }
+        if (val !== '') params[paramName] = val;
+    });
+    return baseUrl + '?' + $.param(params);
+}
+
+// Attach delegated click handlers for export buttons added via data attributes
+$(document).on('click', '.btn-report-export', function(e) {
+    e.preventDefault();
+    var $btn   = $(this);
+    var base   = $btn.data('export-base');
+    var format = $btn.data('export-format');
+    var mapId  = $btn.data('export-map');
+    var filterMap = window['__exportMap_' + mapId] || {};
+    window.location.href = buildReportExportUrl(base, filterMap, format);
+});

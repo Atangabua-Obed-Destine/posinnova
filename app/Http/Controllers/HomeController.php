@@ -71,6 +71,16 @@ class HomeController extends Controller
 
         $business_id = request()->session()->get('user.business_id');
 
+        //PosInnova: with the hospital module on, home is the hospital dashboard; people who
+        //may see sales figures get a "Pharmacy sales" tab (?view=sales) for the usual one.
+        $enabled_modules = (array) (session('business.enabled_modules') ?: []);
+        $hospital_home = in_array('hospital', $enabled_modules);
+        if ($hospital_home && ! (request()->input('view') == 'sales' && \App\Utils\ClinicDashboard::canSeeSales(auth()->user(), $business_id))) {
+            $dash = \App\Utils\ClinicDashboard::build($business_id, auth()->user());
+
+            return view('home.hospital', compact('dash'));
+        }
+
         $is_admin = $this->businessUtil->is_admin(auth()->user());
 
         if (! auth()->user()->can('dashboard.data')) {
@@ -209,8 +219,20 @@ class HomeController extends Controller
 
         $common_settings = ! empty(session('business.common_settings')) ? session('business.common_settings') : [];
 
+        // PosInnova hospital shifts: dashboard shift selector (no-op when disabled).
+        $shift_enabled = $this->businessUtil->isShiftEnabled($business_id);
+        $current_shift = $shift_enabled ? $this->transactionUtil->shiftFor() : null;
+        // Default the date picker to the current shift-day so the default view
+        // shows the active shift (a night begun yesterday resolves to yesterday).
+        $shift_day = $shift_enabled ? $this->transactionUtil->shiftDayFor($business_id) : null;
+        $shift_filter_options = [];
+        if ($shift_enabled) {
+            $shift_filter_options = \App\Utils\Util::shiftLabels();
+            // "None" — ignore the shift and show all sales for the date range.
+            $shift_filter_options['none'] = __('lang_v1.shift_none');
+        }
 
-        return view('home.index', compact('sells_chart_1', 'sells_chart_2', 'widgets', 'all_locations', 'common_settings', 'is_admin'));
+        return view('home.index', compact('sells_chart_1', 'sells_chart_2', 'widgets', 'all_locations', 'common_settings', 'is_admin', 'shift_enabled', 'current_shift', 'shift_filter_options', 'shift_day'));
     }
 
     /**
@@ -270,6 +292,28 @@ class HomeController extends Controller
 
             //NET = TOTAL SALES - INVOICE DUE - EXPENSE
             $output['net'] = $output['total_sell'] - $output['invoice_due'] - $output['total_expense'];
+
+            // PosInnova hospital shifts: when a shift is selected, scope the SELL
+            // cards to that shift using the same stamped-shift bucket as Sales by
+            // Shift (honours extend). Purchases/expenses have no shift, so they
+            // stay on the date-range totals computed above.
+            $shift = request()->shift;
+            $output['shift_scope'] = null;
+            if ($this->businessUtil->isShiftEnabled($business_id) && in_array($shift, ['morning', 'night'], true)) {
+                // Scope the sell cards to this shift across the SELECTED date
+                // range, read as shift START days — exactly like Sales by Shift.
+                // (The picker defaults to the current shift-day.)
+                $win_start = ! empty($start) ? $start : $this->transactionUtil->shiftDayFor($business_id);
+                $win_end = ! empty($end) ? $end : $win_start;
+                [$shift_start, $shift_end] = $this->transactionUtil->shiftDateWindow($shift, $win_start, $win_end, $business_id);
+                $shift_summary = $this->transactionUtil->getShiftSellSummary($business_id, $shift_start, $shift_end, $location_id, $shift, $created_by);
+                $output['total_sell'] = $shift_summary['total_sell'];
+                $output['invoice_due'] = $shift_summary['invoice_due'];
+                $output['total_sell_return'] = $shift_summary['total_sell_return'];
+                $output['total_sell_return_paid'] = $shift_summary['total_sell_return_paid'];
+                $output['net'] = $output['total_sell'] - $output['invoice_due'] - $output['total_expense'];
+                $output['shift_scope'] = $shift;
+            }
 
             return $output;
         }

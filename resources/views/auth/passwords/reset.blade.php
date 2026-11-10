@@ -4,71 +4,41 @@
 @section('title', __('lang_v1.reset_password'))
 
 @section('content')
-    <div class="col-md-4">
-    </div>
-    <div class="col-md-4 col-xs-12">
-        <div
-            class=" tw-p-2 sm:tw-p-3 tw-mb-4 tw-transition-all tw-duration-200  tw-bg-white tw-shadow-sm tw-rounded-xl tw-ring-1 tw-ring-gray-200">
-            <div class="tw-flex tw-flex-col tw-gap-4 tw-dw-rounded-box tw-dw-p-6 tw-dw-max-w-md">
-                <h3 class="tw-text-sm tw-font-medium tw-text-gray-500 tw-self-center">@lang('lang_v1.reset_password')</h3>
-                <form method="POST" action="{{ route('password.request') }}">
-                    {{ csrf_field() }}
-
-                    <input type="hidden" name="token" value="{{ $token }}">
-
-                    <div class="form-group has-feedback {{ $errors->has('email') ? ' has-error' : '' }}">
-                        <label class="tw-dw-form-control">
-                            <div class="tw-dw-label">
-                                <span class="tw-text-xs md:tw-text-sm tw-font-medium tw-text-black">@lang('Email')</span>
-                            </div>
-                            <input id="email" type="email" class="tw-border tw-border-[#D1D5DA] tw-outline-none tw-h-12 tw-bg-transparent tw-rounded-lg tw-px-3 tw-font-medium tw-text-black placeholder:tw-text-gray-500 placeholder:tw-font-medium" name="email"
-                                value="{{ $email ?? old('email') }}" required autofocus placeholder="@lang('lang_v1.email_address')">
-
-                            @if ($errors->has('email'))
-                                <span class="help-block">
-                                    <strong>{{ $errors->first('email') }}</strong>
-                                </span>
-                            @endif
-                        </label>
-                    </div>
-
-                    <div class="form-group has-feedback {{ $errors->has('password') ? ' has-error' : '' }}">
-                        <label class="tw-dw-form-control">
-                            <div class="tw-dw-label">
-                                <span class="tw-text-xs md:tw-text-sm tw-font-medium tw-text-black">@lang('lang_v1.password')</span>
-                            </div>
-                            <input id="password" type="password" class="tw-border tw-border-[#D1D5DA] tw-outline-none tw-h-12 tw-bg-transparent tw-rounded-lg tw-px-3 tw-font-medium tw-text-black placeholder:tw-text-gray-500 placeholder:tw-font-medium" name="password"
-                                required placeholder="@lang('lang_v1.password')">
-                            @if ($errors->has('password'))
-                                <span class="help-block">
-                                    <strong>{{ $errors->first('password') }}</strong>
-                                </span>
-                            @endif
-                        </label>
-                    </div>
-
-                    <div class="form-group has-feedback {{ $errors->has('password_confirmation') ? ' has-error' : '' }}">
-                        <label class="tw-dw-form-control">
-                            <div class="tw-dw-label">
-                                <span class="tw-text-xs md:tw-text-sm tw-font-medium tw-text-black">@lang('business.confirm_password')</span>
-                            </div>
-                            <input id="password" type="password" class="tw-border tw-border-[#D1D5DA] tw-outline-none tw-h-12 tw-bg-transparent tw-rounded-lg tw-px-3 tw-font-medium tw-text-black placeholder:tw-text-gray-500 placeholder:tw-font-medium"
-                                name="password_confirmation" required placeholder="@lang('business.confirm_password')">
-                            @if ($errors->has('password_confirmation'))
-                                <span class="help-block">
-                                    <strong>{{ $errors->first('password_confirmation') }}</strong>
-                                </span>
-                            @endif
-                        </label>
-                    </div>
-                    <button type="submit" class="tw-bg-gradient-to-r tw-from-indigo-500 tw-to-blue-500 tw-h-12 tw-rounded-xl tw-text-sm md:tw-text-base tw-text-white tw-font-semibold tw-w-full tw-max-w-full mt-2 hover:tw-from-indigo-600 hover:tw-to-blue-600 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-ring-offset-2 active:tw-from-indigo-700 active:tw-to-blue-700">
-                        @lang('lang_v1.reset_password')</button>
-                </form>
-            </div>
+    <div class="ia-head">
+        <div class="ia-head-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2"/></svg>
         </div>
+        <h1>@lang('lang_v1.reset_password')</h1>
+        <p>@lang('lang_v1.auth_reset_sub')</p>
     </div>
-    <div class="col-md-4">
+
+    <div class="ia-card">
+        @foreach (['email', 'password', 'password_confirmation'] as $ia_f)
+            @if ($errors->has($ia_f))
+                <div class="ia-alert" role="alert">{{ $errors->first($ia_f) }}</div>
+                @break
+            @endif
+        @endforeach
+
+        <form method="POST" action="{{ route('password.request') }}">
+            {{ csrf_field() }}
+            <input type="hidden" name="token" value="{{ $token }}">
+
+            <div class="ia-field">
+                <label for="email" class="ia-label">@lang('lang_v1.email_address')</label>
+                <input id="email" type="email" name="email" value="{{ $email ?? old('email') }}" required autofocus autocomplete="email" class="ia-input">
+            </div>
+            <div class="ia-field">
+                <label for="password" class="ia-label">@lang('lang_v1.auth_new_password')</label>
+                <input id="password" type="password" name="password" required autocomplete="new-password" class="ia-input">
+            </div>
+            <div class="ia-field">
+                <label for="password_confirmation" class="ia-label">@lang('business.confirm_password')</label>
+                <input id="password_confirmation" type="password" name="password_confirmation" required autocomplete="new-password" class="ia-input">
+            </div>
+            <button type="submit" class="ia-btn">@lang('lang_v1.reset_password')</button>
+        </form>
+
+        <p class="ia-alt"><a href="{{ route('login') }}" class="ia-link">← @lang('lang_v1.auth_back_to_sign_in')</a></p>
     </div>
 @endsection
-
-

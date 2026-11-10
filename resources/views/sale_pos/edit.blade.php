@@ -17,10 +17,14 @@
 	@endphp
 	{!! Form::open(['url' => action([\App\Http\Controllers\SellPosController::class, 'update'], [$transaction->id]), 'method' => 'post', 'id' => 'edit_pos_sell_form' ]) !!}
 	{{ method_field('PUT') }}
+	{{-- Same condition as the product pane below: no pane, nothing to collapse. --}}
+	@if(empty($pos_settings['hide_product_suggestion']) && !isMobile() && empty($only_payment))
+		@include('sale_pos.partials.pos_browser_toggle')
+	@endif
 	<div class="row mb-12">
 		<div class="col-md-12 tw-pt-0 tw-mb-14">
 			<div class="row tw-flex lg:tw-flex-row md:tw-flex-col sm:tw-flex-col tw-flex-col tw-items-start md:tw-gap-4">
-				<div class="tw-px-3 tw-w-full  lg:tw-px-0 lg:tw-pr-0 @if(empty($pos_settings['hide_product_suggestion'])) lg:tw-w-[60%]  @else lg:tw-w-[100%] @endif">
+				<div class="pi-pos-cart-pane tw-px-3 tw-w-full  lg:tw-px-0 lg:tw-pr-0 @if(empty($pos_settings['hide_product_suggestion'])) lg:tw-w-[60%]  @else lg:tw-w-[100%] @endif">
 					<div class="tw-shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] tw-rounded-2xl tw-bg-white tw-mb-2 md:tw-mb-8 tw-p-2">
 						<div class="box-body pb-0">
 							{!! Form::hidden('location_id', $transaction->location_id, ['id' => 'location_id', 'data-receipt_printer_type' => !empty($location_printer_type) ? $location_printer_type : 'browser', 'data-default_payment_accounts' => $transaction->location->default_payment_accounts]); !!}
@@ -53,7 +57,7 @@
 						</div>
 					</div>
 				@if(empty($pos_settings['hide_product_suggestion'])  && !isMobile() && empty($only_payment))
-					<div class="col-md-5 no-padding">
+					<div class="pi-pos-browser-pane col-md-5 no-padding" id="pi_pos_browser_pane">
 						@include('sale_pos.partials.pos_sidebar')
 					</div>
 				@endif

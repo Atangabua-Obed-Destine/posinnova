@@ -218,6 +218,42 @@ class SellController extends Controller
             // Expose shipment-only flag to table rendering
             $only_shipments = request()->only_shipments == 'true' ? true : false;
 
+            // Subqueries for Profit and COGS calculation identical to Profit/Loss report
+            $sells->addSelect(
+                \DB::raw('(SELECT SUM(IF (TSPL.id IS NULL AND P.type=\'combo\', ( 
+                    SELECT Sum((tspl2.quantity - tspl2.qty_returned) * (tsl.unit_price_inc_tax - pl2.purchase_price_inc_tax)) AS total
+                        FROM transaction_sell_lines AS tsl
+                            JOIN transaction_sell_lines_purchase_lines AS tspl2
+                        ON tsl.id=tspl2.sell_line_id 
+                        JOIN purchase_lines AS pl2 
+                        ON tspl2.purchase_line_id = pl2.id 
+                        WHERE tsl.parent_sell_line_id = transaction_sell_lines.id), IF(P.enable_stock=0,(transaction_sell_lines.quantity - transaction_sell_lines.quantity_returned) * transaction_sell_lines.unit_price_inc_tax,   
+                        (TSPL.quantity - TSPL.qty_returned) * (transaction_sell_lines.unit_price_inc_tax - PL.purchase_price_inc_tax)) )) 
+                    FROM transaction_sell_lines
+                    LEFT JOIN transaction_sell_lines_purchase_lines AS TSPL ON transaction_sell_lines.id = TSPL.sell_line_id
+                    LEFT JOIN purchase_lines AS PL ON TSPL.purchase_line_id = PL.id
+                    JOIN products AS P ON transaction_sell_lines.product_id = P.id
+                    WHERE transaction_sell_lines.transaction_id = transactions.id
+                    AND transaction_sell_lines.children_type != \'combo\'
+                ) as gross_profit'),
+                \DB::raw('(SELECT SUM(IF (TSPL.id IS NULL AND P.type=\'combo\', ( 
+                    SELECT Sum((tspl2.quantity - tspl2.qty_returned) * pl2.purchase_price_inc_tax) AS total
+                        FROM transaction_sell_lines AS tsl
+                            JOIN transaction_sell_lines_purchase_lines AS tspl2
+                        ON tsl.id=tspl2.sell_line_id 
+                        JOIN purchase_lines AS pl2 
+                        ON tspl2.purchase_line_id = pl2.id 
+                        WHERE tsl.parent_sell_line_id = transaction_sell_lines.id), IF(P.enable_stock=0, 0,   
+                        (TSPL.quantity - TSPL.qty_returned) * PL.purchase_price_inc_tax) )) 
+                    FROM transaction_sell_lines
+                    LEFT JOIN transaction_sell_lines_purchase_lines AS TSPL ON transaction_sell_lines.id = TSPL.sell_line_id
+                    LEFT JOIN purchase_lines AS PL ON TSPL.purchase_line_id = PL.id
+                    JOIN products AS P ON transaction_sell_lines.product_id = P.id
+                    WHERE transaction_sell_lines.transaction_id = transactions.id
+                    AND transaction_sell_lines.children_type != \'combo\'
+                ) as total_cogs')
+            );
+
             $datatable = Datatables::of($sells)
                 ->addColumn(
                     'action',
@@ -449,6 +485,17 @@ class SellController extends Controller
                     return $status;
                 })
                 ->addColumn('conatct_name', '@if(!empty($supplier_business_name)) {{$supplier_business_name}}, <br> @endif {{$name}}')
+                ->addColumn('total_cogs', function ($row) {
+                    return '<span class="display_currency total_cogs" data-currency_symbol="true" data-orig-value="' . $row->total_cogs . '">' . $this->transactionUtil->num_f($row->total_cogs, true) . '</span>';
+                })
+                ->addColumn('invoice_profit', function ($row) {
+                    $discount = $row->discount_amount;
+                    if ($row->discount_type == 'percentage') {
+                        $discount = ($row->discount_amount * $row->total_before_tax) / 100;
+                    }
+                    $profit = $row->gross_profit - $discount;
+                    return '<span class="display_currency invoice_profit" data-currency_symbol="true" data-orig-value="' . $profit . '">' . $this->transactionUtil->num_f($profit, true) . '</span>';
+                })
                 ->editColumn('total_items', '{{@format_quantity($total_items)}}')
                 ->filterColumn('conatct_name', function ($query, $keyword) {
                     $query->where(function ($q) use ($keyword) {
@@ -519,7 +566,7 @@ class SellController extends Controller
                         }
                     }, ]);
 
-            $rawColumns = ['final_total', 'action', 'total_paid', 'total_remaining', 'payment_status', 'invoice_no', 'discount_amount', 'tax_amount', 'total_before_tax', 'shipping_status', 'types_of_service_name', 'payment_methods', 'return_due', 'conatct_name', 'status', 'zatca_status'];
+            $rawColumns = ['final_total', 'action', 'total_paid', 'total_remaining', 'payment_status', 'invoice_no', 'discount_amount', 'tax_amount', 'total_before_tax', 'shipping_status', 'types_of_service_name', 'payment_methods', 'return_due', 'conatct_name', 'status', 'zatca_status', 'total_cogs', 'invoice_profit'];
 
             return $datatable->rawColumns($rawColumns)
                       ->skipTotalRecords()
@@ -556,6 +603,74 @@ class SellController extends Controller
 
         return view('sell.index')
         ->with(compact('business_locations', 'customers', 'is_woocommerce', 'sales_representative', 'is_cmsn_agent_enabled', 'commission_agents', 'service_staffs', 'is_tables_enabled', 'is_service_staff_enabled', 'is_types_service_enabled', 'shipping_statuses', 'sources', 'payment_types'));
+    }
+
+    /**
+     * PosInnova hospital shifts — "Sales by Shift".
+     * Same list as /sells (reuses the sell.index view + /sells datatable), but
+     * shift-aware: defaults to the current shift + today, and the user can
+     * filter to other shifts/dates. Same permissions as index().
+     */
+    public function salesByShift()
+    {
+        $is_admin = $this->businessUtil->is_admin(auth()->user());
+
+        if (! $is_admin && ! auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'direct_sell.view', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping', 'so.view_all', 'so.view_own'])) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = request()->session()->get('user.business_id');
+
+        if (! $this->businessUtil->isShiftEnabled($business_id)) {
+            return redirect()->action([\App\Http\Controllers\HomeController::class, 'index'])
+                ->with('status', ['success' => 0, 'msg' => __('lang_v1.shift_feature_disabled')]);
+        }
+
+        $is_woocommerce = $this->moduleUtil->isModuleInstalled('Woocommerce');
+        $is_tables_enabled = $this->transactionUtil->isModuleEnabled('tables');
+        $is_service_staff_enabled = $this->transactionUtil->isModuleEnabled('service_staff');
+        $is_types_service_enabled = $this->moduleUtil->isModuleEnabled('types_of_service');
+
+        $business_locations = BusinessLocation::forDropdown($business_id, false);
+        $customers = Contact::customersDropdown($business_id, false);
+        $sales_representative = User::forDropdown($business_id, false, false, true);
+
+        $is_cmsn_agent_enabled = request()->session()->get('business.sales_cmsn_agnt');
+        $commission_agents = [];
+        if (! empty($is_cmsn_agent_enabled)) {
+            $commission_agents = User::forDropdown($business_id, false, true, true);
+        }
+
+        $service_staffs = null;
+        if ($this->productUtil->isModuleEnabled('service_staff')) {
+            $service_staffs = $this->productUtil->serviceStaffDropdown($business_id);
+        }
+
+        $shipping_statuses = $this->transactionUtil->shipping_statuses();
+
+        $sources = $this->transactionUtil->getSources($business_id);
+        if ($is_woocommerce) {
+            $sources['woocommerce'] = 'Woocommerce';
+        }
+
+        $payment_types = $this->transactionUtil->payment_types(null, true, $business_id);
+
+        // Shift-specific extras consumed by sell.index when $shift_mode is set.
+        $shift_mode = true;
+        $shifts = \App\Utils\Util::shiftLabels();
+        // "None" — drop the shift filter and list sales by plain date range.
+        $shifts['none'] = __('lang_v1.shift_none');
+        $current_shift = $this->transactionUtil->shiftFor();
+
+        // Default the date selection to the current SHIFT-DAY (the day the active
+        // shift began). With the shift-day model below, selecting that day shows
+        // the current shift in full — across midnight and including extension.
+        $shift_day = $this->transactionUtil->shiftDayFor($business_id);
+        $shift_range_start = $shift_day;
+        $shift_range_end = $shift_day;
+
+        return view('sell.index')
+            ->with(compact('business_locations', 'customers', 'is_woocommerce', 'sales_representative', 'is_cmsn_agent_enabled', 'commission_agents', 'service_staffs', 'is_tables_enabled', 'is_service_staff_enabled', 'is_types_service_enabled', 'shipping_statuses', 'sources', 'payment_types', 'shift_mode', 'shifts', 'current_shift', 'shift_range_start', 'shift_range_end'));
     }
 
     /**
@@ -1131,8 +1246,11 @@ class SellController extends Controller
         //Added check because $users is of no use if enable_contact_assign if false
         $users = config('constants.enable_contact_assign') ? User::forDropdown($business_id, false, false, false, true) : [];
 
+        //Needed to know which contact is the walk-in customer (custom walk-in name field)
+        $walk_in_customer = $this->contactUtil->getWalkInCustomer($business_id);
+
         return view('sell.edit')
-            ->with(compact('business_details', 'taxes', 'sell_details', 'transaction', 'commission_agent', 'types', 'customer_groups', 'pos_settings', 'waiters', 'invoice_schemes', 'default_invoice_schemes', 'redeem_details', 'edit_discount', 'edit_price', 'shipping_statuses', 'warranties', 'statuses', 'sales_orders', 'payment_types', 'accounts', 'payment_lines', 'change_return', 'is_order_request_enabled', 'customer_due', 'users'));
+            ->with(compact('walk_in_customer', 'business_details', 'taxes', 'sell_details', 'transaction', 'commission_agent', 'types', 'customer_groups', 'pos_settings', 'waiters', 'invoice_schemes', 'default_invoice_schemes', 'redeem_details', 'edit_discount', 'edit_price', 'shipping_statuses', 'warranties', 'statuses', 'sales_orders', 'payment_types', 'accounts', 'payment_lines', 'change_return', 'is_order_request_enabled', 'customer_due', 'users'));
     }
 
     /**
@@ -1211,7 +1329,7 @@ class SellController extends Controller
                     'transactions.id',
                     'transaction_date',
                     'invoice_no',
-                    'contacts.name',
+                    DB::raw('CASE WHEN transactions.walk_in_customer_name IS NOT NULL AND contacts.is_default = 1 THEN transactions.walk_in_customer_name ELSE contacts.name END as name'),
                     'contacts.mobile',
                     'contacts.supplier_business_name',
                     'bl.name as business_location',
@@ -1743,12 +1861,35 @@ class SellController extends Controller
             $query->where('contacts.id', request()->customer_id);
         }
 
-        // Date range
-        if (! empty(request()->start_date) && ! empty(request()->end_date)) {
+        // Shift filter (PosInnova hospital shifts) — bucket by the stamped shift,
+        // falling back to the timestamp window for unstamped sells so it matches
+        // the Shift Summary report.
+        $shift = request()->input('shift');
+        $shift_active = in_array($shift, ['morning', 'night'], true);
+
+        // Date range. In shift mode the selected dates are read as shift START
+        // days (see below), so the plain calendar-day filter is skipped there.
+        if (! $shift_active && ! empty(request()->start_date) && ! empty(request()->end_date)) {
                 $start = request()->start_date . ' 00:00:00';
                 $end = request()->end_date . ' 23:59:59';
                 $query->where('transactions.transaction_date', '>=', $start)
                 ->where('transactions.transaction_date', '<=', $end);
+        }
+
+        if ($shift_active) {
+            $expr = $this->businessUtil->shiftBucketExpression('transactions.shift', 'transactions.transaction_date', $business_id);
+            $query->whereRaw("$expr = ?", [$shift]);
+
+            // Read the selected dates as shift START days: count the shift in full
+            // from when it began until it ends — across midnight and including any
+            // extension — while excluding a previous shift's late/extended sales.
+            $sd = request()->input('start_date');
+            $ed = request()->input('end_date');
+            if (! empty($sd) && ! empty($ed)) {
+                [$w_start, $w_end] = $this->businessUtil->shiftDateWindow($shift, $sd, $ed, $business_id);
+                $query->where('transactions.transaction_date', '>=', $w_start)
+                    ->where('transactions.transaction_date', '<', $w_end);
+            }
         }
 
         // Direct sale flag

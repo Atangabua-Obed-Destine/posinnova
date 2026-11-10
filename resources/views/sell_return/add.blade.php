@@ -26,7 +26,7 @@
 					<strong>@lang('messages.date'):</strong> {{@format_date($sell->transaction_date)}}
 				</div>
 				<div class="col-sm-4">
-					<strong>@lang('contact.customer'):</strong> {{ $sell->contact->name }} <br>
+					<strong>@lang('contact.customer'):</strong> @if(!empty($sell->walk_in_customer_name) && !empty($sell->contact->is_default)){{ $sell->walk_in_customer_name }}@else{{ $sell->contact->name }}@endif <br>
 					<strong>@lang('purchase.business_location'):</strong> {{ $sell->location->name }}
 				</div>
 			</div>

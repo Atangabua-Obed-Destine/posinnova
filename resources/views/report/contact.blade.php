@@ -7,7 +7,7 @@
 <section class="content-header">
     <h1>{{ __('report.customer')}} & {{ __('report.supplier')}} {{ __('report.reports')}}</h1>
     <!-- <ol class="breadcrumb">
-        <li><a href="#"><i class="fa fa-dashboard"></i> Level</a></li>
+        <li><a href="#"><i class="fa fa-tachometer-alt"></i> Level</a></li>
         <li class="active">Here</li>
     </ol> -->
 </section>
@@ -58,6 +58,8 @@
         </div>
     </div>
 
+    @include('report.partials.export_buttons', ['export_base' => '/reports/export/contact-report', 'export_map_id' => 'contactReport'])
+
     <div class="row">
         <div class="col-md-12">
             @component('components.widget', ['class' => 'box-primary'])
@@ -97,4 +99,20 @@
 
 @section('javascript')
     <script src="{{ asset('js/report.js?v=' . $asset_v) }}"></script>
+    <script>
+    $(document).on('click.contactExport', '.btn-report-export[data-export-map="contactReport"]', function(e) {
+        e.stopImmediatePropagation(); e.preventDefault();
+        var dr = $('#scr_date_filter').data('daterangepicker');
+        var params = {
+            format:             $(this).data('export-format'),
+            contact_type:       $('#contact_type').val() || '',
+            location_id:        $('#cs_report_location_id').val() || '',
+            contact_id:         $('#scr_contact_id').val() || '',
+            customer_group_id:  $('#cnt_customer_group_id').val() || '',
+            start_date:         (dr && $('#scr_date_filter').val()) ? dr.startDate.format('YYYY-MM-DD') : '',
+            end_date:           (dr && $('#scr_date_filter').val()) ? dr.endDate.format('YYYY-MM-DD') : '',
+        };
+        window.location.href = $(this).data('export-base') + '?' + $.param(params);
+    });
+    </script>
 @endsection

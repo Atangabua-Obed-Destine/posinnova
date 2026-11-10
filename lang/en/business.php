@@ -112,4 +112,7 @@ return [
     'building_number' => 'Building number',
     'additional_number' => 'Additional number',
     'additional_number_secondary' => 'Additional number/Secondary Number',
+
+    // Report export strings (auto-added)
+    'location_name' => 'Location Name',
 ];

@@ -32,7 +32,7 @@
                 <i class="fas fa-pencil-alt"></i>
                 {{$document_note->createdBy->user_full_name}}
                 &nbsp;
-                <i class="fa fa-calendar-check-o"></i>
+                <i class="fa fa-calendar-check"></i>
                 {{@format_date($document_note->created_at)}}
             </span>
             <button type="button" class="tw-dw-btn tw-dw-btn-neutral tw-text-white tw-dw-btn-sm" data-dismiss="modal">

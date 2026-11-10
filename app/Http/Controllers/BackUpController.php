@@ -20,13 +20,26 @@ class BackUpController extends Controller
     }
 
     /**
+     * PosInnova: a backup is the whole database (every business, password hashes, patient
+     * records), so only the business Admin (or the superadmin) may make, download or delete one.
+     */
+    private function authorizeBackup()
+    {
+        $user = auth()->user();
+        $business_id = request()->session()->get('user.business_id');
+        if (! $user || ! ($user->can('superadmin') || $this->commonUtil->is_admin($user, $business_id))) {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+
+    /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
      */
     public function index()
     {
-        // PosInnova: backup is available to every authenticated user.
+        $this->authorizeBackup();
 
         $disk = Storage::disk(config('backup.backup.destination.disks')[0]);
 
@@ -63,7 +76,7 @@ class BackUpController extends Controller
      */
     public function create()
     {
-        // PosInnova: backup is available to every authenticated user.
+        $this->authorizeBackup();
 
         try {
             //Disable in demo
@@ -98,7 +111,7 @@ class BackUpController extends Controller
      */
     public function download($file_name)
     {
-        // PosInnova: backup is available to every authenticated user.
+        $this->authorizeBackup();
 
         //Disable in demo
         if (config('app.env') == 'demo') {
@@ -134,7 +147,7 @@ class BackUpController extends Controller
     public function delete($file_name)
     {
         
-        // PosInnova: backup is available to every authenticated user.
+        $this->authorizeBackup();
 
         //Disable in demo
         if (config('app.env') == 'demo') {

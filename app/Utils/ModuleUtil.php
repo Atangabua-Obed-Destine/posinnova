@@ -571,6 +571,11 @@ class ModuleUtil extends Util
             'types_of_service' => ['name' => __('lang_v1.types_of_service'),
                 'tooltip' => __('lang_v1.types_of_service_help_long'),
             ],
+            // PosInnova: hospital module (Departments + Department Issues). Off by
+            // default — enabled per business under Settings → Modules.
+            'hospital' => ['name' => __('lang_v1.hospital'),
+                'tooltip' => __('lang_v1.hospital_module_tooltip'),
+            ],
         ];
     }
 

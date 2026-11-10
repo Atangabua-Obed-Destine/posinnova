@@ -70,6 +70,8 @@
         </div>
     </div>
     <div class="row">
+    @include('report.partials.export_buttons', ['export_base' => '/reports/export/sell-payment', 'export_map_id' => 'sellPayment'])
+
         <div class="col-md-12">
             @component('components.widget', ['class' => 'box-primary'])
                 <div class="table-responsive">
@@ -114,4 +116,19 @@
 @section('javascript')
     <script src="{{ asset('js/report.js?v=' . $asset_v) }}"></script>
     <script src="{{ asset('js/payment.js?v=' . $asset_v) }}"></script>
+    <script>
+    $(document).on('click.sellPaymentExport', '.btn-report-export[data-export-map="sellPayment"]', function(e) {
+        e.stopImmediatePropagation(); e.preventDefault();
+        var dr = $('#spr_date_filter').data('daterangepicker');
+        var params = {
+            format:        $(this).data('export-format'),
+            customer_id:   $('select[name="customer_id"]').val() || '',
+            location_id:   $('select[name="location_id"]').val() || '',
+            payment_types: $('select[name="payment_types"]').val() || '',
+            start_date:    (dr && $('#spr_date_filter').val()) ? dr.startDate.format('YYYY-MM-DD') : '',
+            end_date:      (dr && $('#spr_date_filter').val()) ? dr.endDate.format('YYYY-MM-DD') : '',
+        };
+        window.location.href = $(this).data('export-base') + '?' + $.param(params);
+    });
+    </script>
 @endsection

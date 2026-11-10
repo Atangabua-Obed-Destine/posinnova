@@ -19,6 +19,14 @@
                  {!! Form::textarea('pos_settings[display_screen_heading]', isset($pos_settings['display_screen_heading']) ? $pos_settings['display_screen_heading'] : null, ['class' => 'form-control', 'id' => 'display_screen_heading']); !!}
             </div>
         </div>
+        {{-- PosInnova: messages that take turns in the strip at the bottom of the customer display --}}
+        <div class="col-sm-12">
+            <div class="form-group">
+                {!! Form::label('display_screen_messages', __('customer_display.messages_label') . ':') !!}
+                {!! Form::textarea('pos_settings[display_screen_messages]', $pos_settings['display_screen_messages'] ?? null, ['class' => 'form-control', 'id' => 'display_screen_messages', 'rows' => 4]); !!}
+                <p class="help-block"><i>@lang('customer_display.messages_help')</i></p>
+            </div>
+        </div>
         @for ($i = 1; $i <= 10; $i++)
             <div class="col-sm-4">
                 <div class="form-group">

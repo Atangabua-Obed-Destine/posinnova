@@ -87,6 +87,8 @@
             @endcomponent
         </div>
     </div>
+    @include('report.partials.export_buttons', ['export_base' => '/reports/export/product-sell-report', 'export_map_id' => 'productSell'])
+
     <div class="row">
         <div class="col-md-12">
             <div class="nav-tabs-custom">
@@ -343,5 +345,20 @@
                     }
                 });
             });
+
+        $(document).on('click.pSellExport', '.btn-report-export[data-export-map="productSell"]', function(e) {
+            e.stopImmediatePropagation(); e.preventDefault();
+            var dr = $('#product_sr_date_filter').data('daterangepicker');
+            var params = {
+                format:      $(this).data('export-format'),
+                customer_id: $('#product_sell_report_form #customer_id').val() || '',
+                location_id: $('#product_sell_report_form #location_id').val() || '',
+                category_id: $('#psr_filter_category_id').val() || '',
+                brand_id:    $('#psr_filter_brand_id').val() || '',
+                start_date:  (dr && $('#product_sr_date_filter').val()) ? dr.startDate.format('YYYY-MM-DD') : '',
+                end_date:    (dr && $('#product_sr_date_filter').val()) ? dr.endDate.format('YYYY-MM-DD') : '',
+            };
+            window.location.href = $(this).data('export-base') + '?' + $.param(params);
+        });
     </script>
 @endsection

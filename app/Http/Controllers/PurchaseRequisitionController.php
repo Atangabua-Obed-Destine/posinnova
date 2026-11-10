@@ -363,6 +363,74 @@ class PurchaseRequisitionController extends Controller
         return $output;
     }
 
+    /**
+     * PosInnova: return a single product row for the PR products table.
+     * Powers the "Add Product" search box on the create page so a user can build
+     * a requisition for any active stock-tracked product, not only items already
+     * at/below their alert quantity.
+     */
+    public function getProductRow($variation_id)
+    {
+        if (! auth()->user()->can('purchase_requisition.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = request()->session()->get('user.business_id');
+        $location_id = request()->input('location_id');
+
+        if (empty($location_id)) {
+            return response('', 422);
+        }
+
+        //Honour the user's permitted locations.
+        $permitted_locations = auth()->user()->permitted_locations();
+        if ($permitted_locations != 'all' && ! in_array((int) $location_id, $permitted_locations)) {
+            abort(403, 'Unauthorized location.');
+        }
+
+        $product = \App\Variation::join('products as p', 'variations.product_id', '=', 'p.id')
+            ->leftjoin('product_variations as pv', 'variations.product_variation_id', '=', 'pv.id')
+            ->leftjoin('variation_location_details as vld', function ($join) use ($location_id) {
+                $join->on('vld.variation_id', '=', 'variations.id')
+                    ->where('vld.location_id', '=', $location_id);
+            })
+            ->leftjoin('business_locations as l', function ($join) use ($location_id) {
+                $join->on('l.id', '=', \DB::raw((int) $location_id));
+            })
+            ->leftjoin('units as u', 'p.unit_id', '=', 'u.id')
+            ->leftjoin('units as su', 'p.secondary_unit_id', '=', 'su.id')
+            ->where('p.business_id', $business_id)
+            ->where('p.is_inactive', 0)
+            ->whereNull('variations.deleted_at')
+            ->where('variations.id', $variation_id)
+            ->select(
+                'p.name as product',
+                'p.type',
+                'p.sku',
+                'p.alert_quantity',
+                'pv.name as product_variation',
+                'variations.name as variation',
+                'variations.sub_sku',
+                'l.name as location',
+                \DB::raw('COALESCE(vld.qty_available, 0) as stock'),
+                'u.short_name as unit',
+                'variations.id as variation_id',
+                'p.id as product_id',
+                'u.allow_decimal',
+                'su.short_name as second_unit',
+                'su.allow_decimal as su_allow_decimal'
+            )
+            ->first();
+
+        if (empty($product)) {
+            return response('', 404);
+        }
+
+        $products = collect([$product]);
+
+        return view('purchase_requisition.product_list')->with(compact('products'));
+    }
+
     public function getRequisitionProducts()
     {
         if (request()->ajax()) {

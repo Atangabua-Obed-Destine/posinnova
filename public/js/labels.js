@@ -72,6 +72,10 @@ $(document).ready(function() {
     $(document).on('click', 'button#print_label', function() {
         window.print();
     });
+
+    $(document).on('click', '.remove_product_row', function() {
+        $(this).closest('tr').remove();
+    });
 });
 
 function get_label_product_row(product_id, variation_id) {

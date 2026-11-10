@@ -133,6 +133,26 @@
     body.posinnova-ticker-hidden { padding-bottom: 0 !important; }
     body.posinnova-ticker-hidden .posinnova-ticker { display: none; }
 
+    /* Padding on <body> only moves content that is in normal flow. An element
+       fixed to the bottom of the VIEWPORT ignores it completely and ends up
+       underneath this bar, which sits above it at z-index 1040. Those elements
+       have to be lifted by the ticker's own height instead.
+
+       .pos-form-actions is the POS action bar - Pay, Cash, Draft, Cancel and
+       the total payable - so the bottom 34px of it was being covered. Below
+       601px app.css switches that bar to position:absolute, where the body
+       padding does work, so the lift is confined to the fixed case.
+
+       .scrolltop is the floating back-to-top button, fixed 20px up.
+
+       Both drop back to the edge the moment the cashier closes the ticker. */
+    @media only screen and (min-width: 601px) {
+        .pos-form-actions { bottom: var(--posinnova-ticker-h); }
+        body.posinnova-ticker-hidden .pos-form-actions { bottom: 0; }
+    }
+    .scrolltop { bottom: calc(var(--posinnova-ticker-h) + 20px); }
+    body.posinnova-ticker-hidden .scrolltop { bottom: 20px; }
+
     @media (max-width: 600px) {
         :root { --posinnova-ticker-h: 30px; }
         .posinnova-ticker { font-size: 11.5px; }

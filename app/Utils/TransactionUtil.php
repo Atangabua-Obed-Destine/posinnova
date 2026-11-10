@@ -74,6 +74,9 @@ class TransactionUtil extends Util
             'walk_in_customer_name' => ! empty($input['walk_in_customer_name']) ? $input['walk_in_customer_name'] : null,
             'customer_group_id' => ! empty($input['customer_group_id']) ? $input['customer_group_id'] : null,
             'invoice_no' => $invoice_no,
+            // PosInnova: one key per checkout, so a resubmitted sale is
+            // recognised instead of being created twice.
+            'idempotency_key' => ! empty($input['idempotency_key']) ? $input['idempotency_key'] : null,
             'ref_no' => '',
             'source' => ! empty($input['source']) ? $input['source'] : null,
             'total_before_tax' => $invoice_total['total_before_tax'],
@@ -674,6 +677,14 @@ class TransactionUtil extends Util
             // so the receipt prints the location the cashier actually picked.
             'location_id' => $line_location_id,
         ]);
+
+        // Lot selection is only posted when the row's lot dropdown is enabled
+        // (draft/quotation edit); the key is absent for final sales whose lot
+        // select stays disabled, leaving the stored lot untouched.
+        if (isset($product['lot_no_line_id'])) {
+            $sell_line->lot_no_line_id = ! empty($product['lot_no_line_id']) ? $product['lot_no_line_id'] : null;
+        }
+
         $sell_line->save();
 
         //Set warranty
@@ -872,24 +883,28 @@ class TransactionUtil extends Util
             }
         }
 
-        // Guard: for sell transactions, never record more in payments than
-        // the transaction's final_total. The cashier-tendered amount can
-        // exceed final_total (the surplus is "change to return") but UltimatePOS
-        // historically stored the full tendered amount as the payment, which
-        // accumulated phantom credits on contacts (especially Walk-In). Cap
-        // the new (non-advance, non-return) payments so their sum, combined
-        // with already-existing payment_lines kept via $edit_ids, never
-        // exceeds final_total. Any excess is treated as change_return.
+        // Guard: for sell transactions the NET payment (payments minus change handed
+        // back) must never exceed final_total. The cashier-tendered amount may
+        // exceed final_total only by the change actually returned (that change is
+        // its own is_return line, which the receipt prints). Without a change line
+        // the surplus would become phantom credit on the contact (especially
+        // Walk-In), so it is capped. A change line larger than the real overpayment
+        // is trimmed. The old guard capped the tendered amount AND kept the change
+        // line, subtracting the change twice: a draft of 32,300 edited down to
+        // 27,500 and paid in cash ended up "partial" (27,500 - 4,800).
         if ($transaction->type === 'sell' && ! empty($payments_formatted)) {
-            $existing_paid = (float) $transaction->payment_lines()
-                ->whereIn('id', $edit_ids)
-                ->where('is_return', 0)
-                ->sum('amount');
-            $remaining = (float) $transaction->final_total - $existing_paid;
-            if ($remaining < 0) {
-                $remaining = 0;
+            $kept = $transaction->payment_lines()->whereIn('id', $edit_ids)->get();
+            $existing_paid = (float) $kept->where('is_return', 0)->sum('amount');
+            $existing_change = (float) $kept->where('is_return', 1)->sum('amount');
+            $new_change = 0.0;
+            foreach ($payments_formatted as $pf) {
+                if (! empty($pf->is_return)) {
+                    $new_change += (float) $pf->amount;
+                }
             }
 
+            // 1. new (non-advance, non-return) payments: up to what is due plus the change handed back
+            $remaining = max(0, (float) $transaction->final_total - $existing_paid + $existing_change + $new_change);
             $running = 0.0;
             foreach ($payments_formatted as $idx => $pf) {
                 if (! empty($pf->is_return) || $pf->method === 'advance') {
@@ -905,6 +920,36 @@ class TransactionUtil extends Util
                 }
                 $running += (float) $pf->amount;
             }
+
+            // 2. change can only give back what was really overpaid
+            $paid_total = $existing_paid;
+            foreach ($payments_formatted as $pf) {
+                if (empty($pf->is_return)) {
+                    $paid_total += (float) $pf->amount;
+                }
+            }
+            $excess_change = ($existing_change + $new_change) - max(0, $paid_total - (float) $transaction->final_total);
+            if ($excess_change > 0.0001) {
+                foreach ($payments_formatted as $idx => $pf) {
+                    if (empty($pf->is_return) || $excess_change <= 0.0001) {
+                        continue;
+                    }
+                    $cut = min((float) $pf->amount, $excess_change);
+                    $pf->amount = (float) $pf->amount - $cut;
+                    $excess_change -= $cut;
+                    if (isset($account_transactions[$idx])) {
+                        $account_transactions[$idx]['amount'] = $pf->amount;
+                    }
+                }
+            }
+
+            // a line reduced to nothing is not recorded at all
+            foreach ($payments_formatted as $idx => $pf) {
+                if ((float) $pf->amount <= 0.0001) {
+                    unset($payments_formatted[$idx], $account_transactions[$idx]);
+                }
+            }
+            $payments_formatted = array_values($payments_formatted);
         }
 
         if (! empty($payments_formatted)) {
@@ -2493,29 +2538,44 @@ class TransactionUtil extends Util
                                         ->find($invoice_scheme_id);
             }
 
-            if ($scheme->scheme_type == 'blank') {
-                $prefix = $scheme->prefix;
-            } else {
-                $prefix = $scheme->prefix.date('Y').config('constants.invoice_scheme_separator');
-            }
+            // PosInnova: the number used to be read, incremented in PHP and
+            // saved. Two cashiers finalising in the same moment both read the
+            // same invoice_count and were issued the SAME invoice number
+            // (measured: 40 numbers issued, 24 distinct, 16 duplicated).
+            // Re-reading the scheme under SELECT ... FOR UPDATE serialises the
+            // read with the increment, so each sale gets its own number.
+            // The unique index on (business_id, type, invoice_no) is the
+            // backstop if a number ever escapes this path.
+            $scheme_id = $scheme->id;
 
-            //Count
-            if($scheme->number_type == 'sequential'){
+            return DB::transaction(function () use ($scheme_id, $business_id) {
+                $scheme = InvoiceScheme::where('business_id', $business_id)
+                    ->lockForUpdate()
+                    ->findOrFail($scheme_id);
+
+                if ($scheme->scheme_type == 'blank') {
+                    $prefix = $scheme->prefix;
+                } else {
+                    $prefix = $scheme->prefix.date('Y').config('constants.invoice_scheme_separator');
+                }
+
+                //Count
                 $count = $scheme->start_number + $scheme->invoice_count;
-            } elseif($scheme->number_type == 'random'){
-                $max = (int)str_pad(1, $scheme->total_digits, '1');
-                $count = rand(1000, 9*$max);
-            }
-            $count = str_pad($count, $scheme->total_digits, '0', STR_PAD_LEFT);
+                if ($scheme->number_type == 'random') {
+                    $max = (int) str_pad(1, $scheme->total_digits, '1');
+                    $count = rand(1000, 9 * $max);
+                }
+                $count = str_pad($count, $scheme->total_digits, '0', STR_PAD_LEFT);
 
-            //Prefix + count
-            $invoice_no = $prefix.$count;
+                //Prefix + count
+                $invoice_no = $prefix.$count;
 
-            //Increment the invoice count
-            $scheme->invoice_count = $scheme->invoice_count + 1;
-            $scheme->save();
+                //Increment the invoice count
+                $scheme->invoice_count = $scheme->invoice_count + 1;
+                $scheme->save();
 
-            return $invoice_no;
+                return $invoice_no;
+            });
         } elseif ($status == 'draft') {
             $ref_count = $this->setAndGetReferenceCount('draft', $business_id);
             $invoice_no = $this->generateReferenceNumber('draft', $ref_count, $business_id);
@@ -2760,6 +2820,87 @@ class TransactionUtil extends Util
         $output['total_additional_expense'] = $sell_details->total_expense;
 
         return $output;
+    }
+
+    /**
+     * PosInnova hospital shifts — sell-side dashboard totals scoped to a single
+     * shift. Uses the same stamped-shift bucket as the Sales by Shift report
+     * (COALESCE(transactions.shift, <time-based CASE>)), so an extended shift is
+     * honoured exactly as on /sells-by-shift. Only the sell cards use this;
+     * purchases/expenses carry no shift and keep their plain date-range totals.
+     *
+     * $start_date/$end_date are treated as EXACT datetime bounds (not whole
+     * days), so the caller can pass a precise shift window (see Util::shiftWindow)
+     * to capture a midnight-wrapping or extended shift without pulling in a
+     * previous shift instance.
+     *
+     * @return array{total_sell: float, invoice_due: float, total_sell_return: float, total_sell_return_paid: float}
+     */
+    public function getShiftSellSummary($business_id, $start_date, $end_date, $location_id, $shift, $created_by = null)
+    {
+        $bucket = $this->shiftBucketExpression('transactions.shift', 'transactions.transaction_date', $business_id);
+
+        // Sales (final) bucketed into this shift.
+        $sell_query = Transaction::where('transactions.business_id', $business_id)
+            ->where('transactions.type', 'sell')
+            ->where('transactions.status', 'final')
+            ->whereRaw("$bucket = ?", [$shift])
+            ->select(
+                DB::raw('SUM(final_total) as total_sell'),
+                DB::raw('SUM(final_total - (SELECT COALESCE(SUM(IF(tp.is_return = 1, -1*tp.amount, tp.amount)), 0) FROM transaction_payments as tp WHERE tp.transaction_id = transactions.id)) as invoice_due')
+            );
+
+        // Sell returns bucketed into this shift (returns carry no stamp, so the
+        // bucket falls back to transaction_date — the time-based shift).
+        $return_query = Transaction::where('transactions.business_id', $business_id)
+            ->where('transactions.type', 'sell_return')
+            ->whereRaw("$bucket = ?", [$shift])
+            ->select(DB::raw('SUM(final_total) as total_sell_return'));
+
+        foreach ([$sell_query, $return_query] as $q) {
+            // Exact datetime bounds (a precise shift window), not whole-day.
+            if (! empty($start_date)) {
+                $q->where('transactions.transaction_date', '>=', $start_date);
+            }
+            if (! empty($end_date)) {
+                $q->where('transactions.transaction_date', '<=', $end_date);
+            }
+            if (! empty($location_id)) {
+                $q->where('transactions.location_id', $location_id);
+            }
+            if (! empty($created_by)) {
+                $q->where('transactions.created_by', $created_by);
+            }
+        }
+
+        // Sell-return payments bucketed into this shift.
+        $bucket_t = $this->shiftBucketExpression('t.shift', 't.transaction_date', $business_id);
+        $paid_query = TransactionPayment::join('transactions as t', 't.id', 'transaction_payments.transaction_id')
+            ->where('t.type', 'sell_return')
+            ->where('t.business_id', $business_id)
+            ->whereRaw("$bucket_t = ?", [$shift])
+            ->select(DB::raw('SUM(transaction_payments.amount) as total_paid'));
+        if (! empty($start_date)) {
+            $paid_query->where('t.transaction_date', '>=', $start_date);
+        }
+        if (! empty($end_date)) {
+            $paid_query->where('t.transaction_date', '<=', $end_date);
+        }
+        if (! empty($location_id)) {
+            $paid_query->where('t.location_id', $location_id);
+        }
+        if (! empty($created_by)) {
+            $paid_query->where('t.created_by', $created_by);
+        }
+
+        $sell = $sell_query->first();
+
+        return [
+            'total_sell' => (float) ($sell->total_sell ?? 0),
+            'invoice_due' => (float) ($sell->invoice_due ?? 0),
+            'total_sell_return' => (float) ($return_query->first()->total_sell_return ?? 0),
+            'total_sell_return_paid' => (float) ($paid_query->first()->total_paid ?? 0),
+        ];
     }
 
     public function getTotalLedgerDiscount($business_id, $start_date = null, $end_date = null)
@@ -4696,9 +4837,12 @@ class TransactionUtil extends Util
         }
 
         if (in_array('stock_adjustment', $transaction_types)) {
+            // 'recount_migration' adjustments are opening-balance corrections from
+            // inventory counts — reported separately and excluded from Net Profit.
             $query->addSelect(
-                DB::raw("SUM(IF(transactions.type='stock_adjustment', final_total, 0)) as total_adjustment"),
-                DB::raw("SUM(IF(transactions.type='stock_adjustment', total_amount_recovered, 0)) as total_recovered")
+                DB::raw("SUM(IF(transactions.type='stock_adjustment' AND (adjustment_type IS NULL OR adjustment_type <> 'recount_migration'), final_total, 0)) as total_adjustment"),
+                DB::raw("SUM(IF(transactions.type='stock_adjustment', total_amount_recovered, 0)) as total_recovered"),
+                DB::raw("SUM(IF(transactions.type='stock_adjustment' AND adjustment_type = 'recount_migration', final_total, 0)) as total_reconciliation")
             );
         }
 
@@ -4770,6 +4914,10 @@ class TransactionUtil extends Util
             $output['total_recovered'] =
                 ! empty($transaction_totals->total_recovered) ?
                 $transaction_totals->total_recovered : 0;
+
+            $output['total_reconciliation'] =
+                ! empty($transaction_totals->total_reconciliation) ?
+                $transaction_totals->total_reconciliation : 0;
         }
 
         if (in_array('purchase', $transaction_types)) {
@@ -5270,7 +5418,7 @@ class TransactionUtil extends Util
                     'transactions.is_direct_sale',
                     'transactions.invoice_no',
                     'transactions.invoice_no as invoice_no_text',
-                    'contacts.name',
+                    DB::raw('CASE WHEN transactions.walk_in_customer_name IS NOT NULL AND contacts.is_default = 1 THEN transactions.walk_in_customer_name ELSE contacts.name END as name'),
                     'contacts.mobile',
                     'contacts.contact_id',
                     'contacts.supplier_business_name',
@@ -5880,6 +6028,8 @@ class TransactionUtil extends Util
         //Stock adjustments
         $data['total_adjustment'] = $transaction_totals['total_adjustment'];
         $data['total_recovered'] = $transaction_totals['total_recovered'];
+        //Inventory reconciliation (migration counts) — informational, not in net profit
+        $data['total_reconciliation'] = $transaction_totals['total_reconciliation'] ?? 0;
 
         // $data['closing_stock'] = $data['closing_stock'] - $data['total_adjustment'];
 
@@ -6825,6 +6975,9 @@ class TransactionUtil extends Util
         }
         if (! empty(request()->input('status'))) {
             $registers->where('cash_registers.status', request()->input('status'));
+        }
+        if (! empty(request()->input('shift'))) {
+            $registers->where('cash_registers.shift', request()->input('shift'));
         }
         if (! empty($start_date) && ! empty($end_date)) {
             $registers->whereDate('cash_registers.created_at', '>=', $start_date)

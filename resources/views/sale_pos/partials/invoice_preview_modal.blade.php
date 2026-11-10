@@ -6,7 +6,7 @@
                 <h4 class="modal-title" id="invoice_preview_label">
                     <i class="fa fa-eye"></i> @lang('lang_v1.invoice_preview')
                 </h4>
-                <small class="text-muted">@lang('lang_v1.preview_only_notice')</small>
+                <small class="text-muted" id="invoice_preview_notice" data-preview="{{ __('lang_v1.preview_only_notice') }}" data-confirm="{{ __('lang_v1.review_before_finalize_notice') }}" data-alert="{{ __('lang_v1.finalize_saves_notice') }}">@lang('lang_v1.preview_only_notice')</small>
             </div>
             <div class="modal-body" id="invoice_preview_body">
                 <!-- Filled by JS -->

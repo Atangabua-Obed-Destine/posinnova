@@ -256,7 +256,9 @@
 			}
 		@endphp
 		@if(!empty($product->lot_numbers) && empty($is_sales_order))
-			<select class="form-control lot_number input-sm" name="products[{{$row_count}}][lot_no_line_id]" @if(!empty($product->transaction_sell_lines_id)) disabled @endif>
+			{{-- Lot stays locked only on finalized sales (stock already mapped to the lot);
+			     drafts/quotations have no stock commitment so the cashier may still pick one --}}
+			<select class="form-control lot_number input-sm" name="products[{{$row_count}}][lot_no_line_id]" @if(!empty($product->transaction_sell_lines_id) && (($transaction->status ?? '') == 'final')) disabled @endif>
 				<option value="">@lang('lang_v1.lot_n_expiry')</option>
 				@foreach($product->lot_numbers as $lot_number)
 					@php
@@ -389,44 +391,75 @@
 
 		<input type="hidden" class="hidden_base_unit_sell_price" value="{{$product->default_sell_price / $multiplier}}">
 		
-		{{-- Hidden fields for combo products --}}
+		{{-- PosInnova combo (kit): show the contained products + a batch (lot/expiry) picker per item --}}
 		@if($product->product_type == 'combo'&& !empty($product->combo_products))
-
-			@foreach($product->combo_products as $k => $combo_product)
-
-				@if(isset($action) && $action == 'edit')
-					@php
-						$combo_product['qty_required'] = $combo_product['quantity'] / $product->quantity_ordered;
-
-						$qty_total = $combo_product['quantity'];
-					@endphp
-				@else
-					@php
-						$qty_total = $combo_product['qty_required'];
-					@endphp
-				@endif
-
-				<input type="hidden" 
-					name="products[{{$row_count}}][combo][{{$k}}][product_id]"
-					value="{{$combo_product['product_id']}}">
-
-					<input type="hidden" 
-					name="products[{{$row_count}}][combo][{{$k}}][variation_id]"
-					value="{{$combo_product['variation_id']}}">
-
-					<input type="hidden"
-					class="combo_product_qty" 
-					name="products[{{$row_count}}][combo][{{$k}}][quantity]"
-					data-unit_quantity="{{$combo_product['qty_required']}}"
-					value="{{$qty_total}}">
+			@php
+				$combo_lot_enabled = session()->get('business.enable_lot_number') == 1;
+				$combo_exp_enabled = session()->get('business.enable_product_expiry') == 1;
+				// Visible contents only when enriched (POS add). On edit the combo
+				// rows come from saved child lines (no name) — keep the original
+				// hidden-only behaviour, no regression.
+				$combo_show_contents = collect($product->combo_products)->contains(function($cp){ return ! empty($cp['name']); });
+			@endphp
+			<div class="combo-kit-contents" @if($combo_show_contents) style="margin-top:6px;padding-left:8px;border-left:2px solid #e5e7eb;" @endif>
+				@if($combo_show_contents)<small class="text-muted"><i class="fa fa-cubes"></i> @lang('lang_v1.kit_contents'):</small>@endif
+				@foreach($product->combo_products as $k => $combo_product)
 
 					@if(isset($action) && $action == 'edit')
-						<input type="hidden" 
-							name="products[{{$row_count}}][combo][{{$k}}][transaction_sell_lines_id]"
-							value="{{$combo_product['id']}}">
+						@php
+							$combo_product['qty_required'] = $combo_product['quantity'] / $product->quantity_ordered;
+							$qty_total = $combo_product['quantity'];
+						@endphp
+					@else
+						@php
+							$qty_total = $combo_product['qty_required'];
+						@endphp
 					@endif
 
-			@endforeach
+					<div class="combo-kit-line" style="margin:2px 0;">
+						@if(!empty($combo_product['name']))
+						<div style="font-size:12px;">
+							&bull; {{ $combo_product['name'] }}
+							<span class="text-muted">&times; <span class="combo_line_qty_display">{{ @format_quantity($qty_total) }}</span> {{ $combo_product['unit'] ?? '' }}</span>
+						</div>
+						@endif
+						@if(($combo_lot_enabled || $combo_exp_enabled) && !empty($combo_product['lot_numbers']))
+							<select class="form-control input-sm combo_lot_number" name="products[{{$row_count}}][combo][{{$k}}][lot_no_line_id]" style="width:auto;min-width:170px;margin-top:2px;display:inline-block;">
+								<option value="">@lang('lang_v1.auto_earliest_expiry')</option>
+								@foreach($combo_product['lot_numbers'] as $lot_number)
+									@php
+										$expiry_text = '';
+										if($combo_exp_enabled && !empty($lot_number->exp_date) && \Carbon::now()->gt(\Carbon::createFromFormat('Y-m-d', $lot_number->exp_date))){
+											$expiry_text = '(' . __('report.expired') . ')';
+										}
+									@endphp
+									<option value="{{$lot_number->purchase_line_id}}" data-qty_available="{{$lot_number->qty_available}}">@if(!empty($lot_number->lot_number) && $combo_lot_enabled){{$lot_number->lot_number}}@endif @if($combo_lot_enabled && $combo_exp_enabled) - @endif @if($combo_exp_enabled && !empty($lot_number->exp_date)) @lang('product.exp_date'): {{@format_date($lot_number->exp_date)}} @endif {{$expiry_text}} [{{$lot_number->qty_formated}}]</option>
+								@endforeach
+							</select>
+						@endif
+
+						<input type="hidden"
+							name="products[{{$row_count}}][combo][{{$k}}][product_id]"
+							value="{{$combo_product['product_id']}}">
+
+						<input type="hidden"
+							name="products[{{$row_count}}][combo][{{$k}}][variation_id]"
+							value="{{$combo_product['variation_id']}}">
+
+						<input type="hidden"
+							class="combo_product_qty"
+							name="products[{{$row_count}}][combo][{{$k}}][quantity]"
+							data-unit_quantity="{{$combo_product['qty_required']}}"
+							value="{{$qty_total}}">
+
+						@if(isset($action) && $action == 'edit')
+							<input type="hidden"
+								name="products[{{$row_count}}][combo][{{$k}}][transaction_sell_lines_id]"
+								value="{{$combo_product['id']}}">
+						@endif
+					</div>
+				@endforeach
+			</div>
 		@endif
 	</td>
 	@if(!empty($is_direct_sell))

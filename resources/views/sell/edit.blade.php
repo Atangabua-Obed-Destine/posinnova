@@ -82,7 +82,7 @@
 						<div class="checkbox">
 							<label>
 				              {!! Form::checkbox('is_recurring', 1, $transaction->is_recurring, ['class' => 'input-icheck', 'id' => 'is_recurring']); !!} @lang('lang_v1.subscribe')?
-				            </label><button type="button" data-toggle="modal" data-target="#recurringInvoiceModal" class="btn btn-link"><i class="fa fa-external-link"></i></button>@show_tooltip(__('lang_v1.recurring_invoice_help'))
+				            </label><button type="button" data-toggle="modal" data-target="#recurringInvoiceModal" class="btn btn-link"><i class="fa fa-external-link-alt"></i></button>@show_tooltip(__('lang_v1.recurring_invoice_help'))
 						</div>
 					</div>
 				@endif
@@ -96,6 +96,9 @@
 							</span>
 							<input type="hidden" id="default_customer_id" 
 							value="{{ $transaction->contact->id }}" >
+							<input type="hidden" id="walk_in_customer_contact_id" 
+							value="{{ $walk_in_customer['id'] ?? ''}}" >
+							<input type="hidden" id="is_custom_customer_name_required" value="{{ !empty($pos_settings['is_custom_customer_name_required']) ? 1 : 0 }}">
 							<input type="hidden" id="default_customer_name" 
 							value="{{ $transaction->contact->name }}" >
 							{!! Form::select('contact_id', 
@@ -105,6 +108,15 @@
 							</span>
 						</div>
 						<small class="text-danger @if(empty($customer_due)) hide @endif contact_due_text"><strong>@lang('account.customer_due'):</strong> <span>{{$customer_due ?? ''}}</span></small>
+					</div>
+					<div class="form-group walk_in_customer_name_wrap" @if(empty($transaction->contact->is_default)) style="display:none;" @endif>
+						<div class="input-group">
+							<span class="input-group-addon" title="@lang('lang_v1.walk_in_customer_name_help')">
+								<i class="fa fa-id-badge"></i>
+							</span>
+							{!! Form::text('walk_in_customer_name', $transaction->walk_in_customer_name, ['class' => 'form-control', 'id' => 'walk_in_customer_name', 'placeholder' => __('lang_v1.walk_in_customer_name_placeholder'), 'maxlength' => 191, 'autocomplete' => 'off', 'required' => !empty($pos_settings['is_custom_customer_name_required'])]) !!}
+						</div>
+						<small class="text-muted">@lang('lang_v1.walk_in_customer_name_help')</small>
 					</div>
 					<small>
 						<strong>
@@ -151,10 +163,18 @@
 				<div class="col-sm-3">
 					<div class="form-group">
 					{!! Form::label('commission_agent', __('lang_v1.commission_agent') . ':') !!}
-					{!! Form::select('commission_agent', 
+					{!! Form::select('commission_agent',
 								$commission_agent, $transaction->commission_agent, ['class' => 'form-control select2', 'id' => 'commission_agent', 'required' => $is_commission_agent_required]); !!}
 					</div>
 				</div>
+				@if(!empty($pos_settings['enable_invoice_commission']))
+					<div class="col-sm-3">
+						<div class="form-group">
+						{!! Form::label('commission_amount', __('lang_v1.commission_amount') . ':') !!} @show_tooltip(__('lang_v1.invoice_commission_help'))
+						{!! Form::text('commission_amount', !empty($transaction->commission_amount) ? @num_format($transaction->commission_amount) : null, ['class' => 'form-control input_number', 'id' => 'commission_amount', 'placeholder' => __('lang_v1.commission_amount')]) !!}
+						</div>
+					</div>
+				@endif
 				@endif
 				<div class="@if(!empty($commission_agent)) col-sm-3 @else col-sm-4 @endif">
 					<div class="form-group">
@@ -315,6 +335,10 @@
 					<!-- Keeps count of product rows -->
 					<input type="hidden" id="product_row_count" 
 						value="{{count($sell_details)}}">
+					{{-- PosInnova: how many cart rows the browser actually submitted. The server
+					     rejects the sale if fewer arrive, so a dropped line can never be saved
+					     silently. Left at 0 when JS has not run, which skips the check. --}}
+					<input type="hidden" name="expected_product_rows" id="expected_product_rows" value="0">
 					@php
 						$hide_tax = '';
 						if( session()->get('business.enable_inline_tax') == 0){

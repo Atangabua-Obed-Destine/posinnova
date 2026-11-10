@@ -15,6 +15,8 @@
         @include('sell.partials.sell_list_filters')
     @endcomponent
 
+    @include('report.partials.export_buttons', ['export_base' => '/reports/export/sale-report', 'export_map_id' => 'saleReport'])
+
     @component('components.widget', ['class' => 'box-primary'])
         <div class="table-responsive">
     <table class="table table-bordered table-striped ajax_view" id="sale_report_table"
@@ -98,6 +100,32 @@
         $(document).on('change', '#sell_list_filter_location_id, #sell_list_filter_customer_id, #sell_list_filter_payment_status, #created_by, #sales_cmsn_agnt, #service_staffs',  function() {
             sale_report_table.ajax.reload();
         });
+    });
+
+    window.__exportMap_saleReport = {
+        start_date:    function() {
+            var dr = $('#sell_list_filter_date_range').data('daterangepicker');
+            return dr && $('#sell_list_filter_date_range').val() ? dr.startDate.format('YYYY-MM-DD') : '';
+        },
+        end_date:      function() {
+            var dr = $('#sell_list_filter_date_range').data('daterangepicker');
+            return dr && $('#sell_list_filter_date_range').val() ? dr.endDate.format('YYYY-MM-DD') : '';
+        },
+        location_id:   '#sell_list_filter_location_id',
+        customer_id:   '#sell_list_filter_customer_id',
+        payment_status:'#sell_list_filter_payment_status',
+    };
+    // Override buildReportExportUrl for function-valued map entries
+    $(document).off('click.saleExport').on('click.saleExport', '.btn-report-export[data-export-map="saleReport"]', function(e) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        var format = $(this).data('export-format');
+        var params = { format: format };
+        $.each(window.__exportMap_saleReport, function(k, v) {
+            var val = typeof v === 'function' ? v() : ($(v).val() || '');
+            if (val) params[k] = val;
+        });
+        window.location.href = $(this).data('export-base') + '?' + $.param(params);
     });
 </script>
 	

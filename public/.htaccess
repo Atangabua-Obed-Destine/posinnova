@@ -1,3 +1,14 @@
+# PosInnova: each cart line posts ~18 fields, so PHP's default max_input_vars
+# of 1000 silently DISCARDS the tail of a large sale - no error, just missing
+# items. Raised here so it travels with the code. Guarded by module so an
+# install running PHP as CGI/FPM (where php_value is illegal) is unaffected.
+<IfModule php_module>
+    php_value max_input_vars 5000
+</IfModule>
+<IfModule mod_php7.c>
+    php_value max_input_vars 5000
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

@@ -6,6 +6,15 @@ $(document).on('submit', 'form', function (e) {
         return false;
     }
 
+    // PosInnova: a disabled button is not sent with the form, so a form with several submit
+    // buttons (Save draft / Finalize, Save / Save and validate) lost which one was pressed.
+    // Keep the pressed button's name=value as a hidden field before disabling the buttons.
+    var submitter = e.originalEvent && e.originalEvent.submitter;
+    $(this).find('input[type="hidden"][data-pos-submitter]').remove();
+    if (submitter && submitter.name) {
+        $('<input type="hidden" data-pos-submitter="1">').attr('name', submitter.name).val(submitter.value).appendTo(this);
+    }
+
     $(this).find('button[type="submit"]').attr('disabled', true);
 });
 $(document).ready(function () {
@@ -46,6 +55,16 @@ $(document).ready(function () {
     //Toastr setting
     toastr.options.preventDuplicates = true;
     toastr.options.timeOut = '3000';
+    // Always show a close (×) button so a toast can be dismissed manually,
+    // and give it a finite hover timeout so it can't get stuck on screen.
+    toastr.options.closeButton = true;
+    toastr.options.extendedTimeOut = '3000';
+    toastr.options.progressBar = true;
+    // Make the × dismiss the toast instantly instead of fading over ~1s
+    // (closeDuration otherwise falls back to the 1000ms hideDuration).
+    toastr.options.closeMethod = 'fadeOut';
+    toastr.options.closeDuration = 0;
+    toastr.options.closeEasing = 'swing';
 
     //Play notification sound on success, error and warning
     toastr.options.onShown = function () {

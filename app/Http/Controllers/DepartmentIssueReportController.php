@@ -20,6 +20,14 @@ class DepartmentIssueReportController extends Controller
 
     public function __construct(ProductUtil $productUtil, TransactionUtil $transactionUtil, ModuleUtil $moduleUtil)
     {
+        //PosInnova: section switched off in Clinic settings
+        $this->middleware(function ($request, $next) {
+            if (! \App\Utils\ClinicSettings::sectionOn($request->session()->get('user.business_id'), 'departments')) {
+                abort(404);
+            }
+
+            return $next($request);
+        });
         $this->productUtil = $productUtil;
         $this->transactionUtil = $transactionUtil;
         $this->moduleUtil = $moduleUtil;

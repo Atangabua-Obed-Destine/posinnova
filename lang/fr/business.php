@@ -26,7 +26,7 @@
      'email' => 'Email',
      'password' => 'Mot de passe',
      'confirm_password' => 'Confirmez le mot de passe',
-     'register' => 'Registre',
+     'register' => "S'inscrire",
      'business' => 'Entreprise',
      'address' => 'Adresse',
      'logo_help' => "Le logo précédent (s'il existe) sera remplacé",
@@ -77,7 +77,7 @@
      'already_registered' => 'Déjà enregistré?',
      'sign_in' => 'Se connecter',
      'not_yet_registered' => 'Pas encore enregistré?',
-     'register_now' => 'Inscrire maintenant',
+     'register_now' => 'Inscrivez-vous',
      'system' => 'Système',
      'show_help_text' => "Afficher le texte d'aide",
      'mobile' => 'Mobile',
@@ -98,4 +98,13 @@
      'is_active' => 'Actif',
      'created_by' => 'Créé par',
      'additional_number_secondary' => 'Numéro supplémentaire/Numéro secondaire',
- ];
+ 
+    // Report export strings (auto-added)
+    'location_name' => 'Nom de l\'emplacement',
+    // ---- PosInnova: French for keys that only existed in English
+    'set_up_your_account_today' => 'Créez le compte de votre entreprise en quelques minutes.',
+    'land_mark' => 'Point de repère',
+    'street_name' => 'Nom de la rue',
+    'building_number' => 'Numéro du bâtiment',
+    'additional_number' => 'Numéro complémentaire',
+];

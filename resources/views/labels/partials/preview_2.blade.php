@@ -86,7 +86,7 @@
 						</span>
 					@endif
 					{{-- Barcode --}}
-					<img style="max-width:90% !important;height: {{$barcode_details->height*0.24}}in !important; display: block;" src="data:image/png;base64,{{DNS1D::getBarcodePNG($page_product->sub_sku, $page_product->barcode_type, 3,90, array(0, 0, 0), false)}}">
+					<img style="max-width:{{$barcode_details->barcode_width_percent ?? 90}}% !important;height: {{$barcode_details->height * (($barcode_details->barcode_height_percent ?? 24) / 100)}}in !important; display: block;" src="data:image/png;base64,{{DNS1D::getBarcodePNG($page_product->sub_sku, $page_product->barcode_type, 3,90, array(0, 0, 0), false)}}">
 					
 					<span style="font-size: 10px !important">
 						{{$page_product->sub_sku}}
@@ -105,7 +105,8 @@
 <style type="text/css">
 
 	td{
-		border: 1px dotted lightgray;
+		/* border: 1px dotted lightgray; */
+		border: none;
 	}
 	@media print{
 		

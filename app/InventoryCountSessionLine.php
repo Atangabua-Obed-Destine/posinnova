@@ -13,6 +13,7 @@ class InventoryCountSessionLine extends Model
     protected $casts = [
         'counted_at' => 'datetime',
         'exp_date' => 'date',
+        'counted_breakdown' => 'array',
     ];
 
     public function purchaseLine()

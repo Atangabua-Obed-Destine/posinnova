@@ -664,8 +664,15 @@ class ProductUtil extends Util
     {
         $details = [];
 
+        // PosInnova: surface each kit component's name/unit and its batch (lot /
+        // expiry) options, so a combo can be sold batch-aware at the POS. The
+        // batch list reuses the same fetch the normal sell line uses.
+        $lot_enabled = request()->session()->get('business.enable_lot_number') == 1;
+        $exp_enabled = request()->session()->get('business.enable_product_expiry') == 1;
+        $transaction_util = ($lot_enabled || $exp_enabled) ? app(\App\Utils\TransactionUtil::class) : null;
+
         foreach ($combo_variations as $key => $value) {
-            $variation = Variation::with(['product', 'variation_location_details' => function ($q) use ($location_id) {
+            $variation = Variation::with(['product.unit', 'variation_location_details' => function ($q) use ($location_id) {
                 $q->where('location_id', $location_id);
             }])->findOrFail($value['variation_id']);
 
@@ -674,15 +681,77 @@ class ProductUtil extends Util
             $variation_qty = ! empty($vld) ? $vld->qty_available : 0;
             $multiplier = $this->getMultiplierOf2Units($variation->product->unit_id, $value['unit_id']);
 
+            // Batches available for this component at the POS location.
+            $lot_numbers = [];
+            if (! empty($transaction_util) && $variation->product->enable_stock == 1) {
+                $lot_number_obj = $transaction_util->getLotNumbersFromVariation(
+                    $value['variation_id'], $variation->product->business_id, $location_id, true
+                );
+                // Earliest expiry first (FEFO) so the picker defaults read top-down.
+                $lot_number_obj = $lot_number_obj->sortBy(function ($l) {
+                    return ! empty($l->exp_date) ? $l->exp_date : '9999-12-31';
+                })->values();
+                foreach ($lot_number_obj as $lot_number) {
+                    $lot_number->qty_formated = $this->num_f($lot_number->qty_available);
+                    $lot_numbers[] = $lot_number;
+                }
+            }
+
+            $component_name = $variation->product->name;
+            if (! empty($variation->name) && $variation->name !== 'DUMMY') {
+                $component_name .= ' (' . $variation->name . ')';
+            }
+
             $details[] = [
                 'variation_id' => $value['variation_id'],
                 'product_id' => $variation->product_id,
                 'qty_required' => $this->num_uf($value['quantity']) * $multiplier,
                 'enable_stock' => $variation->product->enable_stock,
+                'name' => $component_name,
+                'unit' => optional($variation->product->unit)->short_name,
+                'lot_numbers' => $lot_numbers,
             ];
         }
 
         return $details;
+    }
+
+    /**
+     * PosInnova: name of the first kit component that is short of stock at the
+     * given location — used to explain why an out-of-stock combo can't be added.
+     * Mirrors the per-component availability logic in calculateComboQuantity.
+     *
+     * @param  int  $location_id
+     * @param  array|string  $combo_variations
+     * @return string|null
+     */
+    private function getLimitingComboComponentName($location_id, $combo_variations)
+    {
+        $cv = is_array($combo_variations) ? $combo_variations : json_decode($combo_variations, true);
+        if (empty($cv)) {
+            return null;
+        }
+
+        foreach ($cv as $c) {
+            $variation = Variation::with(['product', 'variation_location_details' => function ($q) use ($location_id) {
+                $q->where('location_id', $location_id);
+            }])->find($c['variation_id']);
+
+            if (empty($variation) || $variation->product->enable_stock != 1) {
+                continue;
+            }
+
+            $vld = $variation->variation_location_details->first();
+            $available = ! empty($vld) ? $vld->qty_available : 0;
+            $multiplier = $this->getMultiplierOf2Units($variation->product->unit_id, $c['unit_id']);
+            $required = $this->num_uf($c['quantity']) * $multiplier;
+
+            if ($available < $required) {
+                return $variation->product->name;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -1367,6 +1436,42 @@ class ProductUtil extends Util
                     $variation_data['purchase_price'] = $purchase_line->purchase_price;
 
                     $this->updateProductFromPurchase($variation_data);
+                }
+
+                // PosInnova: Explicitly process the new unit_prices array if provided from the new UI
+                if (!empty($data['unit_prices']) && is_array($data['unit_prices'])) {
+                    $tax_rate = 0;
+                    $variation_for_tax = Variation::where('id', $purchase_line->variation_id)
+                        ->with(['product.product_tax'])->first();
+                    if (!empty($variation_for_tax->product->product_tax->amount)) {
+                        $tax_rate = $variation_for_tax->product->product_tax->amount;
+                    }
+
+                    foreach ($data['unit_prices'] as $u_id => $prices) {
+                        $exc_raw = $prices['exc'] ?? null;
+                        $inc_raw = $prices['inc'] ?? null;
+                        
+                        $exc = ($exc_raw !== null && $exc_raw !== '') ? $this->num_uf($exc_raw) : null;
+                        $inc = ($inc_raw !== null && $inc_raw !== '') ? $this->num_uf($inc_raw) : null;
+
+                        if ($exc !== null || $inc !== null) {
+                            if ($exc !== null && $inc === null) {
+                                $inc = $this->calc_percentage($exc, $tax_rate, $exc);
+                            } elseif ($inc !== null && $exc === null) {
+                                $exc = $this->calc_percentage_base($inc, $tax_rate);
+                            }
+
+                            \App\VariationUnitPrice::updateOrCreate(
+                                ['variation_id' => $purchase_line->variation_id, 'unit_id' => (int) $u_id],
+                                ['price_exc_tax' => $exc, 'price_inc_tax' => $inc]
+                            );
+                        } else {
+                            // If both are empty/null, clear the override (revert to auto calculation)
+                            \App\VariationUnitPrice::where('variation_id', $purchase_line->variation_id)
+                                ->where('unit_id', (int) $u_id)
+                                ->delete();
+                        }
+                    }
                 }
             }
 
@@ -2671,6 +2776,22 @@ class ProductUtil extends Util
         }
 
         $product = $this->getDetailsFromVariation($variation_id, $business_id, $location_id, $check_qty);
+
+        // PosInnova: block adding an out-of-stock combo (kit). Combos have
+        // enable_stock=0, so the positive-qty filter inside getDetailsFromVariation
+        // skips them; enforce it explicitly from the kit's computed availability.
+        // $check_qty is already false for overselling / sales-order / draft, so
+        // those flows are unaffected.
+        if ($check_qty && $product->product_type == 'combo' && $product->qty_available <= 0) {
+            $short = $this->getLimitingComboComponentName($location_id, $product->combo_variations);
+
+            return [
+                'success' => false,
+                'msg' => $short
+                    ? __('lang_v1.combo_component_out_of_stock', ['product' => $short])
+                    : __('lang_v1.item_out_of_stock'),
+            ];
+        }
 
         if (!isset($product->quantity_ordered)) {
             $product->quantity_ordered = $quantity;

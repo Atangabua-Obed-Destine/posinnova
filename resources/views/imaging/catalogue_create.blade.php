@@ -1,0 +1,17 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        {!! Form::open(['url' => action([\App\Http\Controllers\ImagingController::class, 'storeCatalogue']), 'method' => 'post', 'id' => 'imaging_add_form']) !!}
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">@lang('lang_v1.add_imaging_study')</h4>
+        </div>
+        <div class="modal-body">
+            @include('imaging.partials.catalogue_fields')
+        </div>
+        <div class="modal-footer">
+            <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-text-white">@lang('messages.save')</button>
+            <button type="button" class="tw-dw-btn tw-dw-btn-neutral tw-text-white" data-dismiss="modal">@lang('messages.close')</button>
+        </div>
+        {!! Form::close() !!}
+    </div>
+</div>

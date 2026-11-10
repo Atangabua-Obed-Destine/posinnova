@@ -5,16 +5,23 @@
 
     <div class="tw-pb-6 tw-bg-gradient-to-r tw-from-@if(!empty(session('business.theme_color'))){{session('business.theme_color')}}@else{{'primary'}}@endif-800 tw-to-@if(!empty(session('business.theme_color'))){{session('business.theme_color')}}@else{{'primary'}}@endif-900 xl:tw-pb-0 ">
         <div class="tw-px-5 tw-pt-3">
+            {{-- PosInnova: hospital module on = this sales dashboard is the "Pharmacy sales" tab of the hospital home --}}
+            @if (in_array('hospital', (array) (session('business.enabled_modules') ?: [])))
+                <div role="tablist" style="display:flex;gap:6px;margin:6px 0 4px;">
+                    <a role="tab" aria-selected="false" href="{{ action([\App\Http\Controllers\HomeController::class, 'index']) }}" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;color:#fff;background:rgba(255,255,255,.12);text-decoration:none;">{!! \App\Utils\ClinicIcons::svg('building-hospital', '') !!} {{ __('clinic.dash_tab_hospital') }}</a>
+                    <a role="tab" aria-selected="true" href="{{ action([\App\Http\Controllers\HomeController::class, 'index'], ['view' => 'sales']) }}" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;color:#101828;background:#fff;text-decoration:none;">{!! \App\Utils\ClinicIcons::svg('building-store', '') !!} {{ __('clinic.dash_tab_sales') }}</a>
+                </div>
+            @endif
             {{-- <div class="sm:tw-flex sm:tw-items-center sm:tw-justify-between sm:tw-gap-12">
                 <h1 class="tw-text-2xl tw-font-medium tw-tracking-tight tw-text-white">
-                    {{ __('home.welcome_message', ['name' => Session::get('user.first_name')]) }}
+                    {{ __('home.welcome_message', ['name' => trim(preg_replace('/\s+/', ' ', (auth()->user()->surname ?? '') . ' ' . auth()->user()->first_name)), 'business' => session('business.name')]) }}
                 </h1>
             </div> --}}
                     <div class="sm:tw-flex sm:tw-items-center sm:tw-justify-between sm:tw-gap-12">
                         <div class="tw-mt-2 sm:tw-w-1/2 md:tw-w-1/2">
                             <h1
                                 class="tw-text-2xl md:tw-text-4xl tw-tracking-tight tw-text-primary-800 tw-font-semibold text-white tw-mb-10 md:tw-mb-0">
-                                {{ __('home.welcome_message', ['name' => Session::get('user.first_name')]) }}
+                                {{ __('home.welcome_message', ['name' => trim(preg_replace('/\s+/', ' ', (auth()->user()->surname ?? '') . ' ' . auth()->user()->first_name)), 'business' => session('business.name')]) }}
                             </h1>
                         </div>
     
@@ -32,7 +39,17 @@
             
                                 <div class="tw-mt-2 sm:tw-w-1/3 md:tw-w-1/4 tw-text-right">
                                     @if ($is_admin)
+                                        @if (!empty($shift_enabled))
+                                            <div class="tw-mb-2">
+                                                {!! Form::select('dashboard_shift_filter', $shift_filter_options, $current_shift, [
+                                                    'class' => 'form-control',
+                                                    'id' => 'dashboard_shift_filter',
+                                                    'style' => 'display:inline-block;width:auto;min-width:150px;',
+                                                ]) !!}
+                                            </div>
+                                        @endif
                                         <button type="button" id="dashboard_date_filter"
+                                            @if(!empty($shift_day)) data-shift-start="{{ $shift_day }}" data-shift-end="{{ $shift_day }}" @endif
                                             class="tw-inline-flex tw-items-center tw-justify-center tw-w-full tw-gap-1 tw-px-3 tw-py-2 tw-text-sm tw-font-medium tw-text-gray-900 tw-transition-all tw-duration-200 tw-bg-white tw-rounded-lg sm:tw-w-auto hover:tw-bg-primary-50">
                                             <svg aria-hidden="true" class="tw-size-5" xmlns="http://www.w3.org/2000/svg"
                                                 viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none"
@@ -68,6 +85,15 @@
                     </div>
                     @if (auth()->user()->can('dashboard.data'))
                         @if ($is_admin)
+                            @if (!empty($shift_enabled))
+                                {{-- PosInnova hospital shifts: explains the split — sales are shift-scoped, purchases/expenses are today's totals. --}}
+                                <div id="dashboard_shift_scope_note"
+                                    data-note-template="@lang('lang_v1.dashboard_shift_scope_note', ['shift' => '__SHIFT__'])"
+                                    class="tw-mt-4 tw-rounded-lg tw-bg-white/10 tw-px-3 tw-py-2 tw-text-sm text-white"
+                                    style="display:none;">
+                                    <i class="fa fa-info-circle"></i> <span id="dashboard_shift_scope_text"></span>
+                                </div>
+                            @endif
                             <div class="tw-grid tw-grid-cols-1 tw-gap-4 tw-mt-6 sm:tw-grid-cols-2 xl:tw-grid-cols-4 sm:tw-gap-5">
                             
                                 <div
@@ -1023,14 +1049,13 @@
         </div>
     @endif
 
+    {{-- modals live inside the section: markup outside it is printed before <!DOCTYPE>, which breaks the <head> --}}
+    <div class="modal fade payment_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
+    </div>
+    <div class="modal fade edit_pso_status_modal" tabindex="-1" role="dialog"></div>
+    <div class="modal fade edit_payment_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
+    </div>
 @endsection
-
-
-<div class="modal fade payment_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
-</div>
-<div class="modal fade edit_pso_status_modal" tabindex="-1" role="dialog"></div>
-<div class="modal fade edit_payment_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
-</div>
 
 @section('css')
     <style>

@@ -3,100 +3,119 @@
         @include('sale_pos.partials.featured_products')
     @endif
 </div>
-<div class="row tw-mb-1">
+
+{{--
+    PosInnova: the category and brand pickers used to be DaisyUI drawers that slid
+    a half-screen overlay across the cart. They are now panels that expand in place
+    under their own button, so the cashier never loses sight of the sale.
+
+    The hooks pos.js binds to are unchanged on purpose:
+      .main-category[data-parent=0]  apply this category
+      .main-category[data-parent=1]  drill into its sub-categories
+      .all-sub-category              the hidden sub-category block
+      .category-back / .category_heading
+      .product_category / .product_brand
+      .overlay-category / .overlay-brand   "close the picker" - now collapses the panel
+--}}
+@php
+    $pi_has_facets = !empty($categories) || !empty($brands);
+    // The collapse control only belongs on the desktop split screen. Phones get
+    // this same partial inside a modal, where there is no cart beside it to
+    // widen - and create/edit only render the side pane when !isMobile().
+    $pi_can_collapse = !isMobile();
+@endphp
+@if ($pi_has_facets || $pi_can_collapse)
+<div class="pi-browser-head">
+{{-- Nothing of the facet bar renders when the business has both pickers turned
+     off: an empty #pi_facet_bar would still add its own margin above the
+     product grid, and the pos.js facet module keys its early return off the
+     absence of that element. --}}
+@if ($pi_has_facets)
+<div class="pi-facets" id="pi_facet_bar">
+
+        <div class="pi-facet-btns">
+            @if (!empty($categories))
+                <button type="button" class="pi-facet-btn" id="pi_cat_btn" aria-expanded="false"
+                    aria-controls="pi_cat_panel" data-panel="cat">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" /><path d="M17.5 14v7M14 17.5h7" />
+                    </svg>
+                    <span>@lang('category.category')</span>
+                    <svg class="pi-cv" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                </button>
+            @endif
+
+            @if (!empty($brands))
+                <button type="button" class="pi-facet-btn" id="pi_brand_btn" aria-expanded="false"
+                    aria-controls="pi_brand_panel" data-panel="brand">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 11V5a2 2 0 0 1 2-2h6l10 10-8 8z" /><circle cx="7.5" cy="7.5" r="1.3" />
+                    </svg>
+                    <span>@lang('brand.brands')</span>
+                    <svg class="pi-cv" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                </button>
+            @endif
+        </div>
+
     @if (!empty($categories))
-        <div class="col-md-6 !tw-px-2" id="product_category_div">
-            <div class="tw-dw-drawer tw-dw-drawer-end">
-                <input id="my-drawer-4" type="checkbox" class="tw-dw-drawer-toggle">
-                <div class="tw-dw-drawer-content">
-                    <!-- Page content here -->
-                    <label for="my-drawer-4"
-                        class="tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 hover:tw-from-indigo-600 hover:tw-to-blue-600 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-ring-offset-2 active:tw-from-indigo-700 active:tw-to-blue-700 lg:tw-w-[98%] tw-w-full tw-flex tw-items-center tw-justify-center tw-gap-1 tw-text-base md:tw-text-lg tw-text-white tw-font-semibold tw-rounded-xl tw-h-12 tw-cursor-pointer">
-                        <svg xmlns="http://www.w3.org/2000/svg"
-                            class="tw-w-5 icon icon-tabler icon-tabler-category-plus" width="44" height="44"
-                            viewBox="0 0 24 24" stroke-width="1.5" stroke="#ffffff" fill="none"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                            <path d="M4 4h6v6h-6zm10 0h6v6h-6zm-10 10h6v6h-6zm10 3h6m-3 -3v6" />
-                        </svg>
-                        @lang('category.category')
-                    </label>
-                </div>
-                <div class="tw-dw-drawer-side" style="z-index: 4000">
-                    <label for="my-drawer-4" aria-label="close sidebar"
-                        class="tw-dw-drawer-overlay overlay-category"></label>
-                    <div class="tw-dw-menu tw-w-2/4 tw-min-h-full tw-bg-white tw-p-6">
-                        <div class="tw-flex tw-items-center tw-mb-16">
+        <div class="pi-facet-panel" id="pi_cat_panel">
+            <div>
+                <div class="pi-facet-panel-in">
+                    <div class="pi-facet-head">
+                        <button type="button" class="pi-facet-back category-back" style="display: none">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6" /></svg>
+                            @lang('messages.back')
+                        </button>
+                        <span class="pi-facet-title category_heading">@lang('category.category')</span>
+                        <span class="pi-facet-find">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" /></svg>
+                            <input type="text" class="pi-facet-filter" data-scope="#pi_cat_panel"
+                                placeholder="@lang('lang_v1.search')" autocomplete="off">
+                        </span>
+                        {{-- pos.js closes the picker with $('.overlay-category').trigger('click') --}}
+                        <span class="overlay-category" style="display:none"></span>
+                    </div>
+
+                    <div class="pi-facet-opts">
+                        <button type="button" class="pi-opt main-category-div main-category no-print" data-value="all"
+                            data-parent="0">@lang('lang_v1.all_category')</button>
+
+                        @foreach ($categories as $category)
+                            @php $has_subs = !empty($category['sub_categories']); @endphp
                             <button type="button"
-                                class="tw-dw-btn tw-dw-btn-accent category-back tw-bg-transparent tw-border-2"
-                                style="display: none">
-                                <svg xmlns="http://www.w3.org/2000/svg"
-                                    class="tw-w-5 icon icon-tabler icon-tabler-chevron-left" width="44"
-                                    height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50"
-                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                    <path d="M15 6l-6 6l6 6" />
-                                </svg>
-                            </button>
-
-                            <h3 class="tw-text-center tw-flex-grow mx-auto category_heading tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-inline-block tw-text-transparent tw-bg-clip-text tw-font-bold tw-text-base md:tw-text-2xl"
-                                style="margin-bottom: 0px; margin-top:5px;">@lang('category.category')</h3>
-
-                            <button type="button" class="tw-dw-btn tw-dw-btn-error close-side-bar-category">
-                                <i class="fa fa-times-circle" aria-hidden="true"></i>
-                            </button>
-
-                        </div>
-                        <div class="row tw-mr-5">
-                            <div class="col-md-3 col-xs-12 tw-mb-7 tw-w-auto  tw-h-auto tw-cursor-pointer  main-category-div main-category no-print"
-                                data-value="all" data-parent="0">
-                                <div class="tw-dw-card tw-w-25 tw-bg-base-100 tw-shadow-sm tw-h-auto tw-shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] tw-bg-white hover:tw-bg-white/60 tw-cursor-pointer !tw-text-xs md:!tw-text-sm tw-font-semibold tw-text-center tw-border-2">
-                                    <div class="tw-dw-card-body">
-                                        <h4 class="tw-flex tw-items-center tw-justify-center" style="margin-bottom: 0px; margin-top:0px; font-size: inherit; font-weight: inherit;">@lang('lang_v1.all_category')</h4>
-                                    </div>
-                                </div>
-                            </div>
-                            @foreach ($categories as $category)
-                                    <div class="col-md-3 col-xs-12 tw-mb-7 tw-w-auto  tw-h-28  tw-cursor-pointer main-category-div  no-print"
-                                        data-value="{{ $category['id'] }}" data-name="{{ $category['name'] }}" data-parent="1">
-                                        <div
-                                            class="tw-dw-card tw-w-25 tw-bg-base-100 tw-shadow-sm tw-h-auto tw-shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] tw-bg-white hover:tw-bg-white/60 tw-cursor-pointer tw-text-xs md:tw-text-sm tw-font-semibold !tw-text-center tw-border-2">
-                                            <div class="tw-dw-card-body" style="margin-bottom: -20px">
-                                                <h4 class="tw-flex tw-items-center tw-justify-center"
-                                                    style="margin-bottom: 0px; margin-top:0px; font-size: inherit; font-weight: inherit;">
-                                                    {{ $category['name'] }}</h4>
-                                            </div>
-                                            <div class="tw-dw-card-actions tw-justify-center">
-                                                <button type="button" class="tw-dw-btn tw-dw-btn-accent tw-dw-btn-outline tw-dw-btn-sm main-category tw-mb-2" data-value="{{ $category['id'] }}" data-parent="0">{{ __('lang_v1.all') }}</button>
-                                                @if (!empty($category['sub_categories']))
-                                                <button type="button" class="tw-dw-btn tw-dw-btn-primary tw-dw-btn-outline tw-dw-btn-sm main-category tw-mb-2" data-parent="1" data-value="{{ $category['id'] }}" data-name="{{ $category['name'] }}">@lang('pagination.next')</button>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                            @endforeach
-                            @foreach ($categories as $category)
-                                @if (!empty($category['sub_categories']))
-                                    <div class="all-sub-category" data-category-id="{{ $category['id'] }}" style="display: none">
-                                        @foreach ($category['sub_categories'] as $sc)
-                                            @if ($sc['parent_id'] != 0)
-                                                <div class="col-md-3 col-xs-12 tw-mb-5 tw-w-auto tw-h-auto tw-cursor-pointer product_category no-print"
-                                                    data-value="{{ $sc['id'] }}">
-                                                    <div
-                                                        class="tw-dw-card tw-w-25 tw-bg-base-100 tw-shadow-sm tw-h-auto tw-shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] tw-bg-white hover:tw-bg-white/60 tw-cursor-pointer tw-text-xs md:tw-text-sm tw-font-semibold tw-text-center tw-border-2">
-                                                        <div class="tw-dw-card-body">
-                                                            <h4 class="tw-flex tw-items-center tw-justify-center"
-                                                                style="margin-bottom: 0px; margin-top:0px; font-size: inherit; font-weight: inherit;">
-                                                                {{ $sc['name'] }}</h4>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endif
-                                        @endforeach
-                                    </div>
+                                class="pi-opt main-category-div main-category no-print @if ($has_subs) pi-opt-more @endif"
+                                data-value="{{ $category['id'] }}" data-name="{{ $category['name'] }}"
+                                data-parent="{{ $has_subs ? 1 : 0 }}">
+                                <span>{{ $category['name'] }}</span>
+                                @if ($has_subs)
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
                                 @endif
-                            @endforeach
-                        </div>
+                            </button>
+                        @endforeach
+
+                        @foreach ($categories as $category)
+                            @if (!empty($category['sub_categories']))
+                                <div class="all-sub-category" data-category-id="{{ $category['id'] }}"
+                                    style="display: none">
+                                    <button type="button" class="pi-opt main-category no-print" data-value="{{ $category['id'] }}"
+                                        data-parent="0">@lang('lang_v1.all') &mdash; {{ $category['name'] }}</button>
+                                    @foreach ($category['sub_categories'] as $sc)
+                                        @if ($sc['parent_id'] != 0)
+                                            <button type="button" class="pi-opt product_category no-print"
+                                                data-value="{{ $sc['id'] }}">{{ $sc['name'] }}</button>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            @endif
+                        @endforeach
                     </div>
                 </div>
             </div>
@@ -104,61 +123,62 @@
     @endif
 
     @if (!empty($brands))
-        <div class="col-sm-6 !tw-px-2" id="product_brand_div">
-            <div class="tw-dw-drawer tw-dw-drawer-end">
-                <input id="my-drawer-brand" type="checkbox" class="tw-dw-drawer-toggle">
-                <div class="tw-dw-drawer-content">
-                    <!-- Page content here -->
-                    <label for="my-drawer-brand"
-                        class="tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 hover:tw-from-indigo-600 hover:tw-to-blue-600 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-ring-offset-2 active:tw-from-indigo-700 active:tw-to-blue-700 lg:tw-w-[98%] tw-w-full tw-flex tw-items-center tw-justify-center tw-gap-1 tw-text-base md:tw-text-lg tw-text-white tw-font-semibold tw-rounded-xl tw-h-12 tw-cursor-pointer">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="tw-w-5 icon icon-tabler icon-tabler-brand-beats"
-                            width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#ffffff"
-                            fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                            <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
-                            <path d="M12.5 12.5m-3.5 0a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0 -7 0" />
-                            <path d="M9 12v-8" />
-                        </svg>
-                        @lang('brand.brands')
-                    </label>
+        <div class="pi-facet-panel" id="pi_brand_panel">
+            <div>
+                <div class="pi-facet-panel-in">
+                    <div class="pi-facet-head">
+                        <span class="pi-facet-title">@lang('brand.brands')</span>
+                        <span class="pi-facet-find">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" /></svg>
+                            <input type="text" class="pi-facet-filter" data-scope="#pi_brand_panel"
+                                placeholder="@lang('lang_v1.search')" autocomplete="off">
+                        </span>
+                        <span class="overlay-brand" style="display:none"></span>
+                    </div>
 
-                </div>
-                <div class="tw-dw-drawer-side" style="z-index: 4000">
-                    <label for="my-drawer-brand" aria-label="close sidebar"
-                        class="tw-dw-drawer-overlay overlay-brand"></label>
-                    <div class="tw-dw-menu tw-w-2/4 tw-min-h-full tw-bg-white tw-p-6">
+                    @php
+                        // Brands::forDropdown()->prepend('All Brands','all') means this list is
+                        // never empty: without the 'all' entry there may be no brands at all.
+                        $pi_real_brands = collect($brands)->filter(fn($v, $k) => (string) $k !== 'all');
+                    @endphp
 
-                        <div class="tw-flex tw-items-center tw-mb-16">
-                            <h3 class="tw-text-center tw-mx-auto tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-transparent tw-bg-clip-text tw-font-bold tw-text-base md:tw-text-2xl tw-mb-16"
-                                style="margin-bottom: 0px; margin-top:5px;">@lang('brand.brands')</h3>
-                            <button type="button" class="tw-dw-btn tw-dw-btn-error close-side-bar-brand">
-                                <i class="fa fa-times-circle" aria-hidden="true"></i>
-                            </button>
-                        </div>
-
-                        <div class="row tw-mr-5">
+                    @if ($pi_real_brands->isEmpty())
+                        <div class="pi-facet-empty">@lang('lang_v1.no_brands_configured')</div>
+                    @else
+                        <div class="pi-facet-opts">
                             @foreach ($brands as $key => $brand)
-                                <div class="col-md-4 col-xs-12 tw-mb-5 tw-w-auto tw-h-auto tw-cursor-pointer product_brand no-print"
-                                    data-value="{{ $key }}">
-                                    <div
-                                        class="tw-dw-card tw-w-25 tw-bg-base-100 tw-shadow-sm tw-h-auto tw-shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] tw-bg-white hover:tw-bg-white/60 tw-cursor-pointer tw-text-xs md:tw-text-sm tw-font-semibold tw-text-center tw-border-2">
-                                        <div class="tw-dw-card-body">
-                                            <h4 class="tw-flex tw-items-center tw-justify-center"
-                                                style="margin-bottom: 0px; margin-top:0px; font-size: inherit; font-weight: inherit;">
-                                                {{ $brand }}
-                                            </h4>
-                                        </div>
-                                    </div>
-                                </div>
+                                <button type="button" class="pi-opt product_brand no-print"
+                                    data-value="{{ $key }}">{{ $brand }}</button>
                             @endforeach
                         </div>
-                    </div>
+                    @endif
                 </div>
             </div>
         </div>
     @endif
 
-    <!-- used in repair : filter for service/product -->
+    <div class="pi-active-row" id="pi_active_row"></div>
+</div>
+@endif
+
+@if ($pi_can_collapse)
+    {{-- Hides this whole pane so the cart takes the full width. The way back is
+         the "Products" tab on the right edge (sale_pos/partials/pos_browser_toggle). --}}
+    <button type="button" class="pi-browser-toggle no-print" id="pi_browser_collapse"
+        aria-controls="pi_pos_browser_pane" aria-expanded="true"
+        title="@lang('lang_v1.hide_product_panel')" aria-label="@lang('lang_v1.hide_product_panel')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M15 4v16" /><path d="m8 9 3 3-3 3" />
+        </svg>
+    </button>
+@endif
+</div>
+@endif
+
+<!-- used in repair : filter for service/product -->
+<div class="row">
     <div class="col-md-6 hide" id="product_service_div">
         {!! Form::select(
             'is_enabled_stock',
@@ -173,6 +193,7 @@
             id="show_featured_products">@lang('lang_v1.featured_products')</button>
     </div>
 </div>
+
 <div class="row">
     <input type="hidden" id="suggestion_page" value="1">
     <div class="col-md-12">

@@ -79,8 +79,24 @@
                             </span>
                         </td>
                     </tr>
-                    <tr><td>&nbsp;</td></tr>
-                    <tr><td>&nbsp;</td></tr>
+                    <tr>
+                        <th>{{ __('lang_v1.recount_shortage') }}:</th>
+                        <td>
+                             <span class="total_recount_shortage">
+                                <i class="fas fa-sync fa-spin fa-fw"></i>
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">{{ __('lang_v1.inventory_reconciliation') }}
+                            <i class="fa fa-info-circle text-info" data-toggle="tooltip" title="{{ __('lang_v1.inventory_reconciliation_help') }}"></i>:
+                        </th>
+                        <td class="text-muted">
+                             <span class="total_reconciliation">
+                                <i class="fas fa-sync fa-spin fa-fw"></i>
+                            </span>
+                        </td>
+                    </tr>
                 </table>
             @endcomponent
         </div>

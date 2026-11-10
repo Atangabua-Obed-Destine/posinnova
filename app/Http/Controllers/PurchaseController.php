@@ -1106,6 +1106,41 @@ class PurchaseController extends Controller
                 $row_target_location_id = $target_location_id;
                 $row_target_location_name = $business_locations[$target_location_id] ?? null;
 
+                // Pre-compute per-unit prices data for each variation
+                $all_unit_prices_data = [];
+                foreach ($variations as $var) {
+                    $unit_prices_data = [];
+                    $unit_prices_data[$product->unit->id] = [
+                        'name' => $product->unit->actual_name,
+                        'multiplier' => 1,
+                        'exc' => null,
+                        'inc' => null,
+                    ];
+                    if (!empty($sub_units)) {
+                        foreach ($sub_units as $key => $value) {
+                            $unit_prices_data[$key] = [
+                                'name' => $value['name'],
+                                'multiplier' => $value['multiplier'],
+                                'exc' => null,
+                                'inc' => null,
+                            ];
+                        }
+                    }
+
+                    $saved = \App\VariationUnitPrice::where('variation_id', $var->id)
+                        ->whereIn('unit_id', array_keys($unit_prices_data))
+                        ->get();
+                    foreach ($saved as $row) {
+                        if (isset($unit_prices_data[$row->unit_id])) {
+                            $unit_prices_data[$row->unit_id]['exc'] = $row->price_exc_tax;
+                            $unit_prices_data[$row->unit_id]['inc'] = $row->price_inc_tax;
+                        }
+                    }
+                    $all_unit_prices_data[$var->id] = $unit_prices_data;
+                }
+
+                $tax_type = $product->tax_type ?? 'exclusive';
+
                 return view('purchase.partials.purchase_entry_row')
                     ->with(compact(
                         'product',
@@ -1120,7 +1155,9 @@ class PurchaseController extends Controller
                         'last_purchase_line',
                         'business_locations',
                         'row_target_location_id',
-                        'row_target_location_name'
+                        'row_target_location_name',
+                        'all_unit_prices_data',
+                        'tax_type'
                     ));
             }
         }

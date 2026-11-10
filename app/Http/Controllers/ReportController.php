@@ -1113,7 +1113,9 @@ class ReportController extends Controller
                 DB::raw('SUM(final_total) as total_amount'),
                 DB::raw('SUM(total_amount_recovered) as total_recovered'),
                 DB::raw("SUM(IF(adjustment_type = 'normal', final_total, 0)) as total_normal"),
-                DB::raw("SUM(IF(adjustment_type = 'abnormal', final_total, 0)) as total_abnormal")
+                DB::raw("SUM(IF(adjustment_type = 'abnormal', final_total, 0)) as total_abnormal"),
+                DB::raw("SUM(IF(adjustment_type = 'recount_shortage', final_total, 0)) as total_recount_shortage"),
+                DB::raw("SUM(IF(adjustment_type = 'recount_migration', final_total, 0)) as total_reconciliation")
             )->first();
 
             return $stock_adjustment_details;
@@ -1148,6 +1150,9 @@ class ReportController extends Controller
             $registers = $this->transactionUtil->registerReport($business_id, $permitted_locations, $start_date, $end_date, $user_id);
 
             return Datatables::of($registers)
+                ->addColumn('shift_label', function ($row) {
+                    return $this->businessUtil->shiftLabel($row->shift);
+                })
                 ->editColumn('total_card_payment', function ($row) {
                     return '<span data-orig-value="'.$row->total_card_payment.'" >'.$this->transactionUtil->num_f($row->total_card_payment, true).' ('.$row->total_card_slips.')</span>';
                 })
@@ -1215,9 +1220,107 @@ class ReportController extends Controller
 
         $users = User::forDropdown($business_id, false);
         $payment_types = $this->transactionUtil->payment_types(null, true, $business_id);
+        $shift_enabled = $this->businessUtil->isShiftEnabled($business_id);
+        $shifts = \App\Utils\Util::shiftLabels();
 
         return view('report.register_report')
-                    ->with(compact('users', 'payment_types'));
+                    ->with(compact('users', 'payment_types', 'shift_enabled', 'shifts'));
+    }
+
+    /**
+     * PosInnova hospital shifts — consolidated Shift Summary report.
+     * Buckets every final sale into morning/night by its own timestamp, so
+     * the totals are accurate even across cashiers and the shift boundary.
+     */
+    public function getShiftSummaryReport(Request $request)
+    {
+        if (! auth()->user()->can('shift_report.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = $request->session()->get('user.business_id');
+
+        // Feature must be on; otherwise there are no shifts to report.
+        if (! $this->businessUtil->isShiftEnabled($business_id)) {
+            return redirect()->action([\App\Http\Controllers\HomeController::class, 'index'])
+                ->with('status', ['success' => 0, 'msg' => __('lang_v1.shift_feature_disabled')]);
+        }
+
+        $business_locations = BusinessLocation::forDropdown($business_id, false);
+        $permitted_locations = auth()->user()->permitted_locations();
+
+        $start_date = $request->input('start_date', date('Y-m-01'));
+        $end_date = $request->input('end_date', date('Y-m-d'));
+        $location_id = $request->input('location_id');
+
+        // Prefer the shift stamped on each sale (honours extended shifts);
+        // fall back to the wall-clock window for older/unstamped rows.
+        $shift_expr = $this->businessUtil->shiftBucketExpression('transactions.shift', 'transactions.transaction_date', $business_id);
+
+        // Read the selected dates as shift START days. Each shift that began in
+        // the range is counted in full, through when it ends — across midnight
+        // and including extension — using that shift's own shift-day window, so a
+        // wrapping night is never split. Morning and night each get their window.
+        [$m_start, $m_end] = $this->businessUtil->shiftDateWindow('morning', $start_date, $end_date, $business_id);
+        [$n_start, $n_end] = $this->businessUtil->shiftDateWindow('night', $start_date, $end_date, $business_id);
+
+        $base = Transaction::where('transactions.business_id', $business_id)
+            ->where('transactions.type', 'sell')
+            ->where('transactions.status', 'final')
+            ->where(function ($q) use ($shift_expr, $m_start, $m_end, $n_start, $n_end) {
+                $q->where(function ($w) use ($shift_expr, $m_start, $m_end) {
+                    $w->whereRaw("$shift_expr = 'morning'")
+                        ->where('transactions.transaction_date', '>=', $m_start)
+                        ->where('transactions.transaction_date', '<', $m_end);
+                })->orWhere(function ($w) use ($shift_expr, $n_start, $n_end) {
+                    $w->whereRaw("$shift_expr = 'night'")
+                        ->where('transactions.transaction_date', '>=', $n_start)
+                        ->where('transactions.transaction_date', '<', $n_end);
+                });
+            });
+
+        if ($permitted_locations != 'all') {
+            $base->whereIn('transactions.location_id', $permitted_locations);
+        }
+        if (! empty($location_id)) {
+            $base->where('transactions.location_id', $location_id);
+        }
+
+        // Totals per shift.
+        $by_shift = (clone $base)
+            ->select(
+                DB::raw("$shift_expr as shift"),
+                DB::raw('COUNT(transactions.id) as total_invoices'),
+                DB::raw('SUM(transactions.final_total) as total_sales'),
+                DB::raw('SUM(transactions.tax_amount) as total_tax')
+            )
+            ->groupBy(DB::raw($shift_expr))
+            ->get()
+            ->keyBy('shift');
+
+        // Per-cashier breakdown across both shifts.
+        $by_cashier = (clone $base)
+            ->leftJoin('users as u', 'transactions.created_by', '=', 'u.id')
+            ->select(
+                'transactions.created_by',
+                DB::raw("CONCAT(COALESCE(u.surname,''),' ',COALESCE(u.first_name,''),' ',COALESCE(u.last_name,'')) as cashier_name"),
+                DB::raw("SUM(CASE WHEN $shift_expr = 'morning' THEN transactions.final_total ELSE 0 END) as morning_sales"),
+                DB::raw("SUM(CASE WHEN $shift_expr = 'morning' THEN 1 ELSE 0 END) as morning_invoices"),
+                DB::raw("SUM(CASE WHEN $shift_expr = 'night' THEN transactions.final_total ELSE 0 END) as night_sales"),
+                DB::raw("SUM(CASE WHEN $shift_expr = 'night' THEN 1 ELSE 0 END) as night_invoices"),
+                DB::raw('SUM(transactions.final_total) as total_sales')
+            )
+            ->groupBy('transactions.created_by')
+            ->orderByDesc('total_sales')
+            ->get();
+
+        $shift_labels = \App\Utils\Util::shiftLabels();
+        $shift_settings = $this->businessUtil->getShiftSettings($business_id);
+
+        return view('report.shift_summary')->with(compact(
+            'business_locations', 'start_date', 'end_date', 'location_id',
+            'by_shift', 'by_cashier', 'shift_labels', 'shift_settings'
+        ));
     }
 
     /**
@@ -4101,5 +4204,999 @@ class ReportController extends Controller
         $suppliers = Contact::suppliersDropdown($business_id);
 
         return view('report.gst_purchase_report')->with(compact('suppliers', 'taxes'));
+    }
+
+    /**
+     * PosInnova: Products Price List
+     *
+     * Shows a printable / exportable price list for all sellable products and
+     * their variations. Optional filter by selling price group lets the
+     * business print custom tariffs (e.g. wholesale, distributor).
+     */
+    public function getProductsPriceList(Request $request)
+    {
+        if (! auth()->user()->can('stock_report.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = $request->session()->get('user.business_id');
+
+        if ($request->ajax()) {
+            $category_id     = $request->input('category_id');
+            $sub_category_id = $request->input('sub_category_id');
+            $brand_id        = $request->input('brand_id');
+            $unit_id         = $request->input('unit_id');
+            $price_group_id  = $request->input('price_group_id');
+            $active_state    = $request->input('active_state', 'active');
+            $not_for_selling = $request->input('not_for_selling') == 'true' ? 1 : 0;
+
+            $query = Product::leftjoin('units as u', 'u.id', '=', 'products.unit_id')
+                ->leftjoin('categories as c', 'c.id', '=', 'products.category_id')
+                ->leftjoin('categories as sc', 'sc.id', '=', 'products.sub_category_id')
+                ->leftjoin('brands as b', 'b.id', '=', 'products.brand_id')
+                ->leftjoin('tax_rates as tr', 'tr.id', '=', 'products.tax')
+                ->join('variations as v', function ($join) {
+                    $join->on('v.product_id', '=', 'products.id')
+                         ->whereNull('v.deleted_at');
+                })
+                ->where('products.business_id', $business_id)
+                ->where('products.type', '!=', 'modifier')
+                ->where('products.not_for_selling', $not_for_selling);
+
+            if ($active_state === 'active') {
+                $query->where('products.is_inactive', 0);
+            } elseif ($active_state === 'inactive') {
+                $query->where('products.is_inactive', 1);
+            }
+
+            if (! empty($category_id))     { $query->where('products.category_id', $category_id); }
+            if (! empty($sub_category_id)) { $query->where('products.sub_category_id', $sub_category_id); }
+            if (! empty($brand_id))        { $query->where('products.brand_id', $brand_id); }
+            if (! empty($unit_id))         { $query->where('products.unit_id', $unit_id); }
+
+            if (! empty($price_group_id)) {
+                $query->leftjoin('variation_group_prices as vgp', function ($join) use ($price_group_id) {
+                    $join->on('vgp.variation_id', '=', 'v.id')
+                         ->where('vgp.price_group_id', '=', $price_group_id);
+                });
+            }
+
+            $query->select(
+                'products.id as product_id',
+                'products.name as product',
+                'products.type',
+                'products.sku',
+                'products.unit_id as base_unit_id',
+                'products.sub_unit_ids as sub_unit_ids_json',
+                'v.id as variation_id',
+                'v.name as variation_name',
+                'v.sub_sku',
+                'v.default_purchase_price',
+                'v.sell_price_inc_tax',
+                'u.short_name as unit',
+                'c.name as category',
+                'sc.name as sub_category',
+                'b.name as brand',
+                'tr.name as tax_name',
+                'tr.amount as tax_amount'
+            );
+
+            if (! empty($price_group_id)) {
+                $query->addSelect(DB::raw('IF (vgp.price_type = "fixed", vgp.price_inc_tax, vgp.price_inc_tax * v.sell_price_inc_tax / 100) as group_price'));
+            } else {
+                $query->addSelect(DB::raw('NULL as group_price'));
+            }
+
+            //PosInnova: preload per-unit price helpers once so the addColumn() closure
+            //below stays O(1) per row (no N+1 lookups across the page).
+            $all_units = DB::table('units')
+                ->where('business_id', $business_id)
+                ->select('id', 'actual_name', 'short_name', 'base_unit_id', 'base_unit_multiplier')
+                ->get();
+            $sub_units_by_base = $all_units
+                ->filter(function ($u) { return ! is_null($u->base_unit_id); })
+                ->groupBy('base_unit_id');
+
+            $vup_rows = DB::table('variation_unit_prices as vup')
+                ->join('variations as v2', 'v2.id', '=', 'vup.variation_id')
+                ->join('products as p2', 'p2.id', '=', 'v2.product_id')
+                ->where('p2.business_id', $business_id)
+                ->select('vup.variation_id', 'vup.unit_id', 'vup.price_exc_tax', 'vup.price_inc_tax')
+                ->get();
+            $vup_by_var = [];
+            foreach ($vup_rows as $vr) {
+                $price = (float) $vr->price_inc_tax > 0
+                    ? (float) $vr->price_inc_tax
+                    : (float) $vr->price_exc_tax;
+                $vup_by_var[$vr->variation_id][$vr->unit_id] = $price;
+            }
+
+            $transactionUtil = $this->transactionUtil;
+            $override_label  = __('lang_v1.custom_override_price');
+
+            return Datatables::of($query)
+                ->editColumn('product', function ($row) {
+                    $name = e($row->product);
+                    if ($row->type === 'variable' && ! empty($row->variation_name) && $row->variation_name !== 'DUMMY') {
+                        $name .= ' - '.e($row->variation_name);
+                    }
+                    return $name;
+                })
+                ->editColumn('sub_sku', function ($row) {
+                    return e($row->sub_sku ?: $row->sku);
+                })
+                ->editColumn('default_purchase_price', function ($row) {
+                    return '<span class="display_currency" data-currency_symbol="true">'
+                        .$this->transactionUtil->num_f((float) $row->default_purchase_price).'</span>';
+                })
+                ->editColumn('sell_price_inc_tax', function ($row) {
+                    return '<span class="display_currency" data-currency_symbol="true">'
+                        .$this->transactionUtil->num_f((float) $row->sell_price_inc_tax).'</span>';
+                })
+                ->editColumn('group_price', function ($row) {
+                    if (is_null($row->group_price)) {
+                        return '';
+                    }
+                    return '<span class="display_currency" data-currency_symbol="true">'
+                        .$this->transactionUtil->num_f((float) $row->group_price).'</span>';
+                })
+                ->editColumn('tax_name', function ($row) {
+                    if (empty($row->tax_name)) {
+                        return '';
+                    }
+                    return e($row->tax_name).' ('.(float) $row->tax_amount.'%)';
+                })
+                ->addColumn('other_units', function ($row) use ($sub_units_by_base, $vup_by_var, $transactionUtil, $override_label) {
+                    if (empty($row->base_unit_id)) {
+                        return '<span class="text-muted">&mdash;</span>';
+                    }
+                    $base_id = (int) $row->base_unit_id;
+
+                    //Only list sub-units the merchant has explicitly mapped via
+                    //products.sub_unit_ids, OR units that already have a saved
+                    //per-unit price override. This matches what shows on the product
+                    //edit page (and avoids surfacing FCFA 0.00 placeholders for
+                    //units that aren't actually assigned to the product).
+                    $allowed = [];
+                    if (! empty($row->sub_unit_ids_json)) {
+                        $decoded = json_decode($row->sub_unit_ids_json, true);
+                        if (is_array($decoded)) {
+                            $allowed = array_map('intval', $decoded);
+                        }
+                    }
+
+                    $overrides = $vup_by_var[$row->variation_id] ?? [];
+
+                    if (empty($allowed) && empty($overrides)) {
+                        return '<span class="text-muted">&mdash;</span>';
+                    }
+
+                    $children = $sub_units_by_base->get($base_id, collect());
+                    if ($children->isEmpty()) {
+                        return '<span class="text-muted">&mdash;</span>';
+                    }
+
+                    $base_price = (float) $row->sell_price_inc_tax;
+                    $parts      = [];
+
+                    foreach ($children as $cu) {
+                        $uid = (int) $cu->id;
+                        $is_mapped   = in_array($uid, $allowed, true);
+                        $has_override = array_key_exists($uid, $overrides) && $overrides[$uid] > 0;
+                        if (! $is_mapped && ! $has_override) {
+                            continue;
+                        }
+                        $mult        = (float) $cu->base_unit_multiplier;
+                        $is_override = array_key_exists($uid, $overrides) && $overrides[$uid] > 0;
+                        $price       = $is_override ? $overrides[$uid] : $base_price * $mult;
+                        $name        = e($cu->short_name ?: $cu->actual_name);
+                        $star        = $is_override
+                            ? ' <span class="label label-warning" title="'.e($override_label).'" style="padding:1px 4px;">&#9733;</span>'
+                            : '';
+                        $parts[] = '<span class="text-nowrap" style="display:inline-block;margin-right:8px;">'
+                                 . '<strong>'.$name.':</strong> '
+                                 . '<span class="display_currency" data-currency_symbol="true">'
+                                 . $transactionUtil->num_f($price)
+                                 . '</span>'.$star
+                                 . '</span>';
+                    }
+
+                    return count($parts) ? implode(' ', $parts) : '<span class="text-muted">&mdash;</span>';
+                })
+                ->filterColumn('product', function ($q, $kw) {
+                    $q->where(function ($qq) use ($kw) {
+                        $qq->where('products.name', 'like', "%{$kw}%")
+                           ->orWhere('v.name', 'like', "%{$kw}%");
+                    });
+                })
+                ->filterColumn('sub_sku', function ($q, $kw) {
+                    $q->where(function ($qq) use ($kw) {
+                        $qq->where('v.sub_sku', 'like', "%{$kw}%")
+                           ->orWhere('products.sku', 'like', "%{$kw}%");
+                    });
+                })
+                ->rawColumns(['default_purchase_price', 'sell_price_inc_tax', 'group_price', 'other_units'])
+                ->make(true);
+        }
+
+        $categories = Category::forDropdown($business_id, 'product');
+        $brands     = Brands::forDropdown($business_id);
+        $units      = Unit::where('business_id', $business_id)->pluck('short_name', 'id');
+
+        //Only show price groups the user is permitted to view
+        $price_groups_query = SellingPriceGroup::where('business_id', $business_id)
+            ->where('is_active', 1);
+        $price_groups = $price_groups_query->get()->filter(function ($g) {
+            return auth()->user()->can('selling_price_group.'.$g->id);
+        })->pluck('name', 'id');
+
+        return view('report.products_price_list')
+            ->with(compact('categories', 'brands', 'units', 'price_groups'));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  REPORT EXPORTS  (Excel + PDF)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private function exportBaseData(Request $request): array
+    {
+        $business_id = $request->session()->get('user.business_id');
+        $business    = \App\Utils\ReportExportUtil::getBusinessDetails($business_id);
+        $generated_by = auth()->user()->first_name . ' ' . auth()->user()->last_name;
+        $currency_symbol = $business['currency_symbol'] ?? '';
+        return compact('business_id', 'business', 'generated_by', 'currency_symbol');
+    }
+
+    private function buildMpdf(): \Mpdf\Mpdf
+    {
+        return new \Mpdf\Mpdf([
+            'tempDir'        => public_path('uploads/temp'),
+            'mode'           => 'utf-8',
+            'autoScriptToLang' => true,
+            'autoLangToFont' => true,
+            'margin_top'     => 8,
+            'margin_bottom'  => 8,
+            'margin_left'    => 10,
+            'margin_right'   => 10,
+            'format'         => 'A4-L',  // Landscape for wide tables
+        ]);
+    }
+
+    private function sharedPdfVars(array $business, array $filters, string $generated_by, string $currency_symbol): array
+    {
+        return [
+            'business'       => $business,
+            'logo_path'      => \App\Utils\ReportExportUtil::getLogoPath($business),
+            'address_line'   => \App\Utils\ReportExportUtil::buildAddressLine($business),
+            'contact_line'   => \App\Utils\ReportExportUtil::buildContactLine($business),
+            'filter_summary' => \App\Utils\ReportExportUtil::buildFilterSummary($filters),
+            'generated_by'   => $generated_by,
+            'currency_symbol'=> $currency_symbol,
+        ];
+    }
+
+    // ── Sale Report ─────────────────────────────────────────────────────────
+
+    public function exportSaleReport(Request $request)
+    {
+        if (! auth()->user()->can('sell.view') && ! auth()->user()->can('direct_sell.access')) {
+            abort(403);
+        }
+        ['business_id' => $business_id, 'business' => $business, 'generated_by' => $generated_by, 'currency_symbol' => $currency_symbol] = $this->exportBaseData($request);
+
+        $query = Transaction::leftJoin('contacts', 'transactions.contact_id', '=', 'contacts.id')
+            ->leftJoin('transaction_payments as tp', 'transactions.id', '=', 'tp.transaction_id')
+            ->where('transactions.business_id', $business_id)
+            ->where('transactions.type', 'sell')
+            ->where('transactions.status', 'final')
+            ->groupBy('transactions.id')
+            ->select(
+                'contacts.contact_id',
+                'contacts.name',
+                'transactions.invoice_no',
+                DB::raw('DATE_FORMAT(transactions.transaction_date, "%d/%m/%Y") as sale_date'),
+                'transactions.total_before_tax',
+                'transactions.discount_amount',
+                'transactions.tax_amount',
+                'transactions.final_total',
+                DB::raw("GROUP_CONCAT(DISTINCT tp.method SEPARATOR ', ') as payment_methods_plain")
+            );
+
+        $permitted_locations = auth()->user()->permitted_locations();
+        if ($permitted_locations !== 'all') {
+            $query->whereIn('transactions.location_id', $permitted_locations);
+        }
+        if ($start = $request->get('start_date')) { $query->whereDate('transactions.transaction_date', '>=', $start); }
+        if ($end   = $request->get('end_date'))   { $query->whereDate('transactions.transaction_date', '<=', $end); }
+        if ($cid   = $request->get('customer_id')) { $query->where('transactions.contact_id', $cid); }
+        if ($lid   = $request->get('location_id')) { $query->where('transactions.location_id', $lid); }
+        if ($ps    = $request->get('payment_status')) { $query->where('transactions.payment_status', $ps); }
+
+        $rows = $query->get();
+
+        $kpis = [
+            'total_sales'    => $rows->sum('final_total'),
+            'total_before_tax' => $rows->sum('total_before_tax'),
+            'total_tax'      => $rows->sum('tax_amount'),
+            'total_discount' => $rows->sum('discount_amount'),
+            'invoice_count'  => $rows->count(),
+        ];
+
+        $filters = array_merge($request->only(['start_date', 'end_date', 'payment_status']), [
+            'location_name' => $request->get('location_name'),
+            'customer_name' => $request->get('customer_name'),
+        ]);
+
+        $format = $request->get('format', 'excel');
+
+        if ($format === 'pdf') {
+            $vars = array_merge($this->sharedPdfVars($business, $filters, $generated_by, $currency_symbol), [
+                'report_title' => 'Report 607 — ' . __('business.sale'),
+                'rows'         => $rows,
+                'kpis'         => $kpis,
+            ]);
+            $html = view('report.exports.pdf.sale_report', $vars)->render();
+            $mpdf = $this->buildMpdf();
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('sale_report.pdf', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="sale_report_' . now()->format('Ymd_His') . '.pdf"',
+            ]);
+        }
+
+        $export = new \App\Exports\Reports\SaleReportExport($rows->all(), $kpis, $business, $filters, $generated_by, $currency_symbol);
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'sale_report_' . now()->format('Ymd_His') . '.xlsx');
+    }
+
+    // ── Purchase Report ──────────────────────────────────────────────────────
+
+    public function exportPurchaseReport(Request $request)
+    {
+        if (! auth()->user()->can('purchase.view') && ! auth()->user()->can('view_own_purchase')) {
+            abort(403);
+        }
+        ['business_id' => $business_id, 'business' => $business, 'generated_by' => $generated_by, 'currency_symbol' => $currency_symbol] = $this->exportBaseData($request);
+
+        $query = Transaction::leftJoin('contacts', 'transactions.contact_id', '=', 'contacts.id')
+            ->leftJoin('transaction_payments AS TP', 'transactions.id', '=', 'TP.transaction_id')
+            ->where('transactions.business_id', $business_id)
+            ->where('transactions.type', 'purchase')
+            ->groupBy('transactions.id')
+            ->select(
+                'contacts.contact_id',
+                'contacts.name',
+                'transactions.ref_no',
+                DB::raw('DATE_FORMAT(transactions.transaction_date, "%Y/%m") as purchase_year_month'),
+                DB::raw('DATE_FORMAT(transactions.transaction_date, "%d") as purchase_day'),
+                'transactions.total_before_tax',
+                'transactions.discount_amount',
+                'transactions.discount_type',
+                'transactions.tax_amount',
+                'transactions.final_total',
+                'transactions.payment_status',
+                DB::raw("GROUP_CONCAT(DISTINCT TP.method SEPARATOR ', ') as payment_method_plain")
+            );
+
+        $permitted_locations = auth()->user()->permitted_locations();
+        if ($permitted_locations !== 'all') { $query->whereIn('transactions.location_id', $permitted_locations); }
+        if ($sid = $request->get('supplier_id')) { $query->where('contacts.id', $sid); }
+        if ($lid = $request->get('location_id')) { $query->where('transactions.location_id', $lid); }
+        if ($ps  = $request->get('payment_status')) { $query->where('transactions.payment_status', $ps); }
+        if ($st  = $request->get('status')) { $query->where('transactions.status', $st); }
+        if ($request->get('start_date')) { $query->whereDate('transactions.transaction_date', '>=', $request->get('start_date')); }
+        if ($request->get('end_date'))   { $query->whereDate('transactions.transaction_date', '<=', $request->get('end_date')); }
+
+        $rows = $query->get();
+
+        $kpis = [
+            'total_purchase'  => $rows->sum('final_total'),
+            'total_before_tax'=> $rows->sum('total_before_tax'),
+            'total_tax'       => $rows->sum('tax_amount'),
+            'total_discount'  => $rows->sum(fn($r) => $r->discount_type === 'percentage' ? $r->total_before_tax * ($r->discount_amount / 100) : $r->discount_amount),
+            'purchase_count'  => $rows->count(),
+        ];
+
+        $filters = array_merge($request->only(['start_date', 'end_date', 'payment_status', 'status']), [
+            'supplier_name' => $request->get('supplier_name'),
+            'location_name' => $request->get('location_name'),
+        ]);
+
+        $format = $request->get('format', 'excel');
+        if ($format === 'pdf') {
+            $vars = array_merge($this->sharedPdfVars($business, $filters, $generated_by, $currency_symbol), [
+                'report_title' => 'Report 606 — ' . __('lang_v1.purchase'),
+                'rows'         => $rows,
+                'kpis'         => $kpis,
+            ]);
+            $html = view('report.exports.pdf.purchase_report', $vars)->render();
+            $mpdf = $this->buildMpdf();
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('purchase_report.pdf', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="purchase_report_' . now()->format('Ymd_His') . '.pdf"',
+            ]);
+        }
+
+        $export = new \App\Exports\Reports\PurchaseReportExport($rows->all(), $kpis, $business, $filters, $generated_by, $currency_symbol);
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'purchase_report_' . now()->format('Ymd_His') . '.xlsx');
+    }
+
+    // ── Stock Report ─────────────────────────────────────────────────────────
+
+    public function exportStockReport(Request $request)
+    {
+        if (! auth()->user()->can('stock_report.view')) { abort(403); }
+        ['business_id' => $business_id, 'business' => $business, 'generated_by' => $generated_by, 'currency_symbol' => $currency_symbol] = $this->exportBaseData($request);
+
+        $filters = $request->only(['location_id', 'category_id', 'sub_category_id', 'brand_id', 'unit_id', 'active_state', 'not_for_selling']);
+        $filters['not_for_selling'] = isset($filters['not_for_selling']) && $filters['not_for_selling'] == 'true' ? 1 : 0;
+        $filters['show_manufacturing_data'] = 0;
+
+        $rows = $this->productUtil->getProductStockDetails($business_id, $filters, 'datatables')->get();
+
+        $total_stock_value_purchase = 0;
+        $total_stock_value_sale     = 0;
+        $low_stock_count            = 0;
+        foreach ($rows as $row) {
+            $stock = (float)($row->stock ?? 0);
+            $unit_price = (float)(($row->group_price ?? 0) > 0 ? $row->group_price : ($row->unit_price ?? 0));
+            $total_stock_value_purchase += (float)($row->stock_price ?? 0);
+            $total_stock_value_sale     += $stock * $unit_price;
+            if ($row->enable_stock && $stock <= ($row->alert_quantity ?? 0)) { $low_stock_count++; }
+        }
+
+        $kpis = [
+            'total_sku'                    => $rows->count(),
+            'low_stock_count'              => $low_stock_count,
+            'total_stock_value_purchase'   => $total_stock_value_purchase,
+            'total_stock_value_sale'       => $total_stock_value_sale,
+            'total_potential_profit'       => $total_stock_value_sale - $total_stock_value_purchase,
+        ];
+
+        $filter_labels = array_merge($request->only(['start_date', 'end_date']), [
+            'location_name' => $request->get('location_name'),
+            'category_name' => $request->get('category_name'),
+            'brand_name'    => $request->get('brand_name'),
+        ]);
+
+        $format = $request->get('format', 'excel');
+        if ($format === 'pdf') {
+            $vars = array_merge($this->sharedPdfVars($business, $filter_labels, $generated_by, $currency_symbol), [
+                'report_title' => __('report.stock_report'),
+                'rows'         => $rows,
+                'kpis'         => $kpis,
+            ]);
+            $html = view('report.exports.pdf.stock_report', $vars)->render();
+            $mpdf = $this->buildMpdf();
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('stock_report.pdf', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="stock_report_' . now()->format('Ymd_His') . '.pdf"',
+            ]);
+        }
+
+        $export = new \App\Exports\Reports\StockReportExport($rows->all(), $kpis, $business, $filter_labels, $generated_by, $currency_symbol);
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'stock_report_' . now()->format('Ymd_His') . '.xlsx');
+    }
+
+    // ── Stock Expiry Report ──────────────────────────────────────────────────
+
+    public function exportStockExpiryReport(Request $request)
+    {
+        if (! auth()->user()->can('stock_report.view')) { abort(403); }
+        ['business_id' => $business_id, 'business' => $business, 'generated_by' => $generated_by, 'currency_symbol' => $currency_symbol] = $this->exportBaseData($request);
+
+        $query = \App\PurchaseLine::join('transactions as t', 'purchase_lines.transaction_id', '=', 't.id')
+            ->join('variations as v', 'purchase_lines.variation_id', '=', 'v.id')
+            ->join('product_variations as pv', 'v.product_variation_id', '=', 'pv.id')
+            ->join('products as p', 'pv.product_id', '=', 'p.id')
+            ->leftJoin('units as u', 'p.unit_id', '=', 'u.id')
+            ->leftJoin('categories as c', 'p.category_id', '=', 'c.id')
+            ->where('t.business_id', $business_id)
+            ->where('t.type', 'purchase')
+            ->whereNotNull('purchase_lines.exp_date')
+            ->whereRaw('(purchase_lines.quantity - purchase_lines.quantity_sold - purchase_lines.quantity_adjusted - purchase_lines.quantity_returned) > 0')
+            ->select(
+                'p.name as product',
+                'v.name as variation',
+                'purchase_lines.lot_number',
+                'purchase_lines.mfg_date',
+                'purchase_lines.exp_date',
+                DB::raw('(purchase_lines.quantity - purchase_lines.quantity_sold - purchase_lines.quantity_adjusted - purchase_lines.quantity_returned) as qty_available'),
+                'u.short_name as unit',
+                't.ref_no',
+                'c.name as category'
+            );
+
+        $permitted_locations = auth()->user()->permitted_locations();
+        if ($permitted_locations !== 'all') { $query->whereIn('t.location_id', $permitted_locations); }
+        if ($lid = $request->get('location_id')) { $query->where('t.location_id', $lid); }
+        if ($cat = $request->get('category_id')) { $query->where('p.category_id', $cat); }
+        if ($exp = $request->get('expiry_period')) {
+            $date = match($exp) {
+                'expired'   => ['end' => now()->format('Y-m-d')],
+                '1week'     => ['start' => now()->format('Y-m-d'), 'end' => now()->addWeek()->format('Y-m-d')],
+                '1month'    => ['start' => now()->format('Y-m-d'), 'end' => now()->addMonth()->format('Y-m-d')],
+                '3months'   => ['start' => now()->format('Y-m-d'), 'end' => now()->addMonths(3)->format('Y-m-d')],
+                '6months'   => ['start' => now()->format('Y-m-d'), 'end' => now()->addMonths(6)->format('Y-m-d')],
+                default     => [],
+            };
+            if (!empty($date['start'])) { $query->where('purchase_lines.exp_date', '>=', $date['start']); }
+            if (!empty($date['end']))   { $query->where('purchase_lines.exp_date', '<=', $date['end']); }
+        }
+
+        $rows = $query->orderBy('purchase_lines.exp_date')->get();
+        $today = now();
+        $expired = $rows->filter(fn($r) => $r->exp_date && \Carbon\Carbon::parse($r->exp_date)->lt($today))->count();
+        $exp30   = $rows->filter(fn($r) => $r->exp_date && \Carbon\Carbon::parse($r->exp_date)->between($today, $today->copy()->addDays(30)))->count();
+        $exp90   = $rows->filter(fn($r) => $r->exp_date && \Carbon\Carbon::parse($r->exp_date)->between($today, $today->copy()->addDays(90)))->count();
+
+        $kpis = ['expired_count' => $expired, 'expiring_30' => $exp30, 'expiring_90' => $exp90, 'total_items' => $rows->count()];
+        $filter_labels = ['location_name' => $request->get('location_name'), 'category_name' => $request->get('category_name')];
+
+        $format = $request->get('format', 'excel');
+        if ($format === 'pdf') {
+            $vars = array_merge($this->sharedPdfVars($business, $filter_labels, $generated_by, $currency_symbol), [
+                'report_title' => __('report.stock_expiry_report'),
+                'rows'         => $rows,
+                'kpis'         => $kpis,
+            ]);
+            $html = view('report.exports.pdf.stock_expiry', $vars)->render();
+            $mpdf = $this->buildMpdf();
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('stock_expiry.pdf', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="stock_expiry_' . now()->format('Ymd_His') . '.pdf"',
+            ]);
+        }
+
+        $export = new \App\Exports\Reports\StockExpiryExport($rows->all(), $kpis, $business, $filter_labels, $generated_by, $currency_symbol);
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'stock_expiry_' . now()->format('Ymd_His') . '.xlsx');
+    }
+
+    // ── Profit & Loss Report ─────────────────────────────────────────────────
+
+    public function exportProfitLoss(Request $request)
+    {
+        if (! auth()->user()->can('profit_loss_report.view')) { abort(403); }
+        ['business_id' => $business_id, 'business' => $business, 'generated_by' => $generated_by, 'currency_symbol' => $currency_symbol] = $this->exportBaseData($request);
+
+        $fy = $this->businessUtil->getCurrentFinancialYear($business_id);
+        $start_date  = $request->get('start_date', $fy['start']);
+        $end_date    = $request->get('end_date', $fy['end']);
+        $location_id = $request->get('location_id');
+        $permitted_locations = auth()->user()->permitted_locations();
+
+        $data = $this->transactionUtil->getProfitLossDetails($business_id, $location_id, $start_date, $end_date, null, $permitted_locations);
+
+        // Top products by revenue for the selected period
+        $profit_by_product  = DB::table('transaction_sell_lines as tsl')
+            ->join('transactions as sale', 'tsl.transaction_id', '=', 'sale.id')
+            ->join('products as p', 'tsl.product_id', '=', 'p.id')
+            ->where('sale.business_id', $business_id)
+            ->where('sale.type', 'sell')
+            ->where('sale.status', 'final')
+            ->whereBetween(DB::raw('date(sale.transaction_date)'), [$start_date, $end_date])
+            ->when($location_id, fn($q) => $q->where('sale.location_id', $location_id))
+            ->when($permitted_locations !== 'all', fn($q) => $q->whereIn('sale.location_id', $permitted_locations))
+            ->groupBy('p.id', 'p.name')
+            ->select('p.name as product', DB::raw('SUM(tsl.unit_price_inc_tax * (tsl.quantity - tsl.quantity_returned)) as gross_profit'))
+            ->orderByDesc('gross_profit')
+            ->get()->toArray();
+
+        $filters = [
+            'start_date'    => $start_date,
+            'end_date'      => $end_date,
+            'location_name' => $request->get('location_name'),
+        ];
+
+        $format = $request->get('format', 'excel');
+        if ($format === 'pdf') {
+            $vars = array_merge($this->sharedPdfVars($business, $filters, $generated_by, $currency_symbol), [
+                'report_title'       => __('report.profit_loss'),
+                'data'               => $data,
+                'profit_by_product'  => $profit_by_product,
+            ]);
+            $html = view('report.exports.pdf.profit_loss', $vars)->render();
+            $mpdf = new \Mpdf\Mpdf(['tempDir' => public_path('uploads/temp'), 'mode' => 'utf-8', 'format' => 'A4', 'margin_top' => 8, 'margin_bottom' => 8, 'margin_left' => 10, 'margin_right' => 10]);
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('profit_loss.pdf', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="profit_loss_' . now()->format('Ymd_His') . '.pdf"',
+            ]);
+        }
+
+        $export = new \App\Exports\Reports\ProfitLossExport(
+            $data, $profit_by_product, [], [], [], [], [],
+            $business, $filters, $generated_by, $currency_symbol
+        );
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'profit_loss_' . now()->format('Ymd_His') . '.xlsx');
+    }
+
+    // ── Sell Payment Report ───────────────────────────────────────────────────
+
+    public function exportSellPaymentReport(Request $request)
+    {
+        if (! auth()->user()->can('sell_payment_report.view')) { abort(403); }
+        ['business_id' => $business_id, 'business' => $business, 'generated_by' => $generated_by, 'currency_symbol' => $currency_symbol] = $this->exportBaseData($request);
+
+        $payment_types = $this->transactionUtil->payment_types(null, true, $business_id);
+        $query = \App\TransactionPayment::leftJoin('transactions as t', 'transaction_payments.transaction_id', '=', 't.id')
+            ->leftJoin('contacts as c', 't.contact_id', '=', 'c.id')
+            ->where('transaction_payments.business_id', $business_id)
+            ->whereIn('t.type', ['sell', 'opening_balance'])
+            ->select(
+                'c.name',
+                'c.supplier_business_name as business_name',
+                't.invoice_no',
+                DB::raw('DATE_FORMAT(transaction_payments.paid_on, "%d/%m/%Y %H:%i") as paid_on'),
+                DB::raw('COALESCE(' . implode(', ', array_map(fn($k) => "NULLIF('" . $payment_types[$k] . "','')", array_keys($payment_types))) . ') as payment_method'),
+                'transaction_payments.method as method_key',
+                'transaction_payments.amount',
+                'transaction_payments.payment_ref_no',
+                'transaction_payments.transaction_no',
+                'transaction_payments.is_return'
+            );
+
+        $permitted_locations = auth()->user()->permitted_locations();
+        if ($permitted_locations !== 'all') { $query->whereIn('t.location_id', $permitted_locations); }
+        if ($request->get('start_date')) { $query->whereBetween(DB::raw('date(paid_on)'), [$request->get('start_date'), $request->get('end_date')]); }
+        if ($lid = $request->get('location_id')) { $query->where('t.location_id', $lid); }
+        if ($cid = $request->get('customer_id')) { $query->where('t.contact_id', $cid); }
+        if ($pt  = $request->get('payment_types')) { $query->where('transaction_payments.method', $pt); }
+
+        // Build a simpler query for export
+        $rows = \App\TransactionPayment::leftJoin('transactions as t', 'transaction_payments.transaction_id', '=', 't.id')
+            ->leftJoin('contacts as c', 't.contact_id', '=', 'c.id')
+            ->where('transaction_payments.business_id', $business_id)
+            ->where(function($q) use ($business_id) {
+                $q->whereHas('transaction', fn($tq) => $tq->whereIn('type', ['sell', 'opening_balance']));
+            })
+            ->when($permitted_locations !== 'all', fn($q) => $q->whereIn('t.location_id', $permitted_locations))
+            ->when($request->get('start_date'), fn($q) => $q->whereBetween(DB::raw('date(paid_on)'), [$request->get('start_date'), $request->get('end_date')]))
+            ->when($request->get('location_id'), fn($q) => $q->where('t.location_id', $request->get('location_id')))
+            ->when($request->get('customer_id'), fn($q) => $q->where('t.contact_id', $request->get('customer_id')))
+            ->when($request->get('payment_types'), fn($q) => $q->where('transaction_payments.method', $request->get('payment_types')))
+            ->select(
+                'c.name',
+                'c.supplier_business_name as business_name',
+                't.invoice_no',
+                DB::raw('DATE_FORMAT(transaction_payments.paid_on, "%d/%m/%Y %H:%i") as paid_on'),
+                'transaction_payments.method as payment_method',
+                'transaction_payments.amount',
+                'transaction_payments.payment_ref_no',
+                'transaction_payments.transaction_no',
+                'transaction_payments.is_return'
+            )
+            ->whereHas('transaction', fn($q) => $q->whereIn('type', ['sell', 'opening_balance']))
+            ->get();
+
+        // Resolve method labels
+        $rows->transform(function ($r) use ($payment_types) {
+            $r->payment_method = $payment_types[$r->payment_method] ?? $r->payment_method;
+            $r->amount = $r->is_return ? -1 * $r->amount : $r->amount;
+            return $r;
+        });
+
+        $kpis = [
+            'cash'          => $rows->where('payment_method', $payment_types['cash'] ?? 'cash')->sum('amount'),
+            'card'          => $rows->where('payment_method', $payment_types['card'] ?? 'card')->sum('amount'),
+            'cheque'        => $rows->where('payment_method', $payment_types['cheque'] ?? 'cheque')->sum('amount'),
+            'bank_transfer' => $rows->where('payment_method', $payment_types['bank_transfer'] ?? 'bank_transfer')->sum('amount'),
+            'other'         => $rows->whereNotIn('payment_method', [$payment_types['cash'] ?? '', $payment_types['card'] ?? '', $payment_types['cheque'] ?? '', $payment_types['bank_transfer'] ?? ''])->sum('amount'),
+            'total'         => $rows->sum('amount'),
+        ];
+
+        $filters = array_merge($request->only(['start_date', 'end_date']), ['location_name' => $request->get('location_name'), 'customer_name' => $request->get('customer_name')]);
+
+        $format = $request->get('format', 'excel');
+        if ($format === 'pdf') {
+            $vars = array_merge($this->sharedPdfVars($business, $filters, $generated_by, $currency_symbol), [
+                'report_title' => __('report.sell_payment_report'),
+                'rows'         => $rows,
+                'kpis'         => $kpis,
+            ]);
+            $html = view('report.exports.pdf.sell_payment', $vars)->render();
+            $mpdf = $this->buildMpdf();
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('sell_payment.pdf', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="sell_payment_' . now()->format('Ymd_His') . '.pdf"',
+            ]);
+        }
+
+        $export = new \App\Exports\Reports\SellPaymentExport($rows->all(), $kpis, $business, $filters, $generated_by, $currency_symbol);
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'sell_payment_' . now()->format('Ymd_His') . '.xlsx');
+    }
+
+    // ── Register Report ───────────────────────────────────────────────────────
+
+    public function exportRegisterReport(Request $request)
+    {
+        if (! auth()->user()->can('register_report.view')) { abort(403); }
+        ['business_id' => $business_id, 'business' => $business, 'generated_by' => $generated_by, 'currency_symbol' => $currency_symbol] = $this->exportBaseData($request);
+
+        $permitted_locations = auth()->user()->permitted_locations();
+        $rows = $this->transactionUtil->registerReport(
+            $business_id,
+            $permitted_locations,
+            $request->get('start_date'),
+            $request->get('end_date'),
+            $request->get('user_id')
+        )->get();
+
+        // Flatten user_name from HTML to plain text
+        $rows->transform(function ($r) {
+            $r->user_name_plain = trim(strip_tags($r->user_name ?? ''));
+            return $r;
+        });
+
+        $kpis = [
+            'total_cash'          => $rows->sum('total_cash_payment'),
+            'total_card'          => $rows->sum('total_card_payment'),
+            'total_cheque'        => $rows->sum('total_cheque_payment'),
+            'total_bank_transfer' => $rows->sum('total_bank_transfer_payment'),
+            'total_other'         => $rows->sum('total_other_payment'),
+            'grand_total'         => $rows->sum(fn($r) => $r->total_cash_payment + $r->total_card_payment + $r->total_cheque_payment + $r->total_bank_transfer_payment + $r->total_other_payment + $r->total_advance_payment + $r->total_custom_pay_1 + $r->total_custom_pay_2 + $r->total_custom_pay_3),
+        ];
+
+        $filters = array_merge($request->only(['start_date', 'end_date']), ['location_name' => $request->get('location_name')]);
+
+        $format = $request->get('format', 'excel');
+        if ($format === 'pdf') {
+            $vars = array_merge($this->sharedPdfVars($business, $filters, $generated_by, $currency_symbol), [
+                'report_title' => __('report.register_report'),
+                'rows'         => $rows,
+                'kpis'         => $kpis,
+            ]);
+            $html = view('report.exports.pdf.register_report', $vars)->render();
+            $mpdf = $this->buildMpdf();
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('register_report.pdf', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="register_report_' . now()->format('Ymd_His') . '.pdf"',
+            ]);
+        }
+
+        $export = new \App\Exports\Reports\RegisterReportExport($rows->all(), $kpis, $business, $filters, $generated_by, $currency_symbol);
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'register_report_' . now()->format('Ymd_His') . '.xlsx');
+    }
+
+    // ── Tax Report ────────────────────────────────────────────────────────────
+
+    public function exportTaxReport(Request $request)
+    {
+        if (! auth()->user()->can('tax_report.view')) { abort(403); }
+        ['business_id' => $business_id, 'business' => $business, 'generated_by' => $generated_by, 'currency_symbol' => $currency_symbol] = $this->exportBaseData($request);
+
+        $start_date  = $request->get('start_date');
+        $end_date    = $request->get('end_date');
+        $location_id = $request->get('location_id');
+        $contact_id  = $request->get('contact_id');
+
+        $input_tax  = $this->transactionUtil->getInputTax($business_id, $start_date, $end_date, $location_id, $contact_id);
+        $output_tax = $this->transactionUtil->getOutputTax($business_id, $start_date, $end_date, $location_id, $contact_id);
+        $expense_tax = $this->transactionUtil->getExpenseTax($business_id, $start_date, $end_date, $location_id, $contact_id);
+        $tax_diff = ($output_tax['total_tax'] ?? 0) - ($input_tax['total_tax'] ?? 0) - ($expense_tax['total_tax'] ?? 0);
+
+        // Detailed sell tax rows
+        $sell_rows = \App\TransactionSellLine::join('transactions as t', 'transaction_sell_lines.transaction_id', '=', 't.id')
+            ->join('tax_rates as tr', 'transaction_sell_lines.tax_id', '=', 'tr.id')
+            ->leftJoin('contacts as c', 't.contact_id', '=', 'c.id')
+            ->where('t.business_id', $business_id)
+            ->where('t.type', 'sell')
+            ->where('t.status', 'final')
+            ->when($start_date, fn($q) => $q->whereDate('t.transaction_date', '>=', $start_date))
+            ->when($end_date,   fn($q) => $q->whereDate('t.transaction_date', '<=', $end_date))
+            ->when($location_id, fn($q) => $q->where('t.location_id', $location_id))
+            ->when($contact_id, fn($q) => $q->where('t.contact_id', $contact_id))
+            ->select(
+                't.invoice_no as ref_no',
+                DB::raw('DATE_FORMAT(t.transaction_date, "%d/%m/%Y") as transaction_date'),
+                'c.name as contact_name',
+                DB::raw('(transaction_sell_lines.unit_price_inc_tax * (transaction_sell_lines.quantity - transaction_sell_lines.quantity_returned)) as taxable_value'),
+                DB::raw('(transaction_sell_lines.item_tax * (transaction_sell_lines.quantity - transaction_sell_lines.quantity_returned)) as tax_amount'),
+                'tr.amount as tax_rate'
+            )
+            ->limit(500)->get();
+
+        $purchase_rows = \App\PurchaseLine::join('transactions as t', 'purchase_lines.transaction_id', '=', 't.id')
+            ->join('tax_rates as tr', 'purchase_lines.tax_id', '=', 'tr.id')
+            ->leftJoin('contacts as c', 't.contact_id', '=', 'c.id')
+            ->where('t.business_id', $business_id)
+            ->where('t.type', 'purchase')
+            ->when($start_date, fn($q) => $q->whereDate('t.transaction_date', '>=', $start_date))
+            ->when($end_date,   fn($q) => $q->whereDate('t.transaction_date', '<=', $end_date))
+            ->when($location_id, fn($q) => $q->where('t.location_id', $location_id))
+            ->select(
+                't.ref_no',
+                DB::raw('DATE_FORMAT(t.transaction_date, "%d/%m/%Y") as transaction_date'),
+                'c.name as contact_name',
+                DB::raw('(purchase_lines.purchase_price_inc_tax * purchase_lines.quantity) as taxable_value'),
+                DB::raw('(purchase_lines.item_tax * purchase_lines.quantity) as tax_amount'),
+                'tr.amount as tax_rate'
+            )
+            ->limit(500)->get();
+
+        $filters = array_merge($request->only(['start_date', 'end_date']), ['location_name' => $request->get('location_name'), 'customer_name' => $request->get('contact_name')]);
+
+        $format = $request->get('format', 'excel');
+        if ($format === 'pdf') {
+            $vars = array_merge($this->sharedPdfVars($business, $filters, $generated_by, $currency_symbol), [
+                'report_title'   => __('report.tax_report'),
+                'input_tax'      => $input_tax,
+                'output_tax'     => $output_tax,
+                'expense_tax'    => $expense_tax,
+                'tax_diff'       => $tax_diff,
+                'sell_rows'      => $sell_rows,
+                'purchase_rows'  => $purchase_rows,
+            ]);
+            $html = view('report.exports.pdf.tax_report', $vars)->render();
+            $mpdf = new \Mpdf\Mpdf(['tempDir' => public_path('uploads/temp'), 'mode' => 'utf-8', 'format' => 'A4', 'margin_top' => 8, 'margin_bottom' => 8, 'margin_left' => 10, 'margin_right' => 10]);
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('tax_report.pdf', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="tax_report_' . now()->format('Ymd_His') . '.pdf"',
+            ]);
+        }
+
+        $export = new \App\Exports\Reports\TaxReportExport(
+            (array)$input_tax, (array)$output_tax, (array)$expense_tax, $tax_diff,
+            $sell_rows->all(), $purchase_rows->all(),
+            $business, $filters, $generated_by, $currency_symbol
+        );
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'tax_report_' . now()->format('Ymd_His') . '.xlsx');
+    }
+
+    // ── Product Sell Report ───────────────────────────────────────────────────
+
+    public function exportProductSellReport(Request $request)
+    {
+        if (! auth()->user()->can('purchase_n_sell_report.view')) { abort(403); }
+        ['business_id' => $business_id, 'business' => $business, 'generated_by' => $generated_by, 'currency_symbol' => $currency_symbol] = $this->exportBaseData($request);
+
+        $query = TransactionSellLine::join('transactions as t', 'transaction_sell_lines.transaction_id', '=', 't.id')
+            ->join('variations as v', 'transaction_sell_lines.variation_id', '=', 'v.id')
+            ->join('product_variations as pv', 'v.product_variation_id', '=', 'pv.id')
+            ->join('products as p', 'pv.product_id', '=', 'p.id')
+            ->leftJoin('contacts as c', 't.contact_id', '=', 'c.id')
+            ->leftJoin('units as u', 'p.unit_id', '=', 'u.id')
+            ->leftJoin('tax_rates as tr', 'transaction_sell_lines.tax_id', '=', 'tr.id')
+            ->where('t.business_id', $business_id)
+            ->where('t.type', 'sell')
+            ->where('t.status', 'final')
+            ->whereNull('transaction_sell_lines.parent_sell_line_id')
+            ->select(
+                'p.name as product_name',
+                'v.sub_sku',
+                DB::raw("CONCAT(COALESCE(pv.name,''), '-', COALESCE(v.name,'')) as variation"),
+                't.invoice_no',
+                DB::raw('DATE_FORMAT(t.transaction_date, "%d/%m/%Y") as transaction_date'),
+                'c.name as customer_name',
+                'transaction_sell_lines.unit_price_before_discount',
+                'transaction_sell_lines.unit_price_inc_tax',
+                DB::raw('(transaction_sell_lines.quantity - transaction_sell_lines.quantity_returned) as quantity'),
+                'transaction_sell_lines.line_discount_type',
+                'transaction_sell_lines.line_discount_amount',
+                'transaction_sell_lines.item_tax',
+                DB::raw('((transaction_sell_lines.quantity - transaction_sell_lines.quantity_returned) * transaction_sell_lines.unit_price_inc_tax) as subtotal')
+            )
+            ->groupBy('transaction_sell_lines.id');
+
+        $permitted_locations = auth()->user()->permitted_locations();
+        if ($permitted_locations !== 'all') { $query->whereIn('t.location_id', $permitted_locations); }
+        if ($start = $request->get('start_date')) { $query->where('t.transaction_date', '>=', $start); }
+        if ($end   = $request->get('end_date'))   { $query->where('t.transaction_date', '<=', $end); }
+        if ($lid   = $request->get('location_id')) { $query->where('t.location_id', $lid); }
+        if ($cid   = $request->get('customer_id')) { $query->where('t.contact_id', $cid); }
+        if ($cat   = $request->get('category_id')) { $query->where('p.category_id', $cat); }
+        if ($brand = $request->get('brand_id'))    { $query->where('p.brand_id', $brand); }
+
+        $rows = $query->get();
+
+        $kpis = [
+            'total_qty'      => $rows->sum('quantity'),
+            'total_subtotal' => $rows->sum('subtotal'),
+            'total_discount' => $rows->sum(fn($r) => $r->line_discount_type === 'percentage' ? $r->unit_price_before_discount * $r->quantity * ($r->line_discount_amount / 100) : $r->line_discount_amount),
+            'total_tax'      => $rows->sum(fn($r) => $r->item_tax * $r->quantity),
+        ];
+
+        $filters = array_merge($request->only(['start_date', 'end_date']), [
+            'location_name' => $request->get('location_name'),
+            'customer_name' => $request->get('customer_name'),
+            'category_name' => $request->get('category_name'),
+            'brand_name'    => $request->get('brand_name'),
+        ]);
+
+        $format = $request->get('format', 'excel');
+        if ($format === 'pdf') {
+            $vars = array_merge($this->sharedPdfVars($business, $filters, $generated_by, $currency_symbol), [
+                'report_title' => __('report.product_sell_report'),
+                'rows'         => $rows,
+                'kpis'         => $kpis,
+            ]);
+            $html = view('report.exports.pdf.product_sell', $vars)->render();
+            $mpdf = $this->buildMpdf();
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('product_sell.pdf', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="product_sell_' . now()->format('Ymd_His') . '.pdf"',
+            ]);
+        }
+
+        $export = new \App\Exports\Reports\ProductSellExport($rows->all(), $kpis, $business, $filters, $generated_by, $currency_symbol);
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'product_sell_' . now()->format('Ymd_His') . '.xlsx');
+    }
+
+    // ── Customer/Supplier Report ──────────────────────────────────────────────
+
+    public function exportContactReport(Request $request)
+    {
+        if (! auth()->user()->can('contacts_report.view')) { abort(403); }
+        ['business_id' => $business_id, 'business' => $business, 'generated_by' => $generated_by, 'currency_symbol' => $currency_symbol] = $this->exportBaseData($request);
+
+        $contacts = Contact::where('contacts.business_id', $business_id)
+            ->join('transactions AS t', 'contacts.id', '=', 't.contact_id')
+            ->active()
+            ->groupBy('contacts.id')
+            ->select(
+                DB::raw("SUM(IF(t.type = 'purchase', final_total, 0)) as total_purchase"),
+                DB::raw("SUM(IF(t.type = 'purchase_return', final_total, 0)) as total_purchase_return"),
+                DB::raw("SUM(IF(t.type = 'sell' AND t.status = 'final', final_total, 0)) as total_invoice"),
+                DB::raw("SUM(IF(t.type = 'purchase', (SELECT SUM(amount) FROM transaction_payments WHERE transaction_payments.transaction_id=t.id), 0)) as purchase_paid"),
+                DB::raw("SUM(IF(t.type = 'sell' AND t.status = 'final', (SELECT SUM(IF(is_return = 1,-1*amount,amount)) FROM transaction_payments WHERE transaction_payments.transaction_id=t.id), 0)) as invoice_received"),
+                DB::raw("SUM(IF(t.type = 'sell_return', (SELECT SUM(amount) FROM transaction_payments WHERE transaction_payments.transaction_id=t.id), 0)) as sell_return_paid"),
+                DB::raw("SUM(IF(t.type = 'purchase_return', (SELECT SUM(amount) FROM transaction_payments WHERE transaction_payments.transaction_id=t.id), 0)) as purchase_return_received"),
+                DB::raw("SUM(IF(t.type = 'sell_return', final_total, 0)) as total_sell_return"),
+                DB::raw("SUM(IF(t.type = 'opening_balance', final_total, 0)) as opening_balance"),
+                DB::raw("SUM(IF(t.type = 'opening_balance', (SELECT SUM(IF(is_return = 1,-1*amount,amount)) FROM transaction_payments WHERE transaction_payments.transaction_id=t.id), 0)) as opening_balance_paid"),
+                DB::raw("SUM(IF(t.type = 'ledger_discount' AND sub_type='sell_discount', final_total, 0)) as total_ledger_discount_sell"),
+                DB::raw("SUM(IF(t.type = 'ledger_discount' AND sub_type='purchase_discount', final_total, 0)) as total_ledger_discount_purchase"),
+                'contacts.supplier_business_name',
+                'contacts.name',
+                'contacts.id',
+                'contacts.type as contact_type'
+            );
+
+        $permitted_locations = auth()->user()->permitted_locations();
+        if ($permitted_locations !== 'all') { $contacts->whereIn('t.location_id', $permitted_locations); }
+        if ($cgid = $request->input('customer_group_id')) { $contacts->where('contacts.customer_group_id', $cgid); }
+        if ($lid  = $request->input('location_id'))       { $contacts->where('t.location_id', $lid); }
+        if ($cid  = $request->input('contact_id'))        { $contacts->where('t.contact_id', $cid); }
+        if ($ct   = $request->input('contact_type'))      { $contacts->whereIn('contacts.type', [$ct, 'both']); }
+        if ($sd   = $request->get('start_date'))          { $contacts->where('t.transaction_date', '>=', $sd); }
+        if ($ed   = $request->get('end_date'))            { $contacts->where('t.transaction_date', '<=', $ed); }
+
+        $rows = $contacts->get();
+
+        $kpis = [
+            'total_purchase' => $rows->sum('total_purchase'),
+            'total_invoice'  => $rows->sum('total_invoice'),
+            'total_due'      => $rows->sum(fn($r) => (($r->total_invoice - $r->invoice_received) - ($r->total_purchase - $r->purchase_paid) - ($r->total_sell_return - $r->sell_return_paid) + ($r->total_purchase_return - $r->purchase_return_received))),
+            'contact_count'  => $rows->count(),
+        ];
+
+        $filters = array_merge($request->only(['start_date', 'end_date', 'contact_type']), [
+            'location_name' => $request->get('location_name'),
+        ]);
+
+        $format = $request->get('format', 'excel');
+        if ($format === 'pdf') {
+            $vars = array_merge($this->sharedPdfVars($business, $filters, $generated_by, $currency_symbol), [
+                'report_title' => __('report.customer_supplier_groups'),
+                'rows'         => $rows,
+                'kpis'         => $kpis,
+            ]);
+            $html = view('report.exports.pdf.customer_supplier', $vars)->render();
+            $mpdf = $this->buildMpdf();
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('customer_supplier.pdf', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="customer_supplier_' . now()->format('Ymd_His') . '.pdf"',
+            ]);
+        }
+
+        $export = new \App\Exports\Reports\CustomerSupplierExport($rows->all(), $kpis, $business, $filters, $generated_by, $currency_symbol);
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'customer_supplier_' . now()->format('Ymd_His') . '.xlsx');
     }
 }

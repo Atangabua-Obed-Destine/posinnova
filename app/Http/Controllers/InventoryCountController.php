@@ -411,6 +411,7 @@ class InventoryCountController extends Controller
                 'l.counted_qty',
                 'l.counted_unit_id',
                 'l.counted_qty_input',
+                'l.counted_breakdown',
                 'l.unit_cost',
                 'v.sub_sku as sku',
                 'v.name as variation_name',
@@ -418,6 +419,7 @@ class InventoryCountController extends Controller
                 'p.type as product_type',
                 'p.unit_id as base_unit_id',
                 'p.sub_unit_ids as sub_unit_ids_json',
+                'p.alert_quantity as alert_quantity',
                 'pv.name as product_variation',
                 'u.short_name as unit',
                 'v.sell_price_inc_tax as unit_sell',
@@ -451,14 +453,64 @@ class InventoryCountController extends Controller
             ->keyBy('id');
 
         return DataTables::of($query)
-            ->editColumn('product', function ($row) {
-                $name = e($row->product);
+            ->editColumn('product', function ($row) use ($editable, $can_edit_price) {
+                $suffix = '';
                 if ($row->product_type === 'variable') {
-                    $name .= ' — <small class="text-muted">' . e($row->product_variation . ' / ' . $row->variation_name) . '</small>';
+                    $suffix = ' — <small class="text-muted">' . e($row->product_variation . ' / ' . $row->variation_name) . '</small>';
                 }
-                return $name;
+                $add_lot_btn = '';
+                if ($editable) {
+                    $label = $row->product;
+                    if ($row->product_type === 'variable' && $row->variation_name) {
+                        $label .= ' — ' . $row->variation_name;
+                    }
+                    $add_lot_btn = ' <button type="button" class="btn btn-xs btn-link ic-row-add-lot" '
+                        . 'data-variation-id="' . (int) $row->variation_id . '" '
+                        . 'data-product-id="' . (int) $row->product_id . '" '
+                        . 'data-label="' . e($label . ' [' . $row->sku . ']') . '" '
+                        . 'title="' . e(__('inventory_count.add_lot')) . '" '
+                        . 'style="padding:0 4px;">'
+                        . '<i class="fa fa-calendar-plus-o text-warning"></i></button>';
+                }
+
+                if (! $editable || ! $can_edit_price) {
+                    return e($row->product) . $suffix . $add_lot_btn;
+                }
+
+                // Inline name editor (updates the product master), matching the
+                // other editable cells (cost / sell / alert qty) on this table.
+                return '<div class="input-group input-group-sm ic-name-edit" style="min-width:220px;" '
+                    . 'title="' . e(__('inventory_count.edit_product_info_help')) . '">'
+                    . '<input type="text" class="form-control input-sm ic-name-input" maxlength="191" '
+                    . 'data-product-id="' . (int) $row->product_id . '" '
+                    . 'data-variation-id="' . (int) $row->variation_id . '" '
+                    . 'data-orig="' . e($row->product) . '" '
+                    . 'value="' . e($row->product) . '" />'
+                    . '<span class="input-group-btn">'
+                    . '<button type="button" class="btn btn-primary btn-sm ic-name-save" '
+                    . 'title="' . e(__('messages.save')) . '">'
+                    . '<i class="fa fa-check"></i></button>'
+                    . '</span></div>'
+                    . $suffix . $add_lot_btn;
             })
-            ->addColumn('lot_exp', function ($row) {
+            ->editColumn('sku', function ($row) use ($editable, $can_edit_price) {
+                if (! $editable || ! $can_edit_price) {
+                    return e($row->sku);
+                }
+                // Inline SKU editor (updates the variation sub_sku on the master)
+                return '<div class="input-group input-group-sm ic-sku-edit" style="min-width:140px;">'
+                    . '<input type="text" class="form-control input-sm ic-sku-input" maxlength="191" '
+                    . 'data-product-id="' . (int) $row->product_id . '" '
+                    . 'data-variation-id="' . (int) $row->variation_id . '" '
+                    . 'data-orig="' . e($row->sku) . '" '
+                    . 'value="' . e($row->sku) . '" />'
+                    . '<span class="input-group-btn">'
+                    . '<button type="button" class="btn btn-primary btn-sm ic-sku-save" '
+                    . 'title="' . e(__('messages.save')) . '">'
+                    . '<i class="fa fa-check"></i></button>'
+                    . '</span></div>';
+            })
+            ->addColumn('lot_exp', function ($row) use ($editable) {
                 $lot = $row->lot_number !== null && $row->lot_number !== '' ? e($row->lot_number) : '—';
                 $exp = $row->exp_date ? \Carbon\Carbon::parse($row->exp_date)->format('d M Y') : '—';
                 $cls = '';
@@ -471,17 +523,92 @@ class InventoryCountController extends Controller
                         $cls = ' text-warning';
                     }
                 }
+                $exp_iso = $row->exp_date ? \Carbon\Carbon::parse($row->exp_date)->format('Y-m-d') : '';
+                $edit_btn = '';
+                if ($editable) {
+                    $edit_btn = ' <button type="button" class="btn btn-xs btn-primary ic-lot-edit" '
+                        . 'data-line-id="' . (int) $row->line_id . '" '
+                        . 'data-lot="' . e((string) $row->lot_number) . '" '
+                        . 'data-exp="' . e($exp_iso) . '" '
+                        . 'data-has-pl="' . ($row->purchase_line_id ? '1' : '0') . '" '
+                        . 'title="' . e(__('inventory_count.edit_lot_exp')) . '" '
+                        . 'style="margin-left:6px;padding:2px 8px;">'
+                        . '<i class="fa fa-pencil"></i> ' . e(__('messages.edit')) . '</button>';
+                }
                 return '<small class="text-muted">' . __('lang_v1.lot') . ':</small> ' . $lot
                     . '<br><small class="text-muted">' . __('lang_v1.expiry') . ':</small> '
-                    . '<span class="' . trim($cls) . '">' . $exp . '</span>';
+                    . '<span class="' . trim($cls) . '">' . $exp . '</span>'
+                    . $edit_btn;
+            })
+            ->editColumn('unit', function ($row) use ($editable, $can_edit_price, $units_by_id, $business_id) {
+                $current = e((string) $row->unit);
+                // Only allow inline edit when:
+                //   - session is draft & user can edit prices/products
+                //   - product has NO sub-units (i.e. single unit mapped = the base unit)
+                // Multi-unit products must be edited from the product edit page
+                // so unit conversions / purchase records stay consistent.
+                $subs = [];
+                if (! empty($row->sub_unit_ids_json)) {
+                    $decoded = json_decode($row->sub_unit_ids_json, true);
+                    if (is_array($decoded)) {
+                        $subs = array_values(array_filter($decoded, fn($v) => (int) $v > 0));
+                    }
+                }
+                if (! $editable || ! $can_edit_price || count($subs) > 0) {
+                    return $current;
+                }
+                $opts = '';
+                foreach ($units_by_id as $uid => $u) {
+                    $sel = ((int) $uid === (int) $row->base_unit_id) ? ' selected' : '';
+                    $opts .= '<option value="' . (int) $uid . '"' . $sel . '>' . e($u->short_name) . '</option>';
+                }
+                return '<select class="form-control input-sm ic-unit-edit" '
+                    . 'data-product-id="' . (int) $row->product_id . '" '
+                    . 'data-orig="' . (int) $row->base_unit_id . '" '
+                    . 'style="min-width:90px;">' . $opts . '</select>';
             })
             ->editColumn('theoretical_at_start', function ($row) {
                 return '<span class="theoretical-qty" data-qty="' . (float) $row->theoretical_at_start . '">'
                     . $this->productUtil->num_f((float) $row->theoretical_at_start, false, null, true)
                     . '</span> ' . e($row->unit);
             })
-            ->editColumn('unit_cost', function ($row) {
-                return $this->productUtil->num_f((float) $row->unit_cost, true);
+            ->editColumn('alert_quantity', function ($row) use ($editable, $can_edit_price) {
+                $has_val = $row->alert_quantity !== null && $row->alert_quantity !== '';
+                $val_disp = $has_val
+                    ? ($this->productUtil->num_f((float) $row->alert_quantity, false, null, true) . ' ' . e($row->unit))
+                    : '<span class="text-muted">—</span>';
+                if (! $editable || ! $can_edit_price) {
+                    return $val_disp;
+                }
+                $val = $has_val ? $this->productUtil->num_f((float) $row->alert_quantity, false) : '';
+                return '<div class="input-group input-group-sm ic-alert-edit" style="min-width:150px;">'
+                    . '<input type="text" class="form-control input-sm input_number ic-alert-input text-right" '
+                    . 'data-product-id="' . (int) $row->product_id . '" '
+                    . 'data-orig="' . ($has_val ? (float) $row->alert_quantity : '') . '" '
+                    . 'value="' . $val . '" placeholder="—" />'
+                    . '<span class="input-group-addon">' . e($row->unit) . '</span>'
+                    . '<span class="input-group-btn">'
+                    . '<button type="button" class="btn btn-primary btn-sm ic-alert-save" '
+                    . 'title="' . e(__('messages.save')) . '">'
+                    . '<i class="fa fa-check"></i></button>'
+                    . '</span></div>';
+            })
+            ->editColumn('unit_cost', function ($row) use ($editable) {
+                $val_disp = $this->productUtil->num_f((float) $row->unit_cost, true);
+                if (! $editable) {
+                    return $val_disp;
+                }
+                $val = $this->productUtil->num_f((float) $row->unit_cost, false);
+                return '<div class="input-group input-group-sm ic-cost-edit" style="min-width:160px;">'
+                    . '<input type="text" class="form-control input-sm input_number ic-cost-input text-right" '
+                    . 'data-line-id="' . (int) $row->line_id . '" '
+                    . 'data-orig="' . (float) $row->unit_cost . '" '
+                    . 'value="' . $val . '" />'
+                    . '<span class="input-group-btn">'
+                    . '<button type="button" class="btn btn-primary btn-sm ic-cost-save" '
+                    . 'title="' . e(__('messages.save')) . '">'
+                    . '<i class="fa fa-check"></i></button>'
+                    . '</span></div>';
             })
             ->editColumn('unit_sell', function ($row) use ($can_edit_price) {
                 if (! $can_edit_price) {
@@ -504,6 +631,16 @@ class InventoryCountController extends Controller
                     . '<i class="fa fa-check"></i></button>'
                     . '</span></div>';
                 return $html;
+            })
+            ->addColumn('margin', function ($row) {
+                $cost = (float) $row->unit_cost;
+                $sell = (float) $row->unit_sell;
+                if ($cost <= 0) {
+                    return '<span class="text-muted">-</span>';
+                }
+                $pct = (($sell - $cost) / $cost) * 100;
+                $cls = $pct < 0 ? 'text-danger' : ($pct > 0 ? 'text-success' : 'text-muted');
+                return '<span class="' . $cls . '">' . $this->productUtil->num_f($pct, false, null, true) . '%</span>';
             })
             ->addColumn('counted', function ($row) use ($editable, $units_by_id) {
                 $readonly = $editable ? '' : 'readonly';
@@ -565,7 +702,8 @@ class InventoryCountController extends Controller
                     $val_display = (float) $row->counted_qty;
                 }
 
-                $html = '<div class="input-group input-group-sm counted-cell">'
+                $html = '<div class="counted-cell" data-line-id="' . (int) $row->line_id . '" data-base-unit-id="' . $base_unit_id . '">';
+                $html .= '<div class="input-group input-group-sm">'
                     . '<input type="number" step="any" min="0" '
                     . 'class="form-control input-sm actual-qty" '
                     . 'data-line-id="' . (int) $row->line_id . '" '
@@ -589,11 +727,51 @@ class InventoryCountController extends Controller
                             . e($o['label']) . '</option>';
                     }
                     $html .= '</select>';
+                    if ($editable) {
+                        // Embed unit options as JSON so the JS can spawn extra
+                        // qty+unit rows without re-querying the server.
+                        $html .= '<span class="input-group-btn">'
+                            . '<button type="button" class="btn btn-default btn-sm ic-mix-toggle" '
+                            . 'title="Counted in more than one unit? Click + to add another.">'
+                            . '<i class="fa fa-plus"></i></button>'
+                            . '</span>';
+                        $html .= '<script type="application/json" class="ic-unit-opts">'
+                            . json_encode($opts) . '</script>';
+                    }
                 } else {
                     $html .= '<span class="input-group-addon">' . e($base_short) . '</span>';
                 }
 
-                $html .= '</div>';
+                $html .= '</div>'; // /.input-group
+
+                // Mixed-unit parts container — hidden until user clicks +.
+                $existing_parts = is_array($row->counted_breakdown ?? null)
+                    ? $row->counted_breakdown
+                    : (is_string($row->counted_breakdown ?? null) ? json_decode($row->counted_breakdown, true) : null);
+                $has_parts = is_array($existing_parts) && count($existing_parts) > 0;
+
+                $html .= '<div class="ic-mix-parts" style="margin-top:4px;' . ($has_parts ? '' : 'display:none;') . '">';
+                if ($has_parts && count($opts) > 1) {
+                    foreach ($existing_parts as $p) {
+                        $html .= '<div class="ic-mix-row input-group input-group-sm" style="margin-top:3px;">'
+                            . '<input type="number" step="any" min="0" '
+                            . 'class="form-control input-sm ic-mix-qty" value="' . (float) ($p['qty'] ?? 0) . '" />'
+                            . '<select class="form-control input-sm ic-mix-unit" style="max-width:90px;">';
+                        foreach ($opts as $o) {
+                            $sel = ((int) $o['id'] === (int) ($p['unit_id'] ?? 0)) ? ' selected' : '';
+                            $html .= '<option value="' . $o['id'] . '" data-multiplier="' . $o['multiplier'] . '"' . $sel . '>'
+                                . e($o['label']) . '</option>';
+                        }
+                        $html .= '</select>'
+                            . '<span class="input-group-btn">'
+                            . '<button type="button" class="btn btn-default btn-sm ic-mix-remove" title="Remove"><i class="fa fa-times"></i></button>'
+                            . '</span></div>';
+                    }
+                    $html .= '<div class="ic-mix-total small text-muted" style="margin-top:2px;"></div>';
+                }
+                $html .= '</div>'; // /.ic-mix-parts
+
+                $html .= '</div>'; // /.counted-cell
                 return $html;
             })
             ->addColumn('variance', function ($row) {
@@ -609,7 +787,7 @@ class InventoryCountController extends Controller
                 return '<span class="variance-cell ' . $cls . '">' . $sign
                     . $this->productUtil->num_f($diff, false, null, true) . '</span>';
             })
-            ->rawColumns(['product', 'theoretical_at_start', 'counted', 'variance', 'lot_exp', 'unit_sell'])
+            ->rawColumns(['product', 'sku', 'theoretical_at_start', 'counted', 'variance', 'lot_exp', 'unit', 'unit_cost', 'unit_sell', 'margin', 'alert_quantity'])
             ->make(true);
     }
 
@@ -631,6 +809,9 @@ class InventoryCountController extends Controller
             'line_id' => 'required|integer',
             'counted_qty' => 'nullable|numeric|min:0',
             'unit_id' => 'nullable|integer',
+            'breakdown' => 'nullable|array',
+            'breakdown.*.qty' => 'required_with:breakdown|numeric|min:0',
+            'breakdown.*.unit_id' => 'required_with:breakdown|integer',
         ]);
 
         $business_id = $request->session()->get('user.business_id');
@@ -645,54 +826,108 @@ class InventoryCountController extends Controller
             ->where('id', $request->input('line_id'))
             ->firstOrFail();
 
-        $raw = $request->input('counted_qty');
-        $is_counted = ! ($raw === null || $raw === '');
-        $input_qty = $is_counted ? (float) $raw : null;
-
-        // Resolve the unit the user entered the qty in. Must belong to
-        // the product's unit family (= base unit OR a sub-unit of it).
         $product = Product::select(['id', 'unit_id', 'sub_unit_ids'])->find($line->product_id);
         $base_unit_id = $product ? (int) $product->unit_id : null;
-        $multiplier = 1.0;
-        $chosen_unit_id = null;
+        $sub_ids = ($product && is_array($product->sub_unit_ids))
+            ? array_map('intval', $product->sub_unit_ids) : [];
 
-        $req_unit_id = $request->input('unit_id');
-        if ($req_unit_id !== null && $req_unit_id !== '' && $base_unit_id) {
+        // Helper: resolve a (unit_id) to (multiplier, label) for this product.
+        $resolveUnit = function ($req_unit_id) use ($business_id, $base_unit_id, $sub_ids) {
             $req_unit_id = (int) $req_unit_id;
             if ($req_unit_id === $base_unit_id) {
-                $chosen_unit_id = $base_unit_id;
-                $multiplier = 1.0;
+                $u = Unit::where('business_id', $business_id)->find($base_unit_id);
+                return [
+                    'unit_id' => $base_unit_id,
+                    'multiplier' => 1.0,
+                    'label' => $u ? $u->short_name : '',
+                ];
+            }
+            if (! in_array($req_unit_id, $sub_ids, true)) {
+                return null;
+            }
+            $u = Unit::where('business_id', $business_id)
+                ->where('id', $req_unit_id)
+                ->where('base_unit_id', $base_unit_id)
+                ->first();
+            if (! $u) {
+                return null;
+            }
+            $m = (float) $u->base_unit_multiplier;
+            return [
+                'unit_id' => (int) $u->id,
+                'multiplier' => $m > 0 ? $m : 1.0,
+                'label' => $u->short_name,
+            ];
+        };
+
+        $breakdown_in = $request->input('breakdown');
+        $breakdown_out = null;
+        $base_qty = null;
+        $is_counted = false;
+        $primary_input_qty = null;
+        $primary_unit_id = null;
+        $primary_mult = 1.0;
+
+        if (is_array($breakdown_in) && count($breakdown_in) > 0 && $base_unit_id) {
+            // Mixed-unit count. Recompute the base total server-side from
+            // the parts (don't trust the JS-computed total).
+            $total = 0.0;
+            $parts_out = [];
+            foreach ($breakdown_in as $p) {
+                $q = (float) ($p['qty'] ?? 0);
+                if ($q <= 0) continue;
+                $resolved = $resolveUnit($p['unit_id'] ?? 0);
+                if (! $resolved) {
+                    return response()->json(['success' => 0, 'msg' => 'Invalid unit in breakdown'], 422);
+                }
+                $total += $q * $resolved['multiplier'];
+                $parts_out[] = [
+                    'qty' => $q,
+                    'unit_id' => $resolved['unit_id'],
+                    'label' => $resolved['label'],
+                    'multiplier' => $resolved['multiplier'],
+                ];
+            }
+            if (count($parts_out) === 0) {
+                // Treat as cleared.
+                $is_counted = false;
             } else {
-                // Must be a declared sub-unit on the product, AND a child
-                // of the base unit in the units table.
-                $sub_ids = is_array($product->sub_unit_ids) ? array_map('intval', $product->sub_unit_ids) : [];
-                if (! in_array($req_unit_id, $sub_ids, true)) {
-                    return response()->json(['success' => 0, 'msg' => 'Invalid unit for this product'], 422);
-                }
-                $u = Unit::where('business_id', $business_id)
-                    ->where('id', $req_unit_id)
-                    ->where('base_unit_id', $base_unit_id)
-                    ->first();
-                if (! $u) {
-                    return response()->json(['success' => 0, 'msg' => 'Invalid unit for this product'], 422);
-                }
-                $chosen_unit_id = (int) $u->id;
-                $multiplier = (float) $u->base_unit_multiplier;
-                if ($multiplier <= 0) {
-                    $multiplier = 1.0;
-                }
+                $is_counted = true;
+                $base_qty = round($total, 4);
+                $breakdown_out = $parts_out;
+                // Primary input fields reflect the base total in the base unit.
+                $primary_input_qty = $base_qty;
+                $primary_unit_id = $base_unit_id;
             }
         } else {
-            $chosen_unit_id = $base_unit_id;
-        }
+            // Legacy single-unit path.
+            $raw = $request->input('counted_qty');
+            $is_counted = ! ($raw === null || $raw === '');
+            $input_qty = $is_counted ? (float) $raw : null;
 
-        $base_qty = $is_counted ? round($input_qty * $multiplier, 4) : null;
+            $req_unit_id = $request->input('unit_id');
+            $chosen_unit_id = $base_unit_id;
+            $multiplier = 1.0;
+            if ($req_unit_id !== null && $req_unit_id !== '' && $base_unit_id) {
+                $resolved = $resolveUnit($req_unit_id);
+                if (! $resolved) {
+                    return response()->json(['success' => 0, 'msg' => 'Invalid unit for this product'], 422);
+                }
+                $chosen_unit_id = $resolved['unit_id'];
+                $multiplier = $resolved['multiplier'];
+            }
+            $base_qty = $is_counted ? round($input_qty * $multiplier, 4) : null;
+            $primary_input_qty = $is_counted ? $input_qty : null;
+            $primary_unit_id = $chosen_unit_id;
+            $primary_mult = $multiplier;
+        }
 
         $was_counted = ! is_null($line->counted_qty);
 
         $line->counted_qty = $base_qty;
-        $line->counted_qty_input = $is_counted ? $input_qty : null;
-        $line->counted_unit_id = $is_counted ? $chosen_unit_id : null;
+        $line->counted_qty_input = $primary_input_qty;
+        $line->counted_unit_id = $is_counted ? $primary_unit_id : null;
+        $line->counted_breakdown = $is_counted ? $breakdown_out : null;
         $line->counted_by = $is_counted ? $user_id : null;
         $line->counted_at = $is_counted ? Carbon::now() : null;
         $line->save();
@@ -709,7 +944,335 @@ class InventoryCountController extends Controller
             'lines_total' => $session->lines_total,
             'diff' => $diff,
             'base_qty' => $base_qty,
-            'multiplier' => $multiplier,
+            'multiplier' => $primary_mult,
+            'breakdown' => $breakdown_out,
+        ]);
+    }
+
+    /**
+     * Select2 search of variations already present in this session — used by
+     * the "Add Lot" modal so counters can attach a freshly-discovered batch
+     * (lot/expiry) to a product already on the count sheet.
+     */
+    public function variationSearch(Request $request, $id)
+    {
+        if (! auth()->user()->can('inventory_count.create')) {
+            return response()->json(['results' => []], 403);
+        }
+        $business_id = $request->session()->get('user.business_id');
+        $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
+
+        $permitted = auth()->user()->permitted_locations();
+        if ($permitted !== 'all' && ! in_array($session->location_id, $permitted)) {
+            abort(403);
+        }
+
+        $term = trim((string) $request->input('q', ''));
+
+        $q = DB::table('inventory_count_session_lines as l')
+            ->join('variations as v', 'v.id', '=', 'l.variation_id')
+            ->join('products as p', 'p.id', '=', 'l.product_id')
+            ->join('units as u', 'u.id', '=', 'p.unit_id')
+            ->where('l.session_id', $session->id)
+            ->groupBy('l.variation_id', 'l.product_id', 'p.name', 'v.sub_sku',
+                      'v.name', 'p.type', 'p.unit_id', 'p.sub_unit_ids', 'u.short_name')
+            ->select([
+                'l.variation_id', 'l.product_id',
+                'p.name as product', 'v.sub_sku as sku',
+                'v.name as variation_name', 'p.type as product_type',
+                'p.unit_id as base_unit_id', 'p.sub_unit_ids as sub_unit_ids_json',
+                'u.short_name as unit',
+                DB::raw('MAX(l.unit_cost) as unit_cost'),
+            ])
+            ->orderBy('p.name');
+
+        if ($term !== '') {
+            $like = '%' . $term . '%';
+            $q->where(function ($x) use ($like) {
+                $x->where('p.name', 'like', $like)
+                  ->orWhere('v.sub_sku', 'like', $like)
+                  ->orWhere('p.sku', 'like', $like);
+            });
+        }
+
+        $rows = $q->limit(30)->get();
+
+        $units = Unit::where('business_id', $business_id)
+            ->get(['id', 'short_name', 'base_unit_id', 'base_unit_multiplier'])
+            ->keyBy('id');
+
+        $results = $rows->map(function ($r) use ($units) {
+            $base_id = (int) $r->base_unit_id;
+            $base = $units->get($base_id);
+            $opts = [['id' => $base_id, 'label' => $base ? $base->short_name : ($r->unit ?? ''), 'multiplier' => 1.0]];
+            $subs = $r->sub_unit_ids_json ? json_decode($r->sub_unit_ids_json, true) : [];
+            if (is_array($subs)) {
+                foreach ($subs as $sid) {
+                    $sid = (int) $sid;
+                    if ($sid === $base_id) continue;
+                    $u = $units->get($sid);
+                    if (! $u || (int) $u->base_unit_id !== $base_id) continue;
+                    $opts[] = [
+                        'id' => $sid,
+                        'label' => $u->short_name,
+                        'multiplier' => (float) $u->base_unit_multiplier,
+                    ];
+                }
+            }
+            $label = $r->product;
+            if ($r->product_type === 'variable' && $r->variation_name) {
+                $label .= ' — ' . $r->variation_name;
+            }
+            $label .= ' [' . $r->sku . ']';
+            return [
+                'id' => (int) $r->variation_id,
+                'text' => $label,
+                'product_id' => (int) $r->product_id,
+                'unit_cost' => (float) $r->unit_cost,
+                'units' => $opts,
+            ];
+        });
+
+        return response()->json(['results' => $results->values()]);
+    }
+
+    /**
+     * Add a new lot/batch row to a draft session for a product already in it.
+     * Used when staff finds physical stock under a different (or untracked)
+     * lot/expiry than what was snapshotted at session start. The new line
+     * has theoretical_at_start = 0, counted_qty = entered qty, so on approval
+     * it becomes a surplus that creates a new PurchaseLine carrying the
+     * lot_number/exp_date — exactly like Opening Stock.
+     */
+    public function addLot(Request $request, $id)
+    {
+        if (! auth()->user()->can('inventory_count.create')) {
+            return response()->json(['success' => 0, 'msg' => 'Forbidden'], 403);
+        }
+
+        $request->validate([
+            'variation_id' => 'required|integer',
+            'counted_qty' => 'required|numeric|gt:0',
+            'unit_id' => 'nullable|integer',
+            'lot_number' => 'nullable|string|max:191',
+            'exp_date' => 'nullable|date',
+            'unit_cost' => 'nullable|numeric|min:0',
+        ]);
+
+        $business_id = $request->session()->get('user.business_id');
+        $user_id = $request->session()->get('user.id');
+
+        $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
+        if ($session->status !== 'draft') {
+            return response()->json(['success' => 0, 'msg' => __('inventory_count.session_not_editable')], 422);
+        }
+
+        $permitted = auth()->user()->permitted_locations();
+        if ($permitted !== 'all' && ! in_array($session->location_id, $permitted)) {
+            return response()->json(['success' => 0, 'msg' => 'Unauthorized location'], 403);
+        }
+
+        // Restrict to variations already on this session's sheet — keeps
+        // scope narrow (we don't yet support adding brand-new products mid-count).
+        $existing = InventoryCountSessionLine::where('session_id', $session->id)
+            ->where('variation_id', (int) $request->input('variation_id'))
+            ->first();
+        if (! $existing) {
+            return response()->json(['success' => 0, 'msg' => 'Product is not part of this count session'], 422);
+        }
+
+        $product = Product::select(['id', 'unit_id', 'sub_unit_ids'])->find($existing->product_id);
+        if (! $product) {
+            return response()->json(['success' => 0, 'msg' => 'Product not found'], 422);
+        }
+        $base_unit_id = (int) $product->unit_id;
+        $sub_ids = is_array($product->sub_unit_ids)
+            ? array_map('intval', $product->sub_unit_ids) : [];
+
+        $req_unit_id = (int) ($request->input('unit_id') ?: $base_unit_id);
+        $multiplier = 1.0;
+        $chosen_unit_id = $base_unit_id;
+        if ($req_unit_id !== $base_unit_id) {
+            if (! in_array($req_unit_id, $sub_ids, true)) {
+                return response()->json(['success' => 0, 'msg' => 'Invalid unit for this product'], 422);
+            }
+            $u = Unit::where('business_id', $business_id)
+                ->where('id', $req_unit_id)
+                ->where('base_unit_id', $base_unit_id)
+                ->first();
+            if (! $u) {
+                return response()->json(['success' => 0, 'msg' => 'Invalid unit for this product'], 422);
+            }
+            $m = (float) $u->base_unit_multiplier;
+            $multiplier = $m > 0 ? $m : 1.0;
+            $chosen_unit_id = (int) $u->id;
+        }
+
+        $input_qty = (float) $request->input('counted_qty');
+        $base_qty = round($input_qty * $multiplier, 4);
+
+        $exp_date_raw = $request->input('exp_date');
+        $exp_date = null;
+        if (! empty($exp_date_raw)) {
+            try {
+                $exp_date = Carbon::parse($exp_date_raw)->toDateString();
+            } catch (\Exception $e) {
+                return response()->json(['success' => 0, 'msg' => 'Invalid expiry date'], 422);
+            }
+        }
+
+        // PosInnova: refuse a lot that is already on this sheet for this product.
+        // Rows added here always carry purchase_line_id = NULL, and MySQL treats
+        // every NULL in a unique index as distinct, so icsl_session_variation_lot_unique
+        // cannot block a repeat - it has to be checked here.
+        $lot_in = $request->input('lot_number') ?: null;
+        $dup_q = InventoryCountSessionLine::where('session_id', $session->id)
+            ->where('variation_id', (int) $request->input('variation_id'));
+        $lot_in === null
+            ? $dup_q->whereNull('lot_number')
+            : $dup_q->where('lot_number', $lot_in);
+        $exp_date === null
+            ? $dup_q->whereNull('exp_date')
+            : $dup_q->whereDate('exp_date', $exp_date);
+
+        if ($dup_q->exists()) {
+            return response()->json([
+                'success' => 0,
+                'msg' => __('inventory_count.lot_already_on_sheet'),
+            ], 422);
+        }
+
+        $unit_cost = $request->input('unit_cost');
+        if ($unit_cost === null || $unit_cost === '') {
+            $unit_cost = (float) $existing->unit_cost;
+            if ($unit_cost <= 0) {
+                $unit_cost = $this->lookupUnitCost($existing->variation_id, $session->location_id);
+            }
+        } else {
+            $unit_cost = (float) $unit_cost;
+        }
+
+        DB::beginTransaction();
+        try {
+            $line = new InventoryCountSessionLine();
+            $line->session_id = $session->id;
+            $line->product_id = $existing->product_id;
+            $line->variation_id = $existing->variation_id;
+            $line->purchase_line_id = null; // new lot — PurchaseLine created at approval
+            $line->lot_number = $request->input('lot_number') ?: null;
+            $line->exp_date = $exp_date;
+            $line->theoretical_at_start = 0;
+            $line->counted_qty = $base_qty;
+            $line->counted_qty_input = $input_qty;
+            $line->counted_unit_id = $chosen_unit_id;
+            $line->unit_cost = $unit_cost;
+            $line->counted_by = $user_id;
+            $line->counted_at = Carbon::now();
+            $line->save();
+
+            $session->increment('lines_total');
+            $session->increment('lines_counted');
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('InventoryCount@addLot '.$e->getMessage().' at '.$e->getFile().':'.$e->getLine());
+            return response()->json(['success' => 0, 'msg' => trans('messages.something_went_wrong')], 500);
+        }
+
+        $session->refresh();
+
+        return response()->json([
+            'success' => 1,
+            'msg' => __('inventory_count.lot_added_successfully'),
+            'line_id' => $line->id,
+            'lines_total' => $session->lines_total,
+            'lines_counted' => $session->lines_counted,
+        ]);
+    }
+
+    /**
+     * Edit lot_number / exp_date on an existing session line.
+     *
+     * If the line is already tied to a PurchaseLine, the change is also
+     * pushed to that PL so future sales/reports see the correct expiry
+     * immediately. Otherwise only the session-line snapshot is updated;
+     * if the line later goes through approval with counted_qty > 0 and
+     * no PL, the approval flow will promote it into a new PL carrying
+     * this lot/expiry (see approve()).
+     */
+    public function updateLot(Request $request, $id)
+    {
+        if (! auth()->user()->can('inventory_count.create')) {
+            return response()->json(['success' => 0, 'msg' => 'Forbidden'], 403);
+        }
+
+        $request->validate([
+            'line_id' => 'required|integer',
+            'lot_number' => 'nullable|string|max:191',
+            'exp_date' => 'nullable|date',
+        ]);
+
+        $business_id = $request->session()->get('user.business_id');
+        $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
+        if ($session->status !== 'draft') {
+            return response()->json(['success' => 0, 'msg' => __('inventory_count.session_not_editable')], 422);
+        }
+
+        $permitted = auth()->user()->permitted_locations();
+        if ($permitted !== 'all' && ! in_array($session->location_id, $permitted)) {
+            return response()->json(['success' => 0, 'msg' => 'Unauthorized location'], 403);
+        }
+
+        $line = InventoryCountSessionLine::where('session_id', $session->id)
+            ->where('id', $request->input('line_id'))
+            ->firstOrFail();
+
+        $lot_number = $request->input('lot_number');
+        $lot_number = ($lot_number === '' ? null : $lot_number);
+
+        $exp_raw = $request->input('exp_date');
+        $exp_date = null;
+        if (! empty($exp_raw)) {
+            try {
+                $exp_date = Carbon::parse($exp_raw)->toDateString();
+            } catch (\Exception $e) {
+                return response()->json(['success' => 0, 'msg' => 'Invalid expiry date'], 422);
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            $line->lot_number = $lot_number;
+            $line->exp_date = $exp_date;
+            $line->save();
+
+            $pl_updated = false;
+            if ($line->purchase_line_id) {
+                // Only lot/expiry change — these don't affect FIFO qty/cost
+                // so it's safe to update even after sales have been mapped.
+                $pl = PurchaseLine::find($line->purchase_line_id);
+                if ($pl) {
+                    $pl->lot_number = $lot_number;
+                    $pl->exp_date = $exp_date;
+                    $pl->save();
+                    $pl_updated = true;
+                }
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('InventoryCount@updateLot '.$e->getMessage().' at '.$e->getFile().':'.$e->getLine());
+            return response()->json(['success' => 0, 'msg' => trans('messages.something_went_wrong')], 500);
+        }
+
+        return response()->json([
+            'success' => 1,
+            'msg' => __('inventory_count.lot_updated_successfully'),
+            'lot_number' => $lot_number,
+            'exp_date' => $exp_date,
+            'pl_updated' => $pl_updated,
         ]);
     }
 
@@ -811,10 +1374,15 @@ class InventoryCountController extends Controller
 
         $request->validate([
             'approval_notes' => 'nullable|string|max:2000',
+            'count_purpose' => 'nullable|in:routine,migration',
         ]);
 
         $business_id = $request->session()->get('user.business_id');
         $user_id = $request->session()->get('user.id');
+
+        // 'routine'  : shortages are real shrinkage — reduce Net Profit
+        // 'migration': opening-balance correction — excluded from Net Profit
+        $count_purpose = $request->input('count_purpose', 'routine');
 
         $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
         if ($session->status !== 'pending_approval') {
@@ -844,6 +1412,7 @@ class InventoryCountController extends Controller
         try {
             $shortages = [];
             $surpluses = [];
+            $promotions = []; // untracked lines with lot/expiry but no variance
 
             $lines = InventoryCountSessionLine::where('session_id', $session->id)
                 ->whereNotNull('counted_qty')
@@ -851,7 +1420,27 @@ class InventoryCountController extends Controller
 
             foreach ($lines as $line) {
                 $diff = round((float) $line->counted_qty - (float) $line->theoretical_at_start, 4);
-                if (abs($diff) < 0.0001) continue;
+
+                if (abs($diff) < 0.0001) {
+                    // No qty variance. But if the line has no PL backing AND
+                    // a lot/expiry was set during the count, we want to
+                    // "label" the existing untracked stock by creating a
+                    // PurchaseLine carrying that lot/expiry — only when it's
+                    // safe to do so (no existing PLs already cover this stock).
+                    if (! $line->purchase_line_id
+                        && (float) $line->counted_qty > 0
+                        && ($line->lot_number !== null || $line->exp_date !== null)) {
+                        $promotions[] = [
+                            'product_id' => (int) $line->product_id,
+                            'variation_id' => (int) $line->variation_id,
+                            'quantity' => (float) $line->counted_qty,
+                            'lot_number' => $line->lot_number,
+                            'exp_date' => $line->exp_date,
+                            'unit_cost' => (float) $line->unit_cost,
+                        ];
+                    }
+                    continue;
+                }
 
                 $entry = [
                     'product_id' => (int) $line->product_id,
@@ -870,7 +1459,7 @@ class InventoryCountController extends Controller
                 }
             }
 
-            if (empty($shortages) && empty($surpluses)) {
+            if (empty($shortages) && empty($surpluses) && empty($promotions)) {
                 DB::rollBack();
                 return response()->json([
                     'success' => 0,
@@ -891,7 +1480,7 @@ class InventoryCountController extends Controller
 
             if (! empty($shortages)) {
                 [$shortage_txn_id, $shortage_value] = $this->createShortageTransaction(
-                    $business_id, $user_id, $location_id, $shortages, $notes_block, $business
+                    $business_id, $user_id, $location_id, $shortages, $notes_block, $business, $count_purpose
                 );
             }
 
@@ -901,10 +1490,76 @@ class InventoryCountController extends Controller
                 );
             }
 
+            // Promote untracked lines (no PL, no variance, but lot/expiry set)
+            // into proper PurchaseLines so future sales/reports see the batch.
+            // Only safe when there are no existing PLs for that variation at
+            // this location with remaining qty — otherwise creating a new PL
+            // would double-count the same physical stock.
+            $promoted_count = 0;
+            if (! empty($promotions)) {
+                foreach ($promotions as $p) {
+                    $existing_pl_qty = (float) DB::table('purchase_lines as pl')
+                        ->join('transactions as t', 't.id', '=', 'pl.transaction_id')
+                        ->where('pl.variation_id', $p['variation_id'])
+                        ->whereRaw('COALESCE(pl.location_id, t.location_id) = ?', [$location_id])
+                        ->whereIn('t.type', ['purchase', 'opening_stock', 'purchase_transfer', 'production_purchase'])
+                        ->whereRaw('COALESCE(pl.quantity, 0) - COALESCE(pl.quantity_sold, 0) - COALESCE(pl.quantity_adjusted, 0) - COALESCE(pl.quantity_returned, 0) > 0')
+                        ->sum(DB::raw('COALESCE(pl.quantity, 0) - COALESCE(pl.quantity_sold, 0) - COALESCE(pl.quantity_adjusted, 0) - COALESCE(pl.quantity_returned, 0)'));
+
+                    if ($existing_pl_qty > 0.0001) {
+                        // Stock is already PL-backed elsewhere; skip to avoid
+                        // double counting. The user must use Add Lot instead.
+                        continue;
+                    }
+
+                    $cost = $p['unit_cost'] > 0
+                        ? $p['unit_cost']
+                        : $this->lookupUnitCost($p['variation_id'], $location_id);
+
+                    $promo_ref = 'IC-LBL/' . $session->reference_no . '/' . $p['variation_id'];
+                    $promo_txn = Transaction::create([
+                        'business_id' => $business_id,
+                        'location_id' => $location_id,
+                        'type' => 'opening_stock',
+                        'status' => 'received',
+                        'opening_stock_product_id' => $p['product_id'],
+                        'ref_no' => $promo_ref,
+                        'transaction_date' => Carbon::now(),
+                        'total_before_tax' => $cost * $p['quantity'],
+                        'final_total' => $cost * $p['quantity'],
+                        'payment_status' => 'paid',
+                        'additional_notes' => $notes_block . "\n[Labeled untracked stock with lot/expiry]",
+                        'created_by' => $user_id,
+                    ]);
+
+                    $pl = new PurchaseLine();
+                    $pl->transaction_id = $promo_txn->id;
+                    $pl->product_id = $p['product_id'];
+                    $pl->variation_id = $p['variation_id'];
+                    $pl->location_id = $location_id;
+                    $pl->quantity = $p['quantity'];
+                    $pl->pp_without_discount = $cost;
+                    $pl->purchase_price = $cost;
+                    $pl->purchase_price_inc_tax = $cost;
+                    $pl->item_tax = 0;
+                    $pl->quantity_sold = 0;
+                    $pl->quantity_adjusted = 0;
+                    $pl->quantity_returned = 0;
+                    $pl->lot_number = $p['lot_number'];
+                    $pl->exp_date = $p['exp_date'];
+                    $pl->save();
+                    // Note: NO VLD increment. The stock already exists in
+                    // qty_available; we're just labeling it.
+
+                    $promoted_count++;
+                }
+            }
+
             $session->status = 'posted';
             $session->approved_by = $user_id;
             $session->approved_at = Carbon::now();
             $session->approval_notes = $request->input('approval_notes');
+            $session->count_purpose = $count_purpose;
             $session->shortage_transaction_id = $shortage_txn_id;
             $session->surplus_transaction_id = $surplus_txn_id;
             $session->shortage_value = $shortage_value;
@@ -940,6 +1595,61 @@ class InventoryCountController extends Controller
                 $msg = $e->getMessage();
             }
             return response()->json(['success' => 0, 'msg' => $msg], 500);
+        }
+    }
+
+    /**
+     * Flip an approved session between 'routine' and 'migration' purpose and
+     * restamp its shortage transaction's adjustment_type to match, so the
+     * P&L includes/excludes the shortage from Net Profit accordingly.
+     * Used to reclassify counts after the fact (e.g. data-migration counts
+     * approved before the purpose flag existed).
+     */
+    public function toggleCountPurpose(Request $request, $id)
+    {
+        if (! auth()->user()->can('inventory_count.approve')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = $request->session()->get('user.business_id');
+        $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
+
+        if ($session->status !== 'posted') {
+            return response()->json(['success' => 0, 'msg' => __('inventory_count.purpose_toggle_only_posted')], 422);
+        }
+
+        $new_purpose = ($session->count_purpose ?? 'routine') === 'migration' ? 'routine' : 'migration';
+
+        DB::beginTransaction();
+        try {
+            $session->count_purpose = $new_purpose;
+            $session->save();
+
+            if (! empty($session->shortage_transaction_id)) {
+                Transaction::where('business_id', $business_id)
+                    ->where('id', $session->shortage_transaction_id)
+                    ->where('type', 'stock_adjustment')
+                    ->update([
+                        'adjustment_type' => $new_purpose === 'migration' ? 'recount_migration' : 'recount_shortage',
+                    ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => 1,
+                'msg' => __('inventory_count.purpose_updated', [
+                    'purpose' => $new_purpose === 'migration'
+                        ? __('inventory_count.count_purpose_migration')
+                        : __('inventory_count.count_purpose_routine'),
+                ]),
+                'count_purpose' => $new_purpose,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('InventoryCount@toggleCountPurpose '.$e->getMessage().' at '.$e->getFile().':'.$e->getLine());
+
+            return response()->json(['success' => 0, 'msg' => trans('messages.something_went_wrong')], 500);
         }
     }
 
@@ -1120,6 +1830,7 @@ class InventoryCountController extends Controller
             ->join('products as p', 'p.id', '=', 'variations.product_id')
             ->join('units as u', 'u.id', '=', 'p.unit_id')
             ->join('product_variations as pv', 'pv.id', '=', 'variations.product_variation_id')
+            ->leftJoin('categories as cat', 'cat.id', '=', 'p.category_id')
             ->leftJoin('product_locations as plloc', function ($j) use ($location_id) {
                 $j->on('plloc.product_id', '=', 'p.id')->where('plloc.location_id', '=', $location_id);
             })
@@ -1148,6 +1859,7 @@ class InventoryCountController extends Controller
                 'u.short_name as unit',
                 'p.unit_id as base_unit_id',
                 'p.sub_unit_ids as sub_unit_ids_json',
+                'cat.name as category',
                 DB::raw('COALESCE(vld.qty_available, 0) as theoretical'),
             ])
             ->orderBy('p.name')
@@ -1218,6 +1930,16 @@ class InventoryCountController extends Controller
             $rows = $expanded;
         }
 
+        $order_labels = [
+            'sku' => 'SKU', 'product' => 'Product', 'category' => 'Category',
+            'unit' => 'Unit', 'theoretical' => 'Theoretical Stock', 'expiry' => 'Expiry',
+        ];
+        $active_order = null;
+        if ($request->filled('order_by') && isset($order_labels[$request->input('order_by')])) {
+            $dir = strtolower($request->input('order_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            $active_order = $order_labels[$request->input('order_by')] . ' (' . strtoupper($dir) . ')';
+        }
+
         $pdf = \PDF::loadView('inventory_count.blank_pdf', [
             'location' => $location,
             'rows' => $rows,
@@ -1225,6 +1947,9 @@ class InventoryCountController extends Controller
             'lot_tracking' => $this->isLotTrackingEnabled($request),
             'any_multi_unit' => $any_multi_unit,
             'generated_at' => Carbon::now(),
+            'active_filter' => $request->input('filter'),
+            'active_search' => $request->input('search_term'),
+            'active_order'  => $active_order,
         ])->setPaper('a4', 'portrait');
 
         $filename = 'count-sheet-' . preg_replace('/[^A-Za-z0-9]+/', '-', $location->name) . '-' . date('Ymd-His') . '.pdf';
@@ -1237,7 +1962,7 @@ class InventoryCountController extends Controller
      * in stock_adjustment_lines.lot_no_line_id so mapPurchaseSell decrements
      * that specific batch — matching how the Stock Adjustment form behaves.
      */
-    protected function createShortageTransaction($business_id, $user_id, $location_id, array $lines, $notes, array $business)
+    protected function createShortageTransaction($business_id, $user_id, $location_id, array $lines, $notes, array $business, $count_purpose = 'routine')
     {
         $ref_count = $this->productUtil->setAndGetReferenceCount('stock_adjustment');
         $ref_no = $this->productUtil->generateReferenceNumber('stock_adjustment', $ref_count);
@@ -1273,7 +1998,9 @@ class InventoryCountController extends Controller
             'location_id' => $location_id,
             'type' => 'stock_adjustment',
             'status' => 'received',
-            'adjustment_type' => 'recount_shortage',
+            // 'recount_migration' is excluded from the P&L Net Profit subtraction
+            // (opening-balance correction); 'recount_shortage' counts as real shrinkage.
+            'adjustment_type' => $count_purpose === 'migration' ? 'recount_migration' : 'recount_shortage',
             'ref_no' => $ref_no,
             'transaction_date' => Carbon::now(),
             'total_amount_recovered' => 0,
@@ -1454,6 +2181,27 @@ class InventoryCountController extends Controller
     }
 
     /**
+     * PosInnova: one session line describing a single PurchaseLine batch.
+     *
+     * @param  object  $b  row from fetchActiveBatches()
+     * @return array
+     */
+    protected function sessionLineFromBatch($b, $session_id, $product_id, $variation_id, $default_cost)
+    {
+        return [
+            'session_id' => $session_id,
+            'product_id' => $product_id,
+            'variation_id' => $variation_id,
+            'purchase_line_id' => (int) $b->purchase_line_id,
+            'lot_number' => $b->lot_number,
+            'exp_date' => $b->exp_date,
+            'theoretical_at_start' => (float) $b->qty_available,
+            'unit_cost' => (float) $b->unit_cost > 0 ? (float) $b->unit_cost : $default_cost,
+            'counted_qty' => null,
+        ];
+    }
+
+    /**
      * Build the inventory_count_session_lines insert payload for a set of
      * variation rows. When lot tracking is enabled, fan out one row per
      * active PurchaseLine batch; otherwise one row per variation as before.
@@ -1483,16 +2231,70 @@ class InventoryCountController extends Controller
             $batches = $lot_tracking ? ($batches_by_variation[$variation_id] ?? collect()) : collect();
 
             if ($batches->isNotEmpty()) {
-                foreach ($batches as $b) {
+                // PosInnova: a batch carrying a lot number is always listed on its
+                // own row - the counter can read the lot off the pack and match it.
+                // An unlabelled batch can only be told apart by its expiry date, so
+                // unlabelled batches are grouped by expiry and any group holding
+                // more than one batch is merged into a single countable row.
+                //
+                // Without this, a product received twice with no lot number produced
+                // two byte-identical rows (same name, SKU, unit, expiry, cost and
+                // price - only the expected qty differed). The counter had no way to
+                // split the physical stock between them, and entering the full shelf
+                // count on both rows inflated stock at approval.
+                [$labelled, $unlabelled] = $batches->partition(function ($b) {
+                    return ! is_null($b->lot_number) && $b->lot_number !== '';
+                });
+
+                foreach ($labelled as $b) {
+                    $insert[] = $this->sessionLineFromBatch(
+                        $b, $session_id, $product_id, $variation_id, $default_cost
+                    );
+                }
+
+                $by_expiry = $unlabelled->groupBy(function ($b) {
+                    return (string) ($b->exp_date ?? '');
+                });
+
+                foreach ($by_expiry as $group) {
+                    if ($group->count() === 1) {
+                        // One batch for this expiry - behaviour unchanged, and the row
+                        // keeps its purchase_line_id so a variance is applied to that
+                        // exact batch.
+                        $insert[] = $this->sessionLineFromBatch(
+                            $group->first(), $session_id, $product_id, $variation_id, $default_cost
+                        );
+                        continue;
+                    }
+
+                    $qty = 0.0;
+                    $value = 0.0;
+                    foreach ($group as $b) {
+                        $q = (float) $b->qty_available;
+                        // Apply the same zero-cost fallback an unmerged row gets, so a
+                        // batch is valued identically whether or not it ends up merged.
+                        $batch_cost = (float) $b->unit_cost > 0 ? (float) $b->unit_cost : $default_cost;
+                        $qty += $q;
+                        $value += $q * $batch_cost;
+                    }
+                    // Weighted-average cost, so the merged row values a variance the
+                    // same as the batches it stands for.
+                    $cost = $qty > 0 ? $value / $qty : (float) $group->first()->unit_cost;
+
                     $insert[] = [
                         'session_id' => $session_id,
                         'product_id' => $product_id,
                         'variation_id' => $variation_id,
-                        'purchase_line_id' => (int) $b->purchase_line_id,
-                        'lot_number' => $b->lot_number,
-                        'exp_date' => $b->exp_date,
-                        'theoretical_at_start' => (float) $b->qty_available,
-                        'unit_cost' => (float) $b->unit_cost > 0 ? (float) $b->unit_cost : $default_cost,
+                        // No single batch owns this row. Deliberately null: at approval
+                        // a shortage is then allocated across the real batches by
+                        // mapPurchaseSell (earliest expiry first) rather than being
+                        // forced onto one batch and driving it negative. This is the
+                        // same path already used when lot tracking is off.
+                        'purchase_line_id' => null,
+                        'lot_number' => null,
+                        'exp_date' => $group->first()->exp_date,
+                        'theoretical_at_start' => $qty,
+                        'unit_cost' => $cost > 0 ? $cost : $default_cost,
                         'counted_qty' => null,
                     ];
                 }
@@ -2344,6 +3146,274 @@ class InventoryCountController extends Controller
             'sell_price_inc_tax' => (float) $variation->sell_price_inc_tax,
             'profit_percent' => (float) $variation->profit_percent,
         ]);
+    }
+
+    /**
+     * AJAX: update the unit_cost on a single inventory-count session line.
+     *
+     * Scope of change is INTENTIONALLY narrow — this updates only the
+     * session line's snapshotted unit_cost so that the variance valuation
+     * on approval uses the corrected figure. It does NOT touch the
+     * linked PurchaseLine.purchase_price, COGS on historical sales, or
+     * variations.default_purchase_price (those would alter past reports).
+     * Only allowed while the session is still in `draft`.
+     */
+    /**
+     * AJAX: update a product's alert_quantity from the inventory count screen.
+     * Mirrors the alert_quantity field on the product edit page; the value is
+     * stored in the product's base unit (same as that page).
+     */
+    public function updateAlertQuantity(Request $request, $id)
+    {
+        if (! auth()->user()->can('inventory_count.create') || ! auth()->user()->can('product.update')) {
+            return response()->json(['success' => 0, 'msg' => 'Forbidden'], 403);
+        }
+
+        $request->validate([
+            'product_id' => 'required|integer',
+            'alert_quantity' => 'nullable|string',
+        ]);
+
+        $business_id = $request->session()->get('user.business_id');
+        $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
+        if ($session->status !== 'draft') {
+            return response()->json([
+                'success' => 0,
+                'msg' => __('inventory_count.session_not_editable'),
+            ], 422);
+        }
+
+        $product = \App\Product::where('business_id', $business_id)
+            ->where('id', (int) $request->input('product_id'))
+            ->first();
+        if (! $product) {
+            return response()->json(['success' => 0, 'msg' => 'Product not found'], 404);
+        }
+
+        $raw = trim((string) $request->input('alert_quantity', ''));
+        if ($raw === '') {
+            $product->alert_quantity = null;
+        } else {
+            $parsed = $this->productUtil->num_uf($raw);
+            if (! is_numeric($parsed) || (float) $parsed < 0) {
+                return response()->json([
+                    'success' => 0,
+                    'msg' => __('validation.numeric', ['attribute' => __('product.alert_quantity')]),
+                ], 422);
+            }
+            $product->alert_quantity = $parsed;
+        }
+        $product->save();
+
+        return response()->json([
+            'success' => 1,
+            'msg' => __('lang_v1.updated_succesfully'),
+            'product_id' => $product->id,
+            'alert_quantity' => $product->alert_quantity !== null ? (float) $product->alert_quantity : null,
+        ]);
+    }
+
+    public function updateUnitCost(Request $request, $id)
+    {
+        if (! auth()->user()->can('inventory_count.create')) {
+            return response()->json(['success' => 0, 'msg' => 'Forbidden'], 403);
+        }
+
+        $request->validate([
+            'line_id' => 'required|integer',
+            'unit_cost' => 'required|numeric|min:0',
+        ]);
+
+        $business_id = $request->session()->get('user.business_id');
+        $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
+        if ($session->status !== 'draft') {
+            return response()->json([
+                'success' => 0,
+                'msg' => __('inventory_count.session_not_editable'),
+            ], 422);
+        }
+
+        $line = InventoryCountSessionLine::where('session_id', $session->id)
+            ->where('id', (int) $request->input('line_id'))
+            ->first();
+        if (! $line) {
+            return response()->json(['success' => 0, 'msg' => 'Line not found'], 404);
+        }
+
+        $new_cost = $this->productUtil->num_uf((string) $request->input('unit_cost'));
+        $line->unit_cost = (float) $new_cost;
+        $line->save();
+
+        return response()->json([
+            'success' => 1,
+            'msg' => __('lang_v1.updated_succesfully'),
+            'line_id' => $line->id,
+            'unit_cost' => (float) $line->unit_cost,
+        ]);
+    }
+
+    /**
+     * AJAX: change a product's base unit from the inventory count screen.
+     *
+     * Hard guard: only allowed for products that have NO sub-units mapped.
+     * For multi-unit products the user must go to the product edit page so
+     * unit conversions, purchase prices per unit, and historical purchase
+     * records stay consistent.
+     *
+     * Quantity columns (theoretical, counted, purchase qty, etc.) are not
+     * touched — they are already stored in the product's base unit, so the
+     * change is effectively a re-label of that base unit.
+     */
+    public function updateProductUnit(Request $request, $id)
+    {
+        if (! auth()->user()->can('inventory_count.create') || ! auth()->user()->can('product.update')) {
+            return response()->json(['success' => 0, 'msg' => 'Forbidden'], 403);
+        }
+
+        $request->validate([
+            'product_id' => 'required|integer',
+            'unit_id' => 'required|integer',
+        ]);
+
+        $business_id = $request->session()->get('user.business_id');
+        $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
+        if ($session->status !== 'draft') {
+            return response()->json([
+                'success' => 0,
+                'msg' => __('inventory_count.session_not_editable'),
+            ], 422);
+        }
+
+        $product = \App\Product::where('business_id', $business_id)
+            ->where('id', (int) $request->input('product_id'))
+            ->first();
+        if (! $product) {
+            return response()->json(['success' => 0, 'msg' => 'Product not found'], 404);
+        }
+
+        // Block multi-unit products from being mutated here.
+        $subs = [];
+        if (! empty($product->sub_unit_ids)) {
+            $decoded = is_array($product->sub_unit_ids)
+                ? $product->sub_unit_ids
+                : json_decode($product->sub_unit_ids, true);
+            if (is_array($decoded)) {
+                $subs = array_values(array_filter($decoded, fn($v) => (int) $v > 0));
+            }
+        }
+        if (count($subs) > 0) {
+            return response()->json([
+                'success' => 0,
+                'msg' => __('inventory_count.unit_edit_blocked_multi'),
+            ], 422);
+        }
+
+        $unit = Unit::where('business_id', $business_id)
+            ->where('id', (int) $request->input('unit_id'))
+            ->first();
+        if (! $unit) {
+            return response()->json(['success' => 0, 'msg' => 'Unit not found'], 404);
+        }
+
+        $product->unit_id = $unit->id;
+        $product->save();
+
+        return response()->json([
+            'success' => 1,
+            'msg' => __('lang_v1.updated_succesfully'),
+            'product_id' => $product->id,
+            'unit_id' => $unit->id,
+            'unit_short_name' => $unit->short_name,
+        ]);
+    }
+
+    /**
+     * AJAX: edit a product's name and SKU directly from a draft count session
+     * (migration cleanup convenience — same spirit as updateProductUnit above).
+     * Updates the product master: products.name, and the line's variation
+     * sub_sku (plus products.sku kept in sync for single products).
+     */
+    public function updateProductInfo(Request $request, $id)
+    {
+        if (! auth()->user()->can('inventory_count.create') || ! auth()->user()->can('product.update')) {
+            return response()->json(['success' => 0, 'msg' => 'Forbidden'], 403);
+        }
+
+        $request->validate([
+            'product_id' => 'required|integer',
+            'variation_id' => 'required|integer',
+            'name' => 'required|string|max:191',
+            'sku' => 'nullable|string|max:191',
+        ]);
+
+        $business_id = $request->session()->get('user.business_id');
+        $session = InventoryCountSession::where('business_id', $business_id)->findOrFail($id);
+        if ($session->status !== 'draft') {
+            return response()->json([
+                'success' => 0,
+                'msg' => __('inventory_count.session_not_editable'),
+            ], 422);
+        }
+
+        $product = \App\Product::where('business_id', $business_id)
+            ->where('id', (int) $request->input('product_id'))
+            ->first();
+        if (! $product) {
+            return response()->json(['success' => 0, 'msg' => 'Product not found'], 404);
+        }
+
+        $variation = \App\Variation::where('product_id', $product->id)
+            ->where('id', (int) $request->input('variation_id'))
+            ->first();
+        if (! $variation) {
+            return response()->json(['success' => 0, 'msg' => 'Variation not found'], 404);
+        }
+
+        $new_sku = trim((string) $request->input('sku'));
+
+        if ($new_sku !== '' && $new_sku !== $variation->sub_sku) {
+            $sku_taken = \App\Variation::join('products as p', 'p.id', '=', 'variations.product_id')
+                ->where('p.business_id', $business_id)
+                ->where('variations.sub_sku', $new_sku)
+                ->where('variations.id', '!=', $variation->id)
+                ->exists();
+            if ($sku_taken) {
+                return response()->json([
+                    'success' => 0,
+                    'msg' => __('inventory_count.sku_already_exists', ['sku' => $new_sku]),
+                ], 422);
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            $product->name = trim($request->input('name'));
+
+            if ($new_sku !== '') {
+                $variation->sub_sku = $new_sku;
+                $variation->save();
+                // For single products the parent SKU mirrors the variation SKU.
+                if ($product->type === 'single') {
+                    $product->sku = $new_sku;
+                }
+            }
+            $product->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => 1,
+                'msg' => __('inventory_count.product_info_updated'),
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'sku' => $variation->sub_sku,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('InventoryCount@updateProductInfo '.$e->getMessage().' at '.$e->getFile().':'.$e->getLine());
+
+            return response()->json(['success' => 0, 'msg' => trans('messages.something_went_wrong')], 500);
+        }
     }
 
     /**

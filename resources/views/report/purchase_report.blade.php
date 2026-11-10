@@ -44,6 +44,8 @@
         </div>
     @endcomponent
 
+    @include('report.partials.export_buttons', ['export_base' => '/reports/export/purchase-report', 'export_map_id' => 'purchaseReport'])
+
     @component('components.widget', ['class' => 'box-primary'])
         <div class="table-responsive">
     <table class="table table-bordered table-striped ajax_view" id="purchase_report_table"
@@ -155,6 +157,22 @@
             $('#purchase_list_filter_date_range').val('');
             purchase_report_table.ajax.reload();
         });
+    });
+
+    $(document).on('click.purchaseExport', '.btn-report-export[data-export-map="purchaseReport"]', function(e) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        var dr = $('#purchase_list_filter_date_range').data('daterangepicker');
+        var params = {
+            format:         $(this).data('export-format'),
+            location_id:    $('#purchase_list_filter_location_id').val() || '',
+            supplier_id:    $('#purchase_list_filter_supplier_id').val() || '',
+            payment_status: $('#purchase_list_filter_payment_status').val() || '',
+            status:         $('#purchase_list_filter_status').val() || '',
+            start_date:     (dr && $('#purchase_list_filter_date_range').val()) ? dr.startDate.format('YYYY-MM-DD') : '',
+            end_date:       (dr && $('#purchase_list_filter_date_range').val()) ? dr.endDate.format('YYYY-MM-DD') : '',
+        };
+        window.location.href = $(this).data('export-base') + '?' + $.param(params);
     });
 </script>
 	

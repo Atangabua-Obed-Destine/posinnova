@@ -23,7 +23,9 @@
               <address>
                 <strong>{{ $transaction->contact->supplier_business_name }}</strong>
                 {{ $transaction->contact->name }}
-                {!! $transaction->contact->contact_address !!}
+                @php $pv_c = $transaction->contact; $pv_addr = collect([$pv_c->address_line_1, $pv_c->address_line_2, $pv_c->city, $pv_c->state, $pv_c->country, $pv_c->land_mark, $pv_c->zip_code])->filter()->implode(', '); @endphp
+                {{-- contact_address already starts with the name(s) printed just above --}}
+                @if ($pv_addr)<br>{{ $pv_addr }}@endif
                 @if(!empty($transaction->contact->tax_number))
                   <br>@lang('contact.tax_no'): {{$transaction->contact->tax_number}}
                 @endif
@@ -73,9 +75,11 @@
             @if($transaction->type != 'payroll' && !empty($transaction->contact))
               @lang('contact.customer'):
               <address>
-                <strong>{{ $transaction->contact->name ?? '' }}</strong>
+                <strong>@if(!empty($transaction->walk_in_customer_name) && !empty($transaction->contact->is_default)){{ $transaction->walk_in_customer_name }}@else{{ $transaction->contact->name ?? '' }}@endif</strong>
                
-                {!! $transaction->contact->contact_address !!}
+                @php $pv_c = $transaction->contact; $pv_addr = collect([$pv_c->address_line_1, $pv_c->address_line_2, $pv_c->city, $pv_c->state, $pv_c->country, $pv_c->land_mark, $pv_c->zip_code])->filter()->implode(', '); @endphp
+                {{-- contact_address already starts with the name(s) printed just above --}}
+                @if ($pv_addr)<br>{{ $pv_addr }}@endif
                 @if(!empty($transaction->contact->tax_number))
                   <br>@lang('contact.tax_no'): {{$transaction->contact->tax_number}}
                 @endif

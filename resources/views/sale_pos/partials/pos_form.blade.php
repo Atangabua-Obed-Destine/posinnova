@@ -7,6 +7,8 @@
 				</span>
 				<input type="hidden" id="default_customer_id" 
 				value="{{ $walk_in_customer['id'] ?? ''}}" >
+				<input type="hidden" id="walk_in_customer_contact_id" 
+				value="{{ $walk_in_customer['id'] ?? ''}}" >
 				<input type="hidden" id="default_customer_name" 
 				value="{{ $walk_in_customer['name'] ?? ''}}" >
 				<input type="hidden" id="default_customer_balance" 
@@ -45,6 +47,8 @@
 					<button type="button" class="btn btn-default bg-white btn-flat" data-toggle="modal" data-target="#configure_search_modal" title="{{__('lang_v1.configure_product_search')}}"><i class="fas fa-search-plus"></i></button>
 				</div>
                 {{-- Removed mousetrap class as it was causing issue with barcode scanning --}}
+				<input type="hidden" id="pos_disable_auto_add" value="{{ !empty($pos_settings['disable_auto_add_product']) ? 1 : 0 }}">
+				<input type="hidden" id="is_custom_customer_name_required" value="{{ !empty($pos_settings['is_custom_customer_name_required']) ? 1 : 0 }}">
 				{!! Form::text('search_product', null, ['class' => 'form-control', 'id' => 'search_product', 'placeholder' => __('lang_v1.search_product_placeholder'),
 				'disabled' => is_null($default_location)? true : false,
 				'autofocus' => is_null($default_location)? false : true,
@@ -221,6 +225,34 @@
 		<!-- Keeps count of product rows -->
 		<input type="hidden" id="product_row_count" 
 			value="0">
+		{{-- PosInnova: how many cart rows the browser actually submitted. The server
+		     rejects the sale if fewer arrive, so a dropped line can never be saved
+		     silently. Left at 0 when JS has not run, which skips the check. --}}
+		<input type="hidden" name="expected_product_rows" id="expected_product_rows" value="0">
+		{{-- PosInnova: one key per checkout. If this sale is submitted twice (double-click,
+		     or a retry after a lost response) the server returns the sale it already saved
+		     instead of charging and deducting stock a second time. --}}
+		<input type="hidden" name="idempotency_key" id="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+		{{-- PosInnova: cart recovery. The POS keeps a snapshot of the cart in this
+		     browser so an accidental refresh or a closed tab does not lose a part-built
+		     sale. The snapshot is never restored automatically - it is offered, and
+		     every line is re-fetched from the server on restore so price, stock and
+		     batch are current. Scoped to this user, business and location so one
+		     cashier can never inherit another one's cart. --}}
+		<div id="pos_cart_recovery"
+			class="hide"
+			data-user-id="{{ auth()->user()->id }}"
+			data-business-id="{{ session('user.business_id') }}"
+			data-max-age-mins="720"
+			data-lang-heading="{{ __('lang_v1.cart_recovery_heading') }}"
+			data-lang-help="{{ __('lang_v1.cart_recovery_help', ['count' => '__COUNT__', 'time' => '__TIME__']) }}"
+			data-lang-restore="{{ __('lang_v1.cart_recovery_restore') }}"
+			data-lang-discard="{{ __('lang_v1.cart_recovery_discard') }}"
+			data-lang-restoring="{{ __('lang_v1.cart_recovery_restoring') }}"
+			data-lang-restored="{{ __('lang_v1.cart_recovery_restored', ['count' => '__COUNT__']) }}"
+			data-lang-discarded="{{ __('lang_v1.cart_recovery_discarded') }}"
+			data-lang-price-changed="{{ __('lang_v1.cart_recovery_price_changed', ['products' => '__PRODUCTS__']) }}"
+			data-lang-skipped="{{ __('lang_v1.cart_recovery_skipped', ['products' => '__PRODUCTS__']) }}"></div>
 		@php
 			$hide_tax = '';
 			if( session()->get('business.enable_inline_tax') == 0){

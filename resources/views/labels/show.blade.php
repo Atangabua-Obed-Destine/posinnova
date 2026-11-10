@@ -8,7 +8,7 @@
 <br>
     <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">@lang('barcode.print_labels') @show_tooltip(__('tooltip.print_label'))</h1>
     <!-- <ol class="breadcrumb">
-        <li><a href="#"><i class="fa fa-dashboard"></i> Level</a></li>
+        <li><a href="#"><i class="fa fa-tachometer-alt"></i> Level</a></li>
         <li class="active">Here</li>
     </ol> -->
 </section>
@@ -45,6 +45,7 @@
 							@endif
 							<th>@lang('lang_v1.packing_date')</th>
 							<th>@lang('lang_v1.selling_price_group')</th>
+							<th>@lang('messages.action')</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -71,14 +72,14 @@
       							<div class="input-group-addon"><b>@lang( 'lang_v1.size' )</b></div>
 								<input type="text" class="form-control" 
 									name="print[name_size]" 
-									value="15">
+									value="8">
 							</div>
 						</td>
 
 						<td>
 							<div class="checkbox">
 							    <label>
-							    	<input type="checkbox" checked name="print[variations]" value="1"> <b>@lang( 'barcode.print_variations' )</b>
+							    	<input type="checkbox" name="print[variations]" value="1"> <b>@lang( 'barcode.print_variations' )</b>
 							    </label>
 							</div>
 
@@ -93,7 +94,7 @@
 						<td>
 							<div class="checkbox">
 							    <label>
-							    	<input type="checkbox" checked name="print[price]" value="1" id="is_show_price"> <b>@lang( 'barcode.print_price' )</b>
+							    	<input type="checkbox" name="print[price]" value="1" id="is_show_price"> <b>@lang( 'barcode.print_price' )</b>
 							    </label>
 							</div>
 
@@ -127,7 +128,7 @@
 						<td>
 							<div class="checkbox">
 							    <label>
-							    	<input type="checkbox" checked name="print[business_name]" value="1"> <b>@lang( 'barcode.print_business_name' )</b>
+							    	<input type="checkbox" name="print[business_name]" value="1"> <b>@lang( 'barcode.print_business_name' )</b>
 							    </label>
 							</div>
 
@@ -142,7 +143,7 @@
 						<td>
 							<div class="checkbox">
 							    <label>
-							    	<input type="checkbox" checked name="print[packing_date]" value="1"> <b>@lang( 'lang_v1.print_packing_date' )</b>
+							    	<input type="checkbox" name="print[packing_date]" value="1"> <b>@lang( 'lang_v1.print_packing_date' )</b>
 							    </label>
 							</div>
 
@@ -159,7 +160,7 @@
 							
 								<div class="checkbox">
 								    <label>
-								    	<input type="checkbox" checked name="print[lot_number]" value="1"> <b>@lang( 'lang_v1.print_lot_number' )</b>
+								    	<input type="checkbox" name="print[lot_number]" value="1"> <b>@lang( 'lang_v1.print_lot_number' )</b>
 								    </label>
 								</div>
 
@@ -176,7 +177,7 @@
 							@if(request()->session()->get('business.enable_product_expiry') == 1)
 								<div class="checkbox">
 								    <label>
-								    	<input type="checkbox" checked name="print[exp_date]" value="1"> <b>@lang( 'lang_v1.print_exp_date' )</b>
+								    	<input type="checkbox" name="print[exp_date]" value="1"> <b>@lang( 'lang_v1.print_exp_date' )</b>
 								    </label>
 								</div>
 

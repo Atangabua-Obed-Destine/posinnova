@@ -25,38 +25,19 @@
 @inject('request', 'Illuminate\Http\Request')
 @php
     // PosInnova: shared classes for the header icon buttons so styling stays
-    // consistent. Uniform 40x40 square pill, subtle border, soft hover.
-    $pi_icon_btn = 'pi-pos-icon-btn tw-inline-flex tw-items-center tw-justify-center '
-        . 'tw-w-10 tw-h-10 tw-rounded-lg tw-bg-white tw-border tw-border-gray-200 '
-        . 'hover:tw-bg-gray-50 hover:tw-border-gray-300 hover:tw-shadow-sm '
-        . 'tw-text-gray-600 tw-transition tw-cursor-pointer focus:tw-outline-none '
-        . 'focus:tw-ring-2 focus:tw-ring-blue-200';
-    $pi_icon = 'fa-lg !tw-text-base';
+    // consistent. The look lives in public/pi-pos.css (.pos-header
+    // .pi-pos-icon-btn) - a 30px industrial square. Only the display utility
+    // stays here, because Tailwind orders .tw-hidden after .tw-inline-flex, so
+    // the handful of buttons that add `tw-block md:tw-hidden` still hide
+    // correctly on the breakpoint they target.
+    $pi_icon_btn = 'pi-pos-icon-btn tw-inline-flex tw-items-center tw-justify-center';
 @endphp
-<style>
-    .pos-header .pi-pos-icon-btn { line-height: 1; padding: 0; }
-    .pos-header .pi-pos-icon-btn i { font-size: 16px; }
-    .pos-header .pi-pos-icon-group { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-    .pos-header .pi-add-expense-btn {
-        display: inline-flex; align-items: center; gap: 6px;
-        height: 40px; padding: 0 14px; border-radius: 8px;
-        background: #fff; border: 1px solid #e5e7eb; color: #111827;
-        font-weight: 600; font-size: 13px; line-height: 1; cursor: pointer;
-        white-space: nowrap; transition: all .15s ease;
-    }
-    .pos-header .pi-add-expense-btn:hover { background: #f9fafb; border-color: #d1d5db; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
-    .pos-header .pi-add-expense-btn .fa { color: #ef4b53; }
-    .pos-header .pi-datetime-pill {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 6px 10px; border-radius: 8px; background: #4f5bd5; color: #fff;
-        font-weight: 600; font-size: 12px; line-height: 1;
-    }
-    .pos-header .pi-datetime-pill .fa { color: #fff; opacity: .85; }
-    .pos-header .pi-location-label { font-weight: 700; color: #111827; margin: 0; }
-</style>
+{{-- PosInnova: the header styling used to be an inline style block here. It now
+     sits in public/pi-pos.css alongside the rest of the POS treatment, so there
+     is one place to change the chrome and one file to deploy. --}}
 <div class="col-md-12 no-print pos-header">
     <input type="hidden" id="pos_redirect_url" value="{{ $pos_redirect_url }}">
-    <div class="tw-flex tw-flex-col md:tw-flex-row tw-items-center tw-justify-between tw-shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] tw-bg-white tw-rounded-xl tw-mx-0 tw-mt-1 tw-mb-0 md:tw-mb-0 tw-p-3 tw-gap-3">
+    <div class="pi-pos-headbar tw-flex tw-flex-col md:tw-flex-row tw-items-center tw-justify-between tw-flex-wrap">
 
         {{-- LEFT: Location + datetime pill + mobile menu toggle --}}
         <div class="tw-w-full md:tw-w-auto tw-flex tw-items-center tw-gap-3 tw-flex-wrap">
@@ -78,13 +59,63 @@
                     <span class="tw-font-semibold tw-text-gray-800">{{ $transaction->location->name }}</span>
                 @endif
             </div>
-            <div class="pi-datetime-pill tw-hidden md:tw-inline-flex">
+            <div class="pi-pos-tag pi-datetime-pill tw-hidden md:tw-inline-flex tw-items-center">
                 <i class="fa fa-calendar-alt"></i>
                 <span class="curr_datetime">{{ @format_datetime('now') }}</span>
                 <i class="fa fa-keyboard hover-q" aria-hidden="true" data-container="body"
                     data-toggle="popover" data-placement="bottom" data-content="@include('sale_pos.partials.keyboard_shortcuts_details')"
                     data-html="true" data-trigger="hover" title=""></i>
             </div>
+
+            {{-- PosInnova: who is at the till — current cashier's name --}}
+            <div class="pi-pos-tag pi-cashier-pill tw-inline-flex tw-items-center" title="@lang('lang_v1.signed_in_as')">
+                <i class="fa fa-user-circle"></i>
+                <span>{{ trim(preg_replace('/\s+/', ' ', auth()->user()->user_full_name)) }}</span>
+            </div>
+
+            {{-- PosInnova: pending drafts indicator — opens Recent Transactions on the Draft tab --}}
+            @if (!empty($pos_draft_count) && (!isset($pos_settings['hide_recent_trans']) || $pos_settings['hide_recent_trans'] == 0))
+                <button type="button" id="pos_draft_indicator"
+                    class="pi-pos-tag pi-draft-indicator tw-inline-flex tw-items-center"
+                    title="@lang('lang_v1.draft_indicator_help')">
+                    <i class="fa fa-file-alt"></i>
+                    <span class="pi-draft-count">{{ $pos_draft_count }}</span>
+                    <span>@lang('lang_v1.drafts_pending')</span>
+                </button>
+            @endif
+
+            @if (!empty($shift_enabled) && !empty($current_shift))
+                {{-- PosInnova hospital shifts: current shift badge + live countdown (just after the keyboard shortcut icon) --}}
+                <span id="pos_shift_badge"
+                    class="pi-pos-tag tw-inline-flex tw-items-center"
+                    style="{{ $current_shift == 'morning' ? 'background:#f39c12;' : 'background:#34495e;' }}"
+                    data-shift="{{ $current_shift }}"
+                    data-ends-at="{{ $shift_ends_at }}"
+                    data-server-now="{{ $shift_server_now }}"
+                    data-extended="{{ !empty($shift_extended) ? 1 : 0 }}">
+                    @if ($current_shift == 'morning')<i class="fa fa-sun"></i>@else<i class="fa fa-moon"></i>@endif
+                    <span>{{ $current_shift_label }}</span>
+                    @if (!empty($current_shift_start) && !empty($current_shift_end))
+                        <span class="pi-tag-sub">{{ $current_shift_start }}–{{ $current_shift_end }}</span>
+                    @endif
+                    <span id="pos_shift_countdown"></span>
+                </span>
+            @endif
+
+            {{-- PosInnova Stock Doctor: detect & heal display/purchase stock drift
+                 that blocks sales ("Mismatch between sold and purchase quantity").
+                 Placed right after the shift badge so it is always visible. --}}
+            {{-- The inline style stays: pos.js flips `display` on this button to
+                 reveal it, and the white-on-red treatment is deliberate - it is
+                 a warning, not a status pill. --}}
+            <button type="button" id="stock_doctor_btn" title="@lang('lang_v1.stock_doctor')"
+                class="pi-pos-tag tw-relative tw-inline-flex tw-items-center tw-cursor-pointer"
+                style="display:none; background:#fff; border:1px solid #EF4B53; color:#EF4B53; font-weight:600; font-size:12px; line-height:1;">
+                <i class="fa fa-stethoscope" style="color:#EF4B53;"></i>
+                <span>@lang('lang_v1.stock_doctor')</span>
+                <span id="stock_doctor_badge"
+                    style="display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:#EF4B53; color:#fff; font-size:10px; font-weight:700; line-height:1;"></span>
+            </button>
 
             @if (empty($pos_settings['hide_product_suggestion']))
                 <button type="button" title="{{ __('lang_v1.view_products') }}" data-placement="bottom"
@@ -101,7 +132,7 @@
         </div>
 
         {{-- RIGHT: Icon shortcut group --}}
-        <div class="pi-icon-group tw-hidden md:tw-flex tw-flex-nowrap tw-items-center tw-justify-end tw-gap-1.5 tw-overflow-x-auto"
+        <div class="pi-icon-group tw-hidden md:tw-flex tw-flex-nowrap tw-items-center tw-justify-end tw-gap-1 tw-overflow-x-auto"
             id="pos_header_more_options">
 
             <a href="{{ $go_back_url }}" title="{{ __('lang_v1.go_back') }}" class="{{ $pi_icon_btn }}">
@@ -215,6 +246,10 @@
                 </a>
             @endcan
 
+            {{-- PosInnova: hairline rule separating the icon shortcuts from the
+                 labelled actions, so the eye can find the latter at a glance. --}}
+            <span class="pi-sep"></span>
+
             @if (in_array('pos_sale', $enabled_modules) && !empty($transaction_sub_type))
                 @can('sell.create')
                     <a href="{{ action([\App\Http\Controllers\SellPosController::class, 'create']) }}"
@@ -234,6 +269,13 @@
                     <span>@lang('expense.add_expense')</span>
                 </button>
             @endcan
+
+            {{-- PosInnova: sign out — same logout action as the main header --}}
+            <a href="{{ action([\App\Http\Controllers\Auth\LoginController::class, 'logout']) }}"
+                title="@lang('lang_v1.sign_out')"
+                class="{{ $pi_icon_btn }}">
+                <i class="fas fa-sign-out-alt tw-text-[#EF4B53]"></i>
+            </a>
 
         </div>
     </div>
