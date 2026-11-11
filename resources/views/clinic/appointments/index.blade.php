@@ -5,7 +5,10 @@
     $A = \App\Http\Controllers\ClinicAppointmentController::class;
     $is_today = $date->isToday();
     $is_past_day = $date->lt(\Carbon::today());
-    $q = fn ($d) => action([$A, 'index'], array_filter(['date' => $d->toDateString(), 'doctor_id' => $doctor_id]));
+    $q = fn ($d) => action([$A, 'index'], array_filter(['date' => $d->toDateString(), 'doctor_id' => $doctor_param]));
+    $may = fn ($id) => \App\Utils\ClinicAppointments::mayManage($access, $id);
+    $can_book = $access['manage_all'] || $access['own'] !== null;
+    $from = 'diary';
     $label_cls = ['requested' => 'label-warning', 'confirmed' => 'label-primary', 'checked_in' => 'label-success', 'no_show' => 'label-default', 'cancelled' => 'label-default', 'declined' => 'label-default'];
 @endphp
 
@@ -45,14 +48,16 @@
         </div>
         <form method="GET" class="form-inline" style="margin-bottom:12px; display:flex; gap:6px;">
             <input type="date" name="date" value="{{ $date->toDateString() }}" class="form-control input-sm" onchange="this.form.submit()" aria-label="{{ __('lang_v1.date') }}">
-            <select name="doctor_id" class="form-control input-sm" onchange="this.form.submit()" aria-label="{{ __('clinic.doctor') }}">
-                <option value="">@lang('clinic.appt_all_doctors')</option>
-                @foreach ($all_doctors as $id => $name)
-                    <option value="{{ $id }}" {{ $doctor_id == $id ? 'selected' : '' }}>{{ $name }}</option>
-                @endforeach
-            </select>
+            @if ($access['see_all'])
+                <select name="doctor_id" class="form-control input-sm" onchange="this.form.submit()" aria-label="{{ __('clinic.doctor') }}">
+                    <option value="all">@lang('clinic.appt_all_doctors')</option>
+                    @foreach ($all_doctors as $id => $name)
+                        <option value="{{ $id }}" {{ $doctor_id == $id ? 'selected' : '' }}>{{ $id == auth()->id() ? __('clinic.appt_me', ['name' => $name]) : $name }}</option>
+                    @endforeach
+                </select>
+            @endif
         </form>
-        @if ($reminders_due > 0 && $can_manage)
+        @if ($reminders_due > 0)
             <a href="{{ $q($tomorrow) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline ap-wa" style="margin-left:auto; margin-bottom:12px;">
                 <i class="fab fa-whatsapp"></i> {{ trans_choice('clinic.appt_reminders_due', $reminders_due, ['n' => $reminders_due]) }}
             </a>
@@ -69,7 +74,7 @@
     @if (empty($with_hours))
         <div class="callout callout-info">
             <p><i class="fas fa-info-circle"></i> @lang('clinic.appt_no_hours')
-                @can('clinic_schedule.manage') <a href="{{ action([$A, 'hours']) }}">@lang('clinic.appt_set_hours')</a>@endcan</p>
+                @if ($access['schedule_all'] || $access['schedule_own'] !== null) <a href="{{ action([$A, 'hours']) }}">@lang('clinic.appt_set_hours')</a>@endif</p>
         </div>
     @endif
 
@@ -84,16 +89,8 @@
                                 <td><span class="ap-name">{{ optional($r->patient)->name }}</span>
                                     <br><small class="text-muted">{{ optional(optional($r->patient)->patientDetails)->file_number }} · {{ optional($r->patient)->mobile }}</small></td>
                                 <td>{{ $r->reason ?: '-' }}<br><small class="text-muted">{{ __('clinic.appt_asked_on', ['date' => @format_datetime($r->created_at)]) }}</small></td>
-                                <td class="text-right" style="white-space:nowrap;">
-                                    @if ($can_manage)
-                                        <form method="POST" action="{{ action([$A, 'confirm'], [$r->id]) }}" style="display:inline;">@csrf
-                                            <button class="btn btn-xs btn-success"><i class="fas fa-check"></i> @lang('clinic.appt_confirm')</button>
-                                        </form>
-                                        <form method="POST" action="{{ action([$A, 'decline'], [$r->id]) }}" style="display:inline;" class="js-reason" data-prompt="{{ __('clinic.appt_decline_prompt') }}">@csrf
-                                            <input type="hidden" name="reason">
-                                            <button class="btn btn-xs btn-default"><i class="fas fa-ban"></i> @lang('clinic.appt_decline')</button>
-                                        </form>
-                                    @endif
+                                <td class="text-right">
+                                    @include('clinic.appointments.partials.appt_actions', ['ap' => $r])
                                 </td>
                             </tr>
                         @endforeach
@@ -128,35 +125,10 @@
                                     @if ($ap->reason) · {{ $ap->reason }}@endif
                                     @if ($ap->reminded_at) · <i class="fab fa-whatsapp"></i> {{ __('clinic.appt_reminded', ['date' => @format_datetime($ap->reminded_at)]) }}@endif
                                 </div>
-                                @if ($can_manage)
-                                    <div class="ap-actions">
-                                        @if ($ap->status == 'confirmed' && $is_today)
-                                            <a href="{{ action([\App\Http\Controllers\VisitController::class, 'create'], ['appointment_id' => $ap->id]) }}" class="btn btn-xs btn-primary"><i class="fas fa-sign-in-alt"></i> @lang('clinic.appt_check_in')</a>
-                                        @endif
-                                        @if ($ap->status == 'checked_in' && $ap->visit_id)
-                                            <a href="{{ action([\App\Http\Controllers\VisitController::class, 'show'], [$ap->visit_id]) }}" class="btn btn-xs btn-default"><i class="fas fa-eye"></i> @lang('clinic.appt_open_visit')</a>
-                                        @endif
-                                        @if ($ap->status == 'requested')
-                                            <form method="POST" action="{{ action([$A, 'confirm'], [$ap->id]) }}">@csrf<button class="btn btn-xs btn-success"><i class="fas fa-check"></i> @lang('clinic.appt_confirm')</button></form>
-                                        @endif
-                                        @if (in_array($ap->status, ['requested', 'confirmed']) && ! $is_past_day)
-                                            @php $wa = \App\Utils\ClinicAppointments::whatsappFor($ap); @endphp
-                                            @if ($wa && $ap->status == 'confirmed')
-                                                <a href="{{ $wa }}" target="_blank" rel="noopener" class="btn btn-xs btn-default ap-wa js-wa" data-url="{{ action([$A, 'reminded'], [$ap->id]) }}"><i class="fab fa-whatsapp"></i> @lang('clinic.appt_whatsapp')</a>
-                                            @endif
-                                            <form method="POST" action="{{ action([$A, 'cancel'], [$ap->id]) }}" class="js-reason" data-prompt="{{ __('clinic.appt_cancel_prompt') }}">@csrf
-                                                <input type="hidden" name="reason">
-                                                <button class="btn btn-xs btn-default"><i class="fas fa-ban"></i> @lang('messages.cancel')</button>
-                                            </form>
-                                        @endif
-                                        @if ($ap->status == 'confirmed' && $ap->startsAt()->isPast())
-                                            <form method="POST" action="{{ action([$A, 'noShow'], [$ap->id]) }}">@csrf<button class="btn btn-xs btn-default"><i class="fas fa-user-slash"></i> @lang('clinic.appt_no_show')</button></form>
-                                        @endif
-                                    </div>
-                                @endif
+                                @include('clinic.appointments.partials.appt_actions')
                             @elseif ($s['state'] == 'free')
                                 <span class="ap-free">@lang('clinic.appt_free')</span>
-                                @if ($can_manage)
+                                @if ($may($col['id']))
                                     <button type="button" class="btn btn-xs btn-default js-book" style="margin-left:6px;"
                                         data-doctor="{{ $col['id'] }}" data-doctor-name="{{ $col['name'] }}" data-start="{{ $s['start'] }}"><i class="fas fa-plus"></i> @lang('clinic.appt_book')</button>
                                 @endif
@@ -182,7 +154,7 @@
     <p class="help-block"><i class="fas fa-info-circle"></i> @lang('clinic.appt_diary_help')</p>
 </section>
 
-@if ($can_manage)
+@if ($can_book)
 <div class="modal fade" id="book_modal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <form method="POST" action="{{ action([$A, 'store']) }}" class="modal-content">
@@ -190,7 +162,7 @@
             <input type="hidden" name="doctor_id" id="book_doctor">
             <input type="hidden" name="date" value="{{ $date->toDateString() }}">
             <input type="hidden" name="start" id="book_start">
-            <input type="hidden" name="doctor_filter" value="{{ $doctor_id }}">
+            <input type="hidden" name="doctor_filter" value="{{ $doctor_param }}">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
                 <h4 class="modal-title" id="book_title">@lang('clinic.appt_book')</h4>
@@ -237,16 +209,7 @@
             $('#book_title').text($(this).data('doctor-name') + ' · ' + dateLabel + ' ' + $(this).data('start'));
             $('#book_modal').modal('show');
         });
-        // cancel / decline ask for a short reason
-        $(document).on('submit', 'form.js-reason', function () {
-            var r = prompt($(this).data('prompt'), '');
-            if (r === null) { return false; }
-            $(this).find('input[name=reason]').val(r);
-        });
-        // opening WhatsApp records that the reminder was sent
-        $(document).on('click', '.js-wa', function () {
-            $.post($(this).data('url'), { _token: '{{ csrf_token() }}' });
-        });
     });
 </script>
+@include('clinic.appointments.partials.move_modal')
 @endsection

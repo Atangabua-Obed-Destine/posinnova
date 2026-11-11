@@ -141,19 +141,27 @@ class ClinicDashboard
         }
 
         // ---------- appointments today
-        if ($appts_on && ($user->can('appointment.view') || $user->can('appointment.manage'))) {
-            $appts = ClinicAppointment::forBusiness($business_id)->whereDate('date', $today->toDateString())
+        $appt_access = $appts_on ? ClinicAppointments::access($business_id, $user) : null;
+        if ($appts_on && $appt_access['see']) {
+            // a doctor away from the front desk (or who sees only their own diary) sees their own bookings,
+            // like their waiting-room counts
+            $appts_mine = $appt_access['own'] !== null && (! $appt_access['see_all'] || $appt_access['mine_first']);
+            $mine = function ($q) use ($appts_mine, $user) {
+                return $appts_mine ? $q->where('doctor_id', $user->id) : $q;
+            };
+            $appts = $mine(ClinicAppointment::forBusiness($business_id)->whereDate('date', $today->toDateString()))
                 ->whereIn('status', ['requested', 'confirmed', 'checked_in'])
                 ->with(['patient', 'doctor'])->orderBy('start_time')->get();
-            $to_confirm = ClinicAppointment::forBusiness($business_id)->where('status', 'requested')
+            $to_confirm = $mine(ClinicAppointment::forBusiness($business_id)->where('status', 'requested'))
                 ->whereDate('date', '>=', $today->toDateString())->count();
-            $url = action([\App\Http\Controllers\ClinicAppointmentController::class, 'index']);
+            $url = action([\App\Http\Controllers\ClinicAppointmentController::class, $appts_mine ? 'upcoming' : 'index']);
+            $title = $appts_mine ? __('clinic.dash_my_appointments_today') : __('clinic.dash_appointments_today');
             $d['tiles'][] = ['key' => 'appointments', 'icon' => 'calendar-event', 'tone' => 'blue', 'url' => $url,
-                'label' => __('clinic.dash_appointments_today'), 'value' => $appts->count(),
+                'label' => $title, 'value' => $appts->count(),
                 'sub' => $to_confirm ? __('clinic.dash_to_confirm_n', ['n' => $to_confirm]) : null, 'alert' => $to_confirm > 0];
             $now = Carbon::now()->format('H:i:s');
             $d['panels']['appointments'] = [
-                'title' => __('clinic.dash_appointments_today'),
+                'title' => $title,
                 'url' => $url,
                 'rows' => $appts->sortBy(function ($a) {
                     // still to come first, then the ones already checked in

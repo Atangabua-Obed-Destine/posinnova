@@ -575,6 +575,9 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('clinic/claims/{id}/settle', [\App\Http\Controllers\ClinicClaimController::class, 'settle']);
     Route::get('clinic/appointments', [\App\Http\Controllers\ClinicAppointmentController::class, 'index']);
     Route::post('clinic/appointments', [\App\Http\Controllers\ClinicAppointmentController::class, 'store']);
+    Route::get('clinic/appointments/upcoming', [\App\Http\Controllers\ClinicAppointmentController::class, 'upcoming']);
+    Route::get('clinic/appointments/free-slots', [\App\Http\Controllers\ClinicAppointmentController::class, 'freeSlots']);
+    Route::post('clinic/appointments/{id}/move', [\App\Http\Controllers\ClinicAppointmentController::class, 'move']);
     Route::get('clinic/appointments/hours', [\App\Http\Controllers\ClinicAppointmentController::class, 'hours']);
     Route::post('clinic/appointments/hours', [\App\Http\Controllers\ClinicAppointmentController::class, 'storeHours']);
     Route::post('clinic/appointments/hours/{id}/delete', [\App\Http\Controllers\ClinicAppointmentController::class, 'deleteHours']);

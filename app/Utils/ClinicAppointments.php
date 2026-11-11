@@ -44,6 +44,57 @@ class ClinicAppointments
         return array_intersect_key(ClinicQueue::doctors($business_id), array_flip($with_hours));
     }
 
+    /**
+     * What a user may do with appointments:
+     *  - see_all / manage_all: appointment.view|manage, every doctor's column;
+     *  - own: the user's id when they are a doctor who may see and act on their
+     *    own appointments (appointment.manage_own), else null;
+     *  - see: may open the diary at all;
+     *  - mine_first: a doctor who does not work the front desk starts on their
+     *    own column (the same rule as their home page counts);
+     *  - schedule_all / schedule_own: hours and days off of every doctor, or of
+     *    themselves only (clinic_schedule.manage_own).
+     * Admins pass every permission check but are doctors only when ticked in
+     * Clinic settings.
+     */
+    public static function access($business_id, $user)
+    {
+        // once per request (the doctor list checks every user's role)
+        $key = 'clinic_appt_access_'.$business_id.'_'.$user->id;
+        if (request()->attributes->has($key)) {
+            return request()->attributes->get($key);
+        }
+        $is_doctor = isset(ClinicQueue::doctors($business_id)[$user->id]);
+        $see_all = $user->can('appointment.view') || $user->can('appointment.manage');
+        $own = $is_doctor && ($user->can('appointment.manage_own') || $user->can('appointment.manage')) ? (int) $user->id : null;
+
+        $access = [
+            'is_doctor' => $is_doctor,
+            'see_all' => $see_all,
+            'manage_all' => $user->can('appointment.manage'),
+            'own' => $own,
+            'see' => $see_all || $own !== null,
+            'mine_first' => $is_doctor && ! $user->can('visit.create'),
+            'schedule_all' => $user->can('clinic_schedule.manage'),
+            'schedule_own' => $is_doctor && $user->can('clinic_schedule.manage_own') ? (int) $user->id : null,
+        ];
+        request()->attributes->set($key, $access);
+
+        return $access;
+    }
+
+    /** May the user book / confirm / cancel / move appointments of this doctor? */
+    public static function mayManage(array $access, $doctor_id)
+    {
+        return $access['manage_all'] || ($access['own'] !== null && (int) $doctor_id === $access['own']);
+    }
+
+    /** May the user change this doctor's hours and days off? */
+    public static function maySchedule(array $access, $doctor_id)
+    {
+        return $access['schedule_all'] || ($access['schedule_own'] !== null && (int) $doctor_id === $access['schedule_own']);
+    }
+
     public static function slotKey($doctor_id, $date, $start)
     {
         return $doctor_id.'-'.Carbon::parse($date)->toDateString().'-'.substr($start, 0, 5);
@@ -185,6 +236,76 @@ class ClinicAppointments
     }
 
     /**
+     * Moves an open appointment to another free slot (same or another doctor).
+     * Staff chose the new time, so a patient's request becomes confirmed, and
+     * the reminder has to be sent again.
+     *
+     * @return array [ClinicAppointment|null, error message|null, ['doctor_id', 'date', 'start'] it came from]
+     */
+    public static function move(ClinicAppointment $appt, $doctor_id, $date, $start, $user_id = null)
+    {
+        $business_id = $appt->business_id;
+        if (! self::enabled($business_id)) {
+            return [null, __('clinic.appt_disabled'), null];
+        }
+        if (! in_array($appt->status, ClinicAppointment::OPEN)) {
+            return [null, __('clinic.appt_not_open'), null];
+        }
+        if (! isset(ClinicQueue::doctors($business_id)[(int) $doctor_id])) {
+            return [null, __('clinic.choose_doctor'), null];
+        }
+        try {
+            $date = Carbon::parse($date)->startOfDay();
+        } catch (\Exception $e) {
+            return [null, __('clinic.appt_bad_slot'), null];
+        }
+        if ($date->lt(Carbon::today())) {
+            return [null, __('clinic.appt_slot_past'), null];
+        }
+        $start = substr((string) $start, 0, 5);
+        $slot = collect(self::slots($business_id, $doctor_id, $date))->firstWhere('start', $start);
+        if (! $slot) {
+            return [null, __('clinic.appt_bad_slot'), null];
+        }
+        if ($slot['state'] == 'taken') {
+            $same = $slot['appointment'] && $slot['appointment']->id == $appt->id;
+
+            return [null, __($same ? 'clinic.appt_move_same' : 'clinic.appt_slot_taken'), null];
+        }
+        if ($slot['state'] == 'past') {
+            return [null, __('clinic.appt_slot_past'), null];
+        }
+        $other = ClinicAppointment::forBusiness($business_id)->open()->where('contact_id', $appt->contact_id)
+            ->where('id', '!=', $appt->id)->whereDate('date', $date->toDateString())->exists();
+        if ($other) {
+            return [null, __('clinic.appt_same_day'), null];
+        }
+
+        $from = ['doctor_id' => $appt->doctor_id, 'date' => $appt->date->toDateString(), 'start' => $appt->start];
+        $appt->doctor_id = (int) $doctor_id;
+        $appt->date = $date->toDateString();
+        $appt->start_time = $slot['start'].':00';
+        $appt->end_time = $slot['end'].':00';
+        $appt->slot_key = self::slotKey($doctor_id, $date, $slot['start']);
+        if ($appt->status == 'requested') {
+            $appt->status = 'confirmed';
+            $appt->confirmed_at = now();
+            $appt->confirmed_by = $user_id;
+        }
+        $appt->reminded_at = null;
+        try {
+            $appt->save();
+        } catch (QueryException $e) {
+            if (($e->errorInfo[0] ?? '') == '23000') {
+                return [null, __('clinic.appt_slot_taken'), null];
+            }
+            throw $e;
+        }
+
+        return [$appt, null, $from];
+    }
+
+    /**
      * Frees the slot: cancelled (by staff, or by the patient when $user_id is
      * null) or declined.
      */
@@ -226,11 +347,11 @@ class ClinicAppointments
      * The WhatsApp message for an appointment: a confirmation that doubles as
      * the reminder.
      */
-    public static function message(ClinicAppointment $appt)
+    public static function message(ClinicAppointment $appt, $moved = false)
     {
         $util = new Util();
 
-        return __('clinic.appt_whatsapp_text', [
+        return __($moved ? 'clinic.appt_whatsapp_moved_text' : 'clinic.appt_whatsapp_text', [
             'name' => optional($appt->patient)->first_name ?: optional($appt->patient)->name,
             'clinic' => \App\Business::where('id', $appt->business_id)->value('name'),
             'doctor' => trim(optional($appt->doctor)->user_full_name),
@@ -239,8 +360,8 @@ class ClinicAppointments
         ]);
     }
 
-    public static function whatsappFor(ClinicAppointment $appt)
+    public static function whatsappFor(ClinicAppointment $appt, $moved = false)
     {
-        return self::whatsappLink($appt->business_id, optional($appt->patient)->mobile, self::message($appt));
+        return self::whatsappLink($appt->business_id, optional($appt->patient)->mobile, self::message($appt, $moved));
     }
 }

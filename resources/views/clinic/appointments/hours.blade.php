@@ -1,11 +1,11 @@
 @extends('layouts.app')
-@section('title', __('clinic.appt_doctor_hours'))
+@section('title', $access['schedule_all'] ? __('clinic.appt_doctor_hours') : __('clinic.appt_my_hours'))
 
 @php $A = \App\Http\Controllers\ClinicAppointmentController::class; @endphp
 
 @section('content')
 <section class="content-header">
-    <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">@lang('clinic.appt_doctor_hours')
+    <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">{{ $access['schedule_all'] ? __('clinic.appt_doctor_hours') : __('clinic.appt_my_hours') }}
         <small class="tw-text-gray-600">@lang('clinic.appt_hours_sub')</small>
     </h1>
 </section>
@@ -15,6 +15,22 @@
 
     @if (empty($doctors))
         <div class="callout callout-info"><p>@lang('clinic.appt_no_doctors')</p></div>
+    @endif
+
+    {{-- a new day off on which patients are already booked: who, so they can be moved --}}
+    @if (session('dayoff_clash'))
+        @php $clash = session('dayoff_clash'); @endphp
+        <div class="callout callout-warning" id="dayoff_clash">
+            <p style="margin-bottom:6px;"><strong><i class="fas fa-exclamation-triangle"></i> {{ trans_choice('clinic.appt_clash_title', count($clash['rows']), ['n' => count($clash['rows'])]) }}</strong></p>
+            <ul style="margin:0 0 8px; padding-left:18px;">
+                @foreach ($clash['rows'] as $c)
+                    <li>{{ @format_date($c['date']) }} {{ $c['start'] }} · {{ $c['patient'] }}{{ $c['mobile'] ? ' · '.$c['mobile'] : '' }}
+                        @if ($c['status'] == 'requested') <span class="label label-warning">@lang('clinic.appt_status_requested')</span>@endif
+                        · <a href="{{ action([$A, 'index'], ['date' => $c['date'], 'doctor_id' => $clash['doctor_id']]) }}">@lang('clinic.appt_open_day')</a></li>
+                @endforeach
+            </ul>
+            <a href="{{ action([$A, 'upcoming'], ['doctor_id' => $clash['doctor_id'], 'days' => 30]) }}" class="btn btn-sm" style="background:#fff; color:#92400e !important; text-decoration:none; font-weight:600;"><i class="fas fa-list-ul"></i> @lang('clinic.appt_move_them')</a>
+        </div>
     @endif
 
     <div class="row">

@@ -513,8 +513,10 @@ class AdminSidebarMenu
                 if ($u->can('visit.create')) {
                     $item(action([\App\Http\Controllers\VisitController::class, 'create']), __('clinic.check_in_patient'), 'door-enter', $seg1 == 'visits' && $seg2 == 'create', 5.12);
                 }
-                if (\App\Utils\ClinicAppointments::enabled($hosp_biz) && ($u->can('appointment.view') || $u->can('appointment.manage') || $u->can('clinic_schedule.manage'))) {
-                    $item(($u->can('appointment.view') || $u->can('appointment.manage'))
+                // doctors with only "their own" rights reach their diary too (a non-doctor holding them gets a 403 there)
+                $appt_see = $u->can('appointment.view') || $u->can('appointment.manage') || $u->can('appointment.manage_own');
+                if (\App\Utils\ClinicAppointments::enabled($hosp_biz) && ($appt_see || $u->can('clinic_schedule.manage') || $u->can('clinic_schedule.manage_own'))) {
+                    $item($appt_see
                             ? action([\App\Http\Controllers\ClinicAppointmentController::class, 'index'])
                             : action([\App\Http\Controllers\ClinicAppointmentController::class, 'hours']),
                         __('clinic.appt_menu'), 'calendar-event', $seg1 == 'clinic' && $seg2 == 'appointments', 5.13);
