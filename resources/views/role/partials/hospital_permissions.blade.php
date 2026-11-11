@@ -22,10 +22,10 @@
     };
     $hp_groups = [
         'reception' => [null, ['patient.view', 'patient.create', 'patient.update', 'patient.delete', 'patient.reset_portal_pin', 'visit.view', 'visit.create', 'visit.close']],
-        'doctor' => [null, ['visit.receive_patients', 'consultation.create', 'consultation.view_own', 'consultation.view_all', 'consultation.prescribe', 'consultation.finalize', 'clinic_report.my_practice']],
+        'doctor' => [null, ['visit.receive_patients', 'consultation.create', 'consultation.view_own', 'consultation.view_all', 'consultation.prescribe', 'consultation.finalize', 'clinic_report.my_practice', 'appointment.manage_own', 'clinic_schedule.manage_own']],
         'lab' => [null, ['lab_test.manage_catalogue', 'lab_request.view', 'lab_request.create', 'lab_result.enter', 'lab_result.view', 'lab_result.validate', 'lab_result.amend']],
         'imaging' => ['imaging', ['imaging.manage_catalogue', 'imaging_request.view', 'imaging_request.create', 'imaging_result.enter', 'imaging_result.view']],
-        'appointments' => [null, ['appointment.view', 'appointment.manage', 'appointment.manage_own', 'clinic_schedule.manage', 'clinic_schedule.manage_own']],
+        'appointments' => [null, ['appointment.view', 'appointment.manage', 'clinic_schedule.manage']],
         'billing' => [null, ['patient.view_bill', 'visit.override_pay_first', 'hospital_charge.void', 'clinic_plan.manage', 'clinic_insurance.manage']],
         'dispensary' => [null, ['prescription.dispense']],
         'admin' => [null, ['clinic_settings.manage', 'clinic_package.manage']],
