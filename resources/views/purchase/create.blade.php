@@ -702,4 +702,5 @@
 		}
 	</script>
 	@include('purchase.partials.keyboard_shortcuts')
+    @include('purchase.partials.recovery_config', ['recovery_page' => 'create'])
 @endsection

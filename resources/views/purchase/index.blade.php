@@ -180,4 +180,5 @@
         });
     </script>
 
+    @include('purchase.partials.recovery_config', ['recovery_page' => 'list'])
 @endsection
