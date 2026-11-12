@@ -1348,4 +1348,9 @@ return [
     'fee_doctor_price' => 'Prix de ce médecin',
     'fee_checkin_label' => 'Prix de la consultation :',
     'fee_checkin_help' => 'Il suit le médecin choisi ci-dessus (un médecin sans prix propre : celui de la clinique).',
+
+    // ---- vérifier avant l'enregistrement (pages clinique)
+    'rc_balance_before' => 'Solde avant',
+    'rc_claim' => 'Demande',
+    'rc_rebilled' => 'Lignes renvoyées au patient',
 ];

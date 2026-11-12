@@ -40,7 +40,7 @@
                 @foreach ($plans as $p)
                     @php $on = old('package_id', $plans->count() == 1 ? $p->id : null) == $p->id; @endphp
                     <label class="ci-card {{ $on ? 'is-on' : '' }}">
-                        <input type="radio" name="package_id" value="{{ $p->id }}" {{ $on ? 'checked' : '' }}>
+                        <input type="radio" name="package_id" value="{{ $p->id }}" {{ $on ? 'checked' : '' }} data-price="{{ (float) $p->price }}">
                         <div class="ci-title">{{ $p->name }}</div>
                         <div class="ci-price">{{ $fmt($p->price) }} <small class="text-muted" style="font-size:12px;">/ @lang('clinic.per_month')</small></div>
                         <div class="ci-sub">{{ $p->visits_per_month ? __('clinic.visits_per_month_n', ['n' => $p->visits_per_month]) : __('clinic.visits_unlimited') }}</div>
@@ -100,6 +100,21 @@
         });
         $('#plan_form').on('submit', function () {
             if (! $('input[name=package_id]:checked').length) { toastr.error(@json(__('clinic.plan_choose_patient_and_plan'))); return false; }
+            // "check before recording": the first period is billed straight away
+            var pform = this;
+            if (window.PosConfirm && PosConfirm.enabled('plan') && pform.getAttribute('data-rc-ok') !== '1') {
+                var $pk = $('input[name=package_id]:checked');
+                PosConfirm.ask({ kind: 'plan', amount: parseFloat($pk.data('price')) || 0, rows: [
+                    [@json(__('lang_v1.patient')), $.trim($('#plan_patient option:selected').text())],
+                    [@json(__('clinic.plan')), $.trim($pk.closest('.ci-card').find('.ci-title').text())],
+                    [@json(__('clinic.plan_start_date')), $('#start_date').val()],
+                ] }, function () {
+                    pform.setAttribute('data-rc-ok', '1');
+                    $(pform).trigger('submit');
+                });
+                return false;
+            }
+            pform.removeAttribute('data-rc-ok');
             $('#plan_submit').prop('disabled', true);
         });
     });

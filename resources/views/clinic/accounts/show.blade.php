@@ -53,17 +53,20 @@
                     <h4 style="margin-top:0;"><i class="fas fa-money-bill-alt"></i> @lang('clinic.acc_receive_payment')</h4>
                     <form method="POST" action="{{ action([\App\Http\Controllers\ClinicAccountController::class, 'pay'], [$patient->id]) }}" id="acc_pay_form">
                         @csrf
+                        {{-- PosInnova: what the "check before recording" dialog lists --}}
+                        <span style="display:none" data-confirm-label="{{ __('lang_v1.patient') }}">{{ $patient->name }}{{ optional($patient->patientDetails)->file_number ? ' · '.$patient->patientDetails->file_number : '' }}</span>
+                        <span style="display:none" data-confirm-label="{{ __('clinic.rc_balance_before') }}">{{ @num_format($balance) }}</span>
                         <div class="form-group">
                             <label for="acc_amount">@lang('sale.amount')</label>
-                            <input type="text" name="amount" id="acc_amount" class="form-control input_number input-lg" value="{{ @num_format($balance) }}" required>
+                            <input type="text" name="amount" id="acc_amount" class="form-control input_number input-lg" value="{{ @num_format($balance) }}" required data-confirm-amount="1">
                         </div>
                         <div class="form-group">
                             <label for="acc_method">@lang('lang_v1.payment_method')</label>
-                            {!! Form::select('method', $payment_types, 'cash', ['class' => 'form-control', 'id' => 'acc_method', 'required']) !!}
+                            {!! Form::select('method', $payment_types, 'cash', ['class' => 'form-control', 'id' => 'acc_method', 'required', 'data-confirm-label' => __('lang_v1.payment_method')]) !!}
                         </div>
                         <div class="form-group">
                             <label for="acc_ref">@lang('clinic.acc_reference')</label>
-                            <input type="text" name="transaction_no" id="acc_ref" class="form-control" maxlength="100" placeholder="{{ __('clinic.acc_reference_help') }}">
+                            <input type="text" name="transaction_no" id="acc_ref" class="form-control" maxlength="100" placeholder="{{ __('clinic.acc_reference_help') }}" data-confirm-label="{{ __('clinic.acc_reference') }}">
                         </div>
                         <div class="form-group">
                             <label for="acc_note">@lang('lang_v1.notes')</label>
@@ -226,6 +229,19 @@
                     if (v > 0) { $box.append($('<input type="hidden">').attr('name', 'allocation[' + $(this).data('id') + ']').val(v)); }
                 });
             }
+            // "check this before it is recorded" (record-confirm.js), once the checks above passed
+            var form = this;
+            if (window.PosConfirm && PosConfirm.enabled('clinic_pay') && form.getAttribute('data-rc-ok') !== '1') {
+                var rc = PosConfirm.fromForm(form);
+                rc.kind = 'clinic_pay';
+                rc.amount = amt;
+                PosConfirm.ask(rc, function () {
+                    form.setAttribute('data-rc-ok', '1');
+                    $(form).trigger('submit');
+                });
+                return false;
+            }
+            form.removeAttribute('data-rc-ok');
             $(this).find('button[type="submit"]').prop('disabled', true);
             return true;
         });

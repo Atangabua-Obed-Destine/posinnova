@@ -1,7 +1,7 @@
 <div class="modal-dialog" role="document">
   <div class="modal-content">
 
-    {!! Form::open(['url' => action([\App\Http\Controllers\AccountController::class, 'store']), 'method' => 'post', 'id' => 'payment_account_form' ]) !!}
+    {!! Form::open(['url' => action([\App\Http\Controllers\AccountController::class, 'store']), 'method' => 'post', 'id' => 'payment_account_form', 'data-record-confirm' => 'opening_balance', 'data-confirm-skip-zero' => 1 ]) !!}
 
     <div class="modal-header">
       <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -11,7 +11,7 @@
     <div class="modal-body">
             <div class="form-group">
                 {!! Form::label('name', __( 'lang_v1.name' ) .":*") !!}
-                {!! Form::text('name', null, ['class' => 'form-control', 'required','placeholder' => __( 'lang_v1.name' ) ]); !!}
+                {!! Form::text('name', null, ['class' => 'form-control', 'required','placeholder' => __( 'lang_v1.name' ), 'data-confirm-label' => __('lang_v1.name') ]); !!}
             </div>
 
             <div class="form-group">
@@ -36,7 +36,7 @@
 
             <div class="form-group">
                 {!! Form::label('opening_balance', __( 'account.opening_balance' ) .":") !!}
-                {!! Form::text('opening_balance', 0, ['class' => 'form-control input_number','placeholder' => __( 'account.opening_balance' ) ]); !!}
+                {!! Form::text('opening_balance', 0, ['class' => 'form-control input_number','placeholder' => __( 'account.opening_balance' ), 'data-confirm-amount' => 1 ]); !!}
             </div>
 
             <label>@lang('lang_v1.account_details'):</label>

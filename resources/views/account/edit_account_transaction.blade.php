@@ -1,7 +1,7 @@
 <div class="modal-dialog" role="document">
   <div class="modal-content">
 
-    {!! Form::open(['url' => action([\App\Http\Controllers\AccountController::class, 'updateAccountTransaction'], ['id' => $account_transaction->id ]), 'method' => 'post', 'id' => 'edit_account_transaction_form' ]) !!}
+    {!! Form::open(['url' => action([\App\Http\Controllers\AccountController::class, 'updateAccountTransaction'], ['id' => $account_transaction->id ]), 'method' => 'post', 'id' => 'edit_account_transaction_form', 'data-record-confirm' => 'account_edit' ]) !!}
 
     <div class="modal-header">
       <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -36,7 +36,7 @@
 
             <div class="form-group">
                 {!! Form::label('amount', __( 'sale.amount' ) .":*") !!}
-                {!! Form::text('amount', @num_format($account_transaction->amount), ['class' => 'form-control input_number', 'required','placeholder' => __( 'sale.amount' ), !empty($account_transaction->transaction_payment_id) ? 'readonly' : '' ]); !!}
+                {!! Form::text('amount', @num_format($account_transaction->amount), ['class' => 'form-control input_number', 'required','placeholder' => __( 'sale.amount' ), 'data-confirm-amount' => 1, !empty($account_transaction->transaction_payment_id) ? 'readonly' : '' ]); !!}
             </div>
             @if($account_transaction->sub_type == 'deposit')
             @php
@@ -60,7 +60,7 @@
             <div class="form-group">
                 {!! Form::label('operation_date', __( 'messages.date' ) .":*") !!}
                 <div class="input-group date">
-                  {!! Form::text('operation_date', @format_datetime($account_transaction->operation_date), ['class' => 'form-control', 'required','placeholder' => __( 'messages.date' ), 'id' => 'od_datetimepicker' ]); !!}
+                  {!! Form::text('operation_date', @format_datetime($account_transaction->operation_date), ['class' => 'form-control', 'required','placeholder' => __( 'messages.date' ), 'id' => 'od_datetimepicker', 'data-confirm-label' => __('messages.date') ]); !!}
                   <span class="input-group-addon">
                     <span class="glyphicon glyphicon-calendar"></span>
                   </span>

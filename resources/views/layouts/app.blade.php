@@ -128,6 +128,8 @@
         @endif
 
         @include('layouts.partials.javascripts')
+        {{-- PosInnova: "check this before it is recorded" dialog for money operations --}}
+        @include('layouts.partials.record_confirm')
 
         {{-- PosInnova hospital shifts: header shift badge countdown (non-POS pages) --}}
         @if (!$pos_layout && !empty(session('business.enable_shift')))

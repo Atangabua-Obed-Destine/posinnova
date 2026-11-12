@@ -1,7 +1,7 @@
 <div class="modal-dialog" role="document">
   <div class="modal-content">
 
-    {!! Form::open(['url' => action([\App\Http\Controllers\AccountController::class, 'postDeposit']), 'method' => 'post', 'id' => 'deposit_form' ]) !!}
+    {!! Form::open(['url' => action([\App\Http\Controllers\AccountController::class, 'postDeposit']), 'method' => 'post', 'id' => 'deposit_form', 'data-record-confirm' => 'deposit' ]) !!}
 
     <div class="modal-header">
       <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -17,23 +17,23 @@
 
             <div class="form-group">
                 {!! Form::label('account_id', __( 'lang_v1.deposit_to' ) .":") !!}
-                {!! Form::select('account_id', $from_accounts, $account->id, ['class' => 'form-control' ]); !!}
+                {!! Form::select('account_id', $from_accounts, $account->id, ['class' => 'form-control', 'data-confirm-label' => __('lang_v1.deposit_to') ]); !!}
             </div>
 
             <div class="form-group">
                 {!! Form::label('amount', __( 'sale.amount' ) .":*") !!}
-                {!! Form::text('amount', 0, ['class' => 'form-control input_number', 'required','placeholder' => __( 'sale.amount' ) ]); !!}
+                {!! Form::text('amount', 0, ['class' => 'form-control input_number', 'required','placeholder' => __( 'sale.amount' ), 'data-confirm-amount' => 1 ]); !!}
             </div>
 
             <div class="form-group">
                 {!! Form::label('from_account', __( 'account.deposit_from' ) .":") !!}
-                {!! Form::select('from_account', $from_accounts, null, ['class' => 'form-control', 'placeholder' => __('messages.please_select') ]); !!}
+                {!! Form::select('from_account', $from_accounts, null, ['class' => 'form-control', 'placeholder' => __('messages.please_select'), 'data-confirm-label' => __('account.deposit_from') ]); !!}
             </div>
 
             <div class="form-group">
                 {!! Form::label('operation_date', __( 'messages.date' ) .":*") !!}
                 <div class="input-group date">
-                  {!! Form::text('operation_date', null, ['class' => 'form-control', 'required','placeholder' => __( 'messages.date' ), 'id'=>'od_datetimepicker' ]); !!}
+                  {!! Form::text('operation_date', null, ['class' => 'form-control', 'required','placeholder' => __( 'messages.date' ), 'id'=>'od_datetimepicker', 'data-confirm-label' => __('messages.date') ]); !!}
                   <span class="input-group-addon">
                     <span class="glyphicon glyphicon-calendar"></span>
                   </span>

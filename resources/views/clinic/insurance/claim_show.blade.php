@@ -58,6 +58,9 @@
     @if ($can_settle)
         <form method="POST" action="{{ action([$C, 'settle'], [$claim->id]) }}" id="settle_form">
         @csrf
+        {{-- PosInnova: what the "check before recording" dialog lists --}}
+        <span style="display:none" data-confirm-label="{{ __('clinic.ins_insurer') }}">{{ optional($claim->insurer)->name }}</span>
+        <span style="display:none" data-confirm-label="{{ __('clinic.rc_claim') }}">{{ $claim->ref_no }}</span>
     @endif
 
     @component('components.widget', ['class' => 'box-primary'])
@@ -149,19 +152,19 @@
                 <div class="col-sm-3">
                     <div class="form-group">
                         <label for="method">@lang('lang_v1.payment_method'):</label>
-                        {!! Form::select('method', $payment_types, 'bank_transfer', ['class' => 'form-control', 'id' => 'method']) !!}
+                        {!! Form::select('method', $payment_types, 'bank_transfer', ['class' => 'form-control', 'id' => 'method', 'data-confirm-label' => __('lang_v1.payment_method')]) !!}
                     </div>
                 </div>
                 <div class="col-sm-3">
                     <div class="form-group">
                         <label for="paid_on">@lang('lang_v1.paid_on'):</label>
-                        <input type="date" name="paid_on" id="paid_on" class="form-control" value="{{ \Carbon::today()->toDateString() }}" max="{{ \Carbon::today()->toDateString() }}">
+                        <input type="date" name="paid_on" id="paid_on" class="form-control" value="{{ \Carbon::today()->toDateString() }}" max="{{ \Carbon::today()->toDateString() }}" data-confirm-label="{{ __('lang_v1.paid_on') }}">
                     </div>
                 </div>
                 <div class="col-sm-3">
                     <div class="form-group">
                         <label for="reference">@lang('clinic.ins_reference'):</label>
-                        <input type="text" name="reference" id="reference" class="form-control" maxlength="200" placeholder="{{ __('clinic.ins_reference_ph') }}">
+                        <input type="text" name="reference" id="reference" class="form-control" maxlength="200" placeholder="{{ __('clinic.ins_reference_ph') }}" data-confirm-label="{{ __('clinic.ins_reference') }}">
                     </div>
                 </div>
             </div>
@@ -199,6 +202,22 @@
                 if ((__read_number($(this)) || 0) > parseFloat($(this).data('due')) + 0.004) { over = true; }
             });
             if (over) { toastr.error(@json(__('clinic.ins_paid_more_than_due'))); return false; }
+            // "check this before it is recorded" (record-confirm.js); the plain question if it is switched off
+            var form = this;
+            if (window.PosConfirm && PosConfirm.enabled('claim_settle')) {
+                if (form.getAttribute('data-rc-ok') === '1') { form.removeAttribute('data-rc-ok'); return true; }
+                var total = 0, rebilled = $('#claim_items .js-rebill:checked').length;
+                $('#claim_items .js-paid').each(function () { total += __read_number($(this)) || 0; });
+                var rc = PosConfirm.fromForm(form);
+                rc.kind = 'claim_settle';
+                rc.amount = total;
+                if (rebilled) { rc.rows.push([@json(__('clinic.rc_rebilled')), String(rebilled)]); }
+                PosConfirm.ask(rc, function () {
+                    form.setAttribute('data-rc-ok', '1');
+                    $(form).trigger('submit');
+                });
+                return false;
+            }
             return confirm(@json(__('clinic.ins_settle_confirm')));
         });
     });

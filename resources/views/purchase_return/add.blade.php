@@ -10,7 +10,10 @@
 
 <!-- Main content -->
 <section class="content">
-	{!! Form::open(['url' => action([\App\Http\Controllers\PurchaseReturnController::class, 'store']), 'method' => 'post', 'id' => 'purchase_return_form' ]) !!}
+	{!! Form::open(['url' => action([\App\Http\Controllers\PurchaseReturnController::class, 'store']), 'method' => 'post', 'id' => 'purchase_return_form', 'data-record-confirm' => 'purchase_return' ]) !!}
+	{{-- PosInnova: what the "check before recording" dialog lists --}}
+	<span style="display:none" data-confirm-label="{{ __('purchase.supplier') }}">{{ optional($purchase->contact)->name }}</span>
+	<span style="display:none" data-confirm-label="{{ __('purchase.ref_no') }}">{{ $purchase->ref_no }}</span>
 	{!! Form::hidden('transaction_id', $purchase->id); !!}
 
 	@component('components.widget', ['class' => 'box-primary', 'title' => __('lang_v1.parent_purchase')])
@@ -129,7 +132,7 @@
 		<div class="row">
 			<div class="col-sm-12 text-right">
 				<strong>@lang('lang_v1.return_total'): </strong>&nbsp;
-				<span id="net_return">0</span> 
+				<span id="net_return" data-confirm-amount="1">0</span> 
 			</div>
 		</div>
 		<br>

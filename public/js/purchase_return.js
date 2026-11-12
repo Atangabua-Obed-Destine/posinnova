@@ -144,7 +144,18 @@ $(document).ready(function() {
         }
 
         if ($('form#purchase_return_form').valid()) {
-            $('form#purchase_return_form').submit();
+            // PosInnova "check before recording" (a scripted submit skips the form hook: ask here)
+            if (window.PosConfirm && PosConfirm.enabled('purchase_return')) {
+                var rows = [];
+                var supplier = $.trim($('#supplier_id option:selected').text());
+                if (supplier) { rows.push([PosConfirm.label('supplier'), supplier]); }
+                rows.push([PosConfirm.label('items'), String($('table#purchase_return_product_table tbody tr').length)]);
+                PosConfirm.ask({ kind: 'purchase_return', amount: __number_uf($('#total_return').text()), rows: rows }, function () {
+                    $('form#purchase_return_form').submit();
+                });
+            } else {
+                $('form#purchase_return_form').submit();
+            }
         }
     });
 

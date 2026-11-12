@@ -190,8 +190,25 @@
         <div class="col-sm-8">
             <div class="form-group">
                 <label>
-                    {!! Form::checkbox('common_settings[is_enabled_export]', true, !empty($common_settings['is_enabled_export']) ? true : false , 
+                    {!! Form::checkbox('common_settings[is_enabled_export]', true, !empty($common_settings['is_enabled_export']) ? true : false ,
                     [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.enable_export' ) }}
+                </label>
+            </div>
+        </div>
+    </div>
+    {{-- PosInnova: the "check before recording" dialog (on unless turned off here) --}}
+    <div class="row" id="record_confirm_settings">
+        <div class="col-sm-12">
+            <h4 style="margin-top:10px;"><i class="fas fa-clipboard-check"></i> @lang('lang_v1.rc_setting')</h4>
+            <p class="help-block">@lang('lang_v1.rc_setting_help')</p>
+            <div class="form-group" style="margin-bottom:6px;">
+                <label>
+                    {!! Form::checkbox('common_settings[record_confirm_off]', 1, ! empty($common_settings['record_confirm_off']), ['class' => 'input-icheck']); !!} @lang('lang_v1.rc_setting_off')
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    {!! Form::checkbox('common_settings[record_confirm_off_pos]', 1, ! empty($common_settings['record_confirm_off_pos']), ['class' => 'input-icheck']); !!} @lang('lang_v1.rc_setting_off_pos')
                 </label>
             </div>
         </div>

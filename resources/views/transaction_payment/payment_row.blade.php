@@ -1,7 +1,14 @@
 <div class="modal-dialog" role="document">
   <div class="modal-content">
 
-    {!! Form::open(['url' => action([\App\Http\Controllers\TransactionPaymentController::class, 'store']), 'method' => 'post', 'id' => 'transaction_payment_add_form', 'files' => true ]) !!}
+    {!! Form::open(['url' => action([\App\Http\Controllers\TransactionPaymentController::class, 'store']), 'method' => 'post', 'id' => 'transaction_payment_add_form', 'files' => true, 'data-record-confirm' => 'payment' ]) !!}
+    {{-- PosInnova: what the "check before recording" dialog lists --}}
+    @if(!empty($transaction->contact))
+      <span style="display:none" data-confirm-label="{{ in_array($transaction->type, ['purchase', 'purchase_return']) ? __('purchase.supplier') : __('contact.customer') }}">{{ $transaction->contact->full_name_with_business }}</span>
+    @endif
+    <span style="display:none" data-confirm-label="{{ in_array($transaction->type, ['sell', 'sell_return']) ? __('sale.invoice_no') : __('purchase.ref_no') }}">{{ in_array($transaction->type, ['sell', 'sell_return']) ? $transaction->invoice_no : $transaction->ref_no }}</span>
+    <span style="display:none" data-confirm-label="{{ __('sale.total_amount') }}">{{ @num_format($transaction->final_total) }}</span>
+
     {!! Form::hidden('transaction_id', $transaction->id); !!}
     @if(request()->get('post_to_register') == 1)
       {{-- PosInnova clinic: opened from a clinic screen; the payment also goes into the open cash register --}}
@@ -73,7 +80,7 @@
               <span class="input-group-addon">
                 <i class="fas fa-money-bill-alt"></i>
               </span>
-              {!! Form::select("method", $payment_types, $payment_line->method, ['class' => 'form-control select2 payment_types_dropdown', 'required', 'style' => 'width:100%;']); !!}
+              {!! Form::select("method", $payment_types, $payment_line->method, ['class' => 'form-control select2 payment_types_dropdown', 'required', 'style' => 'width:100%;', 'data-confirm-label' => __('purchase.payment_method')]); !!}
             </div>
           </div>
         </div>
@@ -84,7 +91,7 @@
               <span class="input-group-addon">
                 <i class="fa fa-calendar"></i>
               </span>
-              {!! Form::text('paid_on', @format_datetime($payment_line->paid_on), ['class' => 'form-control', 'readonly', 'required']); !!}
+              {!! Form::text('paid_on', @format_datetime($payment_line->paid_on), ['class' => 'form-control', 'readonly', 'required', 'data-confirm-label' => __('lang_v1.paid_on')]); !!}
             </div>
           </div>
         </div>
@@ -95,7 +102,7 @@
               <span class="input-group-addon">
                 <i class="fas fa-money-bill-alt"></i>
               </span>
-              {!! Form::text("amount", @num_format($payment_line->amount), ['class' => 'form-control input_number payment_amount', 'required', 'placeholder' => 'Amount', 'data-rule-max-value' => $payment_line->amount, 'data-msg-max-value' => __('lang_v1.max_amount_to_be_paid_is', ['amount' => $amount_formated])]); !!}
+              {!! Form::text("amount", @num_format($payment_line->amount), ['class' => 'form-control input_number payment_amount', 'required', 'data-confirm-amount' => 1, 'placeholder' => 'Amount', 'data-rule-max-value' => $payment_line->amount, 'data-msg-max-value' => __('lang_v1.max_amount_to_be_paid_is', ['amount' => $amount_formated])]); !!}
             </div>
           </div>
         </div>
@@ -161,7 +168,7 @@
                 <span class="input-group-addon">
                   <i class="fas fa-money-bill-alt"></i>
                 </span>
-                {!! Form::select("account_id", $accounts, !empty($payment_line->account_id) ? $payment_line->account_id : '' , ['class' => 'form-control select2', 'id' => "account_id", 'style' => 'width:100%;']); !!}
+                {!! Form::select("account_id", $accounts, !empty($payment_line->account_id) ? $payment_line->account_id : '' , ['class' => 'form-control select2', 'id' => "account_id", 'style' => 'width:100%;', 'data-confirm-label' => __('lang_v1.payment_account')]); !!}
               </div>
             </div>
           </div>

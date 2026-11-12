@@ -291,6 +291,31 @@
                 if ($('input[name=package_id]').length && ! $('input[name=package_id]:checked').length) {
                     e.preventDefault(); toastr.error('{{ __('clinic.choose_package') }}'); return false;
                 }
+                // "check before recording": the fee goes on the patient's account (a covered or plan visit costs nothing: no question)
+                var vform = this;
+                if (window.PosConfirm && PosConfirm.enabled('checkin') && vform.getAttribute('data-rc-ok') !== '1') {
+                    var $pk = $('input[name=package_id]:checked'), fee = 0, pkg = '';
+                    if ($pk.length) {
+                        var $card = $pk.closest('.ci-card');
+                        if ($pk.val() !== 'plan' && $pk.val() !== 'cover') { fee = __number_uf($card.find('.js-fee-price').text()); }
+                        pkg = $.trim($card.find('.ci-title').first().text());
+                    } else if ($('#fee_line .js-fee-price').length) {
+                        fee = __number_uf($('#fee_line .js-fee-price').text());
+                    }
+                    if (fee > 0) {
+                        e.preventDefault();
+                        var rows = [[@json(__('lang_v1.patient')), $.trim($('#visit_patient_id option:selected').text())]];
+                        var doc = $.trim($('input[name=doctor_id]:checked').closest('.ci-card').find('.ci-title').text());
+                        if (doc) { rows.push([@json(__('clinic.doctor')), doc]); }
+                        if (pkg) { rows.push([@json(__('clinic.package')), pkg]); }
+                        PosConfirm.ask({ kind: 'checkin', amount: fee, rows: rows }, function () {
+                            vform.setAttribute('data-rc-ok', '1');
+                            $(vform).trigger('submit');
+                        });
+                        return false;
+                    }
+                }
+                vform.removeAttribute('data-rc-ok');
                 $('#checkin_submit').prop('disabled', true);
             });
         });

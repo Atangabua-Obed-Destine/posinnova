@@ -16,7 +16,7 @@
 <!-- Main content -->
 <section class="content">
 {!! Form::open(['url' => action([\App\Http\Controllers\CashRegisterController::class, 'store']), 'method' => 'post',
-'id' => 'add_cash_register_form' ]) !!}
+'id' => 'add_cash_register_form', 'data-record-confirm' => empty($shift_enabled) ? 'register_open' : null ]) !!}
   <div class="box box-solid">
     <div class="box-body">
     <br><br>
@@ -68,7 +68,7 @@
             <div class="form-group">
               {!! Form::label('amount', __('cash_register.cash_in_hand') . ':*') !!}
               {!! Form::text('amount', null, ['class' => 'form-control input_number',
-                'placeholder' => __('cash_register.enter_amount'), 'required']); !!}
+                'placeholder' => __('cash_register.enter_amount'), 'required', 'data-confirm-amount' => 1]); !!}
             </div>
           </div>
           @if(count($business_locations) > 1)

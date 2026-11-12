@@ -1,6 +1,8 @@
 <div class="modal-dialog modal-lg" role="document">
   <div class="modal-content">
-    {!! Form::open(['url' => action([\App\Http\Controllers\CashRegisterController::class, 'postCloseRegister']), 'method' => 'post' ]) !!}
+    {!! Form::open(['url' => action([\App\Http\Controllers\CashRegisterController::class, 'postCloseRegister']), 'method' => 'post', 'data-record-confirm' => 'register_close' ]) !!}
+    {{-- PosInnova: what the "check before recording" dialog lists --}}
+    <span style="display:none" data-confirm-label="{{ __('lang_v1.rc_expected_cash') }}">{{ @num_format($register_details->cash_in_hand + $register_details->total_cash - $register_details->total_cash_refund - $register_details->total_cash_expense) }}</span>
 
     {!! Form::hidden('user_id', $register_details->user_id); !!}
     <div class="modal-header">
@@ -18,19 +20,19 @@
         <div class="col-sm-4">
           <div class="form-group">
             {!! Form::label('closing_amount', __( 'cash_register.total_cash' ) . ':*') !!}
-              {!! Form::text('closing_amount', @num_format($register_details->cash_in_hand + $register_details->total_cash - $register_details->total_cash_refund - $register_details->total_cash_expense), ['class' => 'form-control input_number', 'required', 'placeholder' => __( 'cash_register.total_cash' ) ]); !!}
+              {!! Form::text('closing_amount', @num_format($register_details->cash_in_hand + $register_details->total_cash - $register_details->total_cash_refund - $register_details->total_cash_expense), ['class' => 'form-control input_number', 'required', 'placeholder' => __( 'cash_register.total_cash' ), 'data-confirm-amount' => 1 ]); !!}
           </div>
         </div>
         <div class="col-sm-4">
           <div class="form-group">
             {!! Form::label('total_card_slips', __( 'cash_register.total_card_slips' ) . ':*') !!} @show_tooltip(__('tooltip.total_card_slips'))
-              {!! Form::number('total_card_slips', $register_details->total_card_slips, ['class' => 'form-control', 'required', 'placeholder' => __( 'cash_register.total_card_slips' ), 'min' => 0 ]); !!}
+              {!! Form::number('total_card_slips', $register_details->total_card_slips, ['class' => 'form-control', 'required', 'placeholder' => __( 'cash_register.total_card_slips' ), 'min' => 0, 'data-confirm-label' => __('cash_register.total_card_slips') ]); !!}
           </div>
         </div> 
         <div class="col-sm-4">
           <div class="form-group">
             {!! Form::label('total_cheques', __( 'cash_register.total_cheques' ) . ':*') !!} @show_tooltip(__('tooltip.total_cheques'))
-              {!! Form::number('total_cheques', $register_details->total_cheques, ['class' => 'form-control', 'required', 'placeholder' => __( 'cash_register.total_cheques' ), 'min' => 0 ]); !!}
+              {!! Form::number('total_cheques', $register_details->total_cheques, ['class' => 'form-control', 'required', 'placeholder' => __( 'cash_register.total_cheques' ), 'min' => 0, 'data-confirm-label' => __('cash_register.total_cheques') ]); !!}
           </div>
         </div> 
         <hr>

@@ -30,7 +30,7 @@
             <a href="?show=cancelled" class="btn btn-sm {{ $show == 'cancelled' ? 'btn-primary' : 'btn-default' }}">@lang('clinic.plan_status_cancelled')</a>
         </div>
         @if ($due_now > 0)
-            <form method="POST" action="{{ action([\App\Http\Controllers\ClinicPlanController::class, 'billNow']) }}" style="margin-left:auto;">
+            <form method="POST" action="{{ action([\App\Http\Controllers\ClinicPlanController::class, 'billNow']) }}" style="margin-left:auto;" data-record-confirm="plan_bill">
                 @csrf
                 <button type="submit" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-warning"><i class="fas fa-file-invoice"></i> {{ trans_choice('clinic.plan_bill_due_now', $due_now, ['n' => $due_now]) }}</button>
             </form>

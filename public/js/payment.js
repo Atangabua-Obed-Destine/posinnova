@@ -169,7 +169,13 @@ $(document).on('change', '.payment_types_dropdown', function(e) {
 $(document).on('submit', 'form#transaction_payment_add_form', function(e){
     var is_valid = true;
     var payment_type = $('#transaction_payment_add_form .payment_types_dropdown').val();
-    var denomination_for_payment_types = JSON.parse($('#transaction_payment_add_form .enable_cash_denomination_for_payment_methods').val());
+    // PosInnova: the cash-denomination setting is not on every variant of this form: a missing one
+    // made JSON.parse throw and the buttons stayed disabled
+    var denom_raw = $('#transaction_payment_add_form .enable_cash_denomination_for_payment_methods').val();
+    var denomination_for_payment_types = [];
+    if (denom_raw) {
+        try { denomination_for_payment_types = JSON.parse(denom_raw); } catch (err) { denomination_for_payment_types = []; }
+    }
     if (denomination_for_payment_types.includes(payment_type) && $('#transaction_payment_add_form .is_strict').length && $('#transaction_payment_add_form .is_strict').val() === '1' ) {
         var payment_amount = __read_number($('#transaction_payment_add_form .payment_amount'));
         var total_denomination = $('#transaction_payment_add_form').find('input.denomination_total_amount').val();

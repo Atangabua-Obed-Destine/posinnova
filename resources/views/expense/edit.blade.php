@@ -10,20 +10,20 @@
 
 <!-- Main content -->
 <section class="content">
-  {!! Form::open(['url' => action([\App\Http\Controllers\ExpenseController::class, 'update'], [$expense->id]), 'method' => 'PUT', 'id' => 'add_expense_form', 'files' => true ]) !!}
+  {!! Form::open(['url' => action([\App\Http\Controllers\ExpenseController::class, 'update'], [$expense->id]), 'method' => 'PUT', 'id' => 'add_expense_form', 'files' => true, 'data-record-confirm' => 'expense' ]) !!}
   <div class="box box-solid">
     <div class="box-body">
       <div class="row">
         <div class="col-sm-4">
           <div class="form-group">
             {!! Form::label('location_id', __('purchase.business_location').':*') !!}
-            {!! Form::select('location_id', $business_locations, $expense->location_id, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select'), 'required']); !!}
+            {!! Form::select('location_id', $business_locations, $expense->location_id, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select'), 'required', 'data-confirm-label' => __('purchase.business_location')]); !!}
           </div>
         </div>
         <div class="col-sm-4">
           <div class="form-group">
             {!! Form::label('expense_category_id', __('expense.expense_category').':') !!}
-            {!! Form::select('expense_category_id', $expense_categories, $expense->expense_category_id, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select')]); !!}
+            {!! Form::select('expense_category_id', $expense_categories, $expense->expense_category_id, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select'), 'data-confirm-label' => __('expense.expense_category')]); !!}
           </div>
         </div>
         <div class="col-sm-4">
@@ -35,7 +35,7 @@
         <div class="col-sm-4">
           <div class="form-group">
             {!! Form::label('ref_no', __('purchase.ref_no').':*') !!}
-            {!! Form::text('ref_no', $expense->ref_no, ['class' => 'form-control', 'required']); !!}
+            {!! Form::text('ref_no', $expense->ref_no, ['class' => 'form-control', 'data-confirm-label' => __('purchase.ref_no'), 'required']); !!}
             <p class="help-block">
                 @lang('lang_v1.leave_empty_to_autogenerate')
             </p>
@@ -49,20 +49,20 @@
               <span class="input-group-addon">
                 <i class="fa fa-calendar"></i>
               </span>
-              {!! Form::text('transaction_date', @format_datetime($expense->transaction_date), ['class' => 'form-control', 'readonly', 'required', 'id' => 'expense_transaction_date']); !!}
+              {!! Form::text('transaction_date', @format_datetime($expense->transaction_date), ['class' => 'form-control', 'readonly', 'required', 'id' => 'expense_transaction_date', 'data-confirm-label' => __('messages.date')]); !!}
             </div>
           </div>
         </div>
         <div class="col-sm-4">
           <div class="form-group">
             {!! Form::label('expense_for', __('expense.expense_for').':') !!} @show_tooltip(__('tooltip.expense_for'))
-            {!! Form::select('expense_for', $users, $expense->expense_for, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select')]); !!}
+            {!! Form::select('expense_for', $users, $expense->expense_for, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select'), 'data-confirm-label' => __('expense.expense_for')]); !!}
           </div>
         </div>
         <div class="col-sm-4">
           <div class="form-group">
             {!! Form::label('contact_id', __('lang_v1.expense_for_contact').':') !!} 
-            {!! Form::select('contact_id', $contacts, $expense->contact_id, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select')]); !!}
+            {!! Form::select('contact_id', $contacts, $expense->contact_id, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select'), 'data-confirm-label' => __('lang_v1.expense_for_contact')]); !!}
           </div>
         </div>
         <div class="clearfix"></div>
@@ -91,7 +91,7 @@
         <div class="col-sm-4">
           <div class="form-group">
             {!! Form::label('final_total', __('sale.total_amount') . ':*') !!}
-            {!! Form::text('final_total', @num_format($expense->final_total), ['class' => 'form-control input_number', 'placeholder' => __('sale.total_amount'), 'required']); !!}
+            {!! Form::text('final_total', @num_format($expense->final_total), ['class' => 'form-control input_number', 'placeholder' => __('sale.total_amount'), 'required', 'data-confirm-amount' => 1]); !!}
           </div>
         </div>
         <div class="clearfix"></div>

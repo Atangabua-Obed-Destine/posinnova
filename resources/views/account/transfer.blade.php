@@ -1,7 +1,7 @@
 <div class="modal-dialog" role="document">
   <div class="modal-content">
 
-    {!! Form::open(['url' => action([\App\Http\Controllers\AccountController::class, 'postFundTransfer']), 'method' => 'post', 'id' => 'fund_transfer_form', 'files' => true ]) !!}
+    {!! Form::open(['url' => action([\App\Http\Controllers\AccountController::class, 'postFundTransfer']), 'method' => 'post', 'id' => 'fund_transfer_form', 'files' => true, 'data-record-confirm' => 'transfer' ]) !!}
 
     <div class="modal-header">
       <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -12,23 +12,23 @@
 
             <div class="form-group">
                 {!! Form::label('from_account', __( 'lang_v1.transfer_from' ) .":*") !!}
-                {!! Form::select('from_account', $to_accounts, $from_account->id, ['class' => 'form-control', 'required' ]); !!}
+                {!! Form::select('from_account', $to_accounts, $from_account->id, ['class' => 'form-control', 'required', 'data-confirm-label' => __('lang_v1.transfer_from') ]); !!}
             </div>
 
             <div class="form-group">
                 {!! Form::label('to_account', __( 'account.transfer_to' ) .":*") !!}
-                {!! Form::select('to_account', $to_accounts, null, ['class' => 'form-control', 'required' ]); !!}
+                {!! Form::select('to_account', $to_accounts, null, ['class' => 'form-control', 'required', 'data-confirm-label' => __('account.transfer_to') ]); !!}
             </div>
 
             <div class="form-group">
                 {!! Form::label('amount', __( 'sale.amount' ) .":*") !!}
-                {!! Form::text('amount', 0, ['class' => 'form-control input_number', 'required','placeholder' => __( 'sale.amount' ) ]); !!}
+                {!! Form::text('amount', 0, ['class' => 'form-control input_number', 'required','placeholder' => __( 'sale.amount' ), 'data-confirm-amount' => 1 ]); !!}
             </div>
 
             <div class="form-group">
                 {!! Form::label('od_datetimepicker', __( 'messages.date' ) .":*") !!}
                 <div class="input-group">
-                  {!! Form::text('operation_date', null, ['class' => 'form-control', 'required','placeholder' => __( 'messages.date' ), 'id' => 'od_datetimepicker' ]); !!}
+                  {!! Form::text('operation_date', null, ['class' => 'form-control', 'required','placeholder' => __( 'messages.date' ), 'id' => 'od_datetimepicker', 'data-confirm-label' => __('messages.date') ]); !!}
                   <span class="input-group-addon">
                     <span class="glyphicon glyphicon-calendar"></span>
                   </span>

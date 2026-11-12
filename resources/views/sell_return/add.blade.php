@@ -15,6 +15,9 @@
 
 	{!! Form::open(['url' => action([\App\Http\Controllers\SellReturnController::class, 'store']), 'method' => 'post', 'id' => 'sell_return_form' ]) !!}
 	{!! Form::hidden('transaction_id', $sell->id); !!}
+	{{-- PosInnova: what the "check before recording" dialog lists --}}
+	<span style="display:none" data-confirm-label="{{ __('sale.invoice_no') }}">{{ $sell->invoice_no }}</span>
+	<span style="display:none" data-confirm-label="{{ __('contact.customer') }}">@if(!empty($sell->walk_in_customer_name) && !empty($sell->contact->is_default)){{ $sell->walk_in_customer_name }}@else{{ optional($sell->contact)->name }}@endif</span>
 	<div class="box box-solid">
 		<div class="box-header">
 			<h3 class="box-title">@lang('lang_v1.parent_sale')</h3>

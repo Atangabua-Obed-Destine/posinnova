@@ -2,7 +2,7 @@
         aria-labelledby="gridSystemModalLabel">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            {!! Form::open(['url' => action([\App\Http\Controllers\LedgerDiscountController::class, 'store']), 'method' => 'post', 'id' => 'add_discount_form' ]) !!}
+            {!! Form::open(['url' => action([\App\Http\Controllers\LedgerDiscountController::class, 'store']), 'method' => 'post', 'id' => 'add_discount_form', 'data-record-confirm' => 'ledger_discount' ]) !!}
             <input type="hidden" name="contact_id" value="{{$contact->id}}">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -16,7 +16,7 @@
 
                 <div class="form-group">
                     {!! Form::label('amount', __( 'sale.amount' ) . ':*') !!}
-                      {!! Form::text('amount', null, ['class' => 'form-control input_number', 'required', 'placeholder' => __( 'sale.amount' ) ]); !!}
+                      {!! Form::text('amount', null, ['class' => 'form-control input_number', 'required', 'placeholder' => __( 'sale.amount' ), 'data-confirm-amount' => 1 ]); !!}
                 </div>
 
                 @if($contact->type == 'both')

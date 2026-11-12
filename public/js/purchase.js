@@ -1288,8 +1288,32 @@ $(document).on('click', 'button#submit_purchase_form', function(e) {
     }
 
     if ($('form#add_purchase_form').valid()) {
-        $(this).attr('disabled', true);
-        $('form#add_purchase_form').submit();
+        var $purchase_btn = $(this);
+        var save_purchase = function () {
+            $purchase_btn.attr('disabled', true);
+            $('form#add_purchase_form').submit();
+        };
+        // PosInnova "check before recording", once the checks above passed
+        if (window.PosConfirm && PosConfirm.enabled('purchase')) {
+            var rows = [];
+            var supplier = $.trim($('#supplier_id option:selected').text());
+            if (supplier) { rows.push([PosConfirm.label('supplier'), supplier]); }
+            var ref = $.trim($('#ref_no').val() || '');
+            if (ref) { rows.push([PosConfirm.label('ref'), ref]); }
+            var status = $.trim($('#add_purchase_form select[name="status"] option:selected').text());
+            if (status) { rows.push([PosConfirm.label('status'), status]); }
+            rows.push([PosConfirm.label('items'), String($('#purchase_entry_table tbody tr').length)]);
+            var $pay = $('.payment_row').filter(':visible').first();
+            if ($pay.length) {
+                rows.push([PosConfirm.label('paid'), __currency_trans_from_en(__read_number($pay.find('.payment-amount')) || 0, true)]);
+                var method = $.trim($pay.find('.payment_types_dropdown option:selected').text());
+                if (method) { rows.push([PosConfirm.label('method'), method]); }
+            }
+            if ($('#payment_due').length) { rows.push([PosConfirm.label('due'), $.trim($('#payment_due').text())]); }
+            PosConfirm.ask({ kind: 'purchase', amount: __read_number($('#grand_total_hidden')) || 0, rows: rows }, save_purchase);
+        } else {
+            save_purchase();
+        }
     }
 });
 

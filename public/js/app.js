@@ -3072,6 +3072,20 @@ $(document).on('submit', 'form#pay_contact_due_form', function(e){
         $('#pay_contact_due_form').find('.cash_denomination_error').addClass('hide');
     }
 
+    // PosInnova: "check this before it is recorded" (record-confirm.js), once the form's own checks passed
+    var due_form = this;
+    if (window.PosConfirm && PosConfirm.enabled('pay_due') && due_form.getAttribute('data-rc-ok') !== '1') {
+        e.preventDefault();
+        var rc_opts = PosConfirm.fromForm(due_form);
+        rc_opts.kind = 'pay_due';
+        PosConfirm.ask(rc_opts, function () {
+            due_form.setAttribute('data-rc-ok', '1');
+            $(due_form).trigger('submit');
+        });
+        return false;
+    }
+    due_form.removeAttribute('data-rc-ok');
+
     // PosInnova: take over the submit, AJAX-post the payment, then show the
     // parent payment receipt preview (same view used by Contacts > Payments tab)
     // so the user can print it before the page reloads.

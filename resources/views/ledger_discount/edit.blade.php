@@ -1,6 +1,6 @@
 <div class="modal-dialog" role="document">
     <div class="modal-content">
-        {!! Form::open(['url' => action([\App\Http\Controllers\LedgerDiscountController::class, 'update'], $discount->id), 'method' => 'put', 'id' => 'edit_discount_form' ]) !!}
+        {!! Form::open(['url' => action([\App\Http\Controllers\LedgerDiscountController::class, 'update'], $discount->id), 'method' => 'put', 'id' => 'edit_discount_form', 'data-record-confirm' => 'ledger_discount' ]) !!}
         <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
             <h4 class="modal-title">@lang('lang_v1.edit_discount')</h4>
@@ -13,7 +13,7 @@
 
             <div class="form-group">
                 {!! Form::label('amount', __( 'sale.amount' ) . ':*') !!}
-                  {!! Form::text('amount', @num_format($discount->final_total), ['class' => 'form-control input_number', 'required', 'placeholder' => __( 'sale.amount' ) ]); !!}
+                  {!! Form::text('amount', @num_format($discount->final_total), ['class' => 'form-control input_number', 'required', 'placeholder' => __( 'sale.amount' ), 'data-confirm-amount' => 1 ]); !!}
             </div>
 
             @if($contact->type == 'both')

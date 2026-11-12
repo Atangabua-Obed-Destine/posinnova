@@ -19,6 +19,7 @@
             'url' => action([\App\Http\Controllers\StockAdjustmentController::class, 'store']),
             'method' => 'post',
             'id' => 'stock_adjustment_form',
+            'data-record-confirm' => 'stock_adjustment',
         ]) !!}
 
         @component('components.widget', ['class' => 'box-solid'])
@@ -85,7 +86,7 @@
             <div class="row">
                 <div class="col-sm-10 col-sm-offset-1">
                     <input type="hidden" id="product_row_index" value="0">
-                    <input type="hidden" id="total_amount" name="final_total" value="0">
+                    <input type="hidden" id="total_amount" name="final_total" value="0" data-confirm-amount="1">
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped table-condensed" id="stock_adjustment_product_table">
                             <thead>
@@ -130,6 +131,7 @@
                         {!! Form::text('total_amount_recovered', 0, [
                             'class' => 'form-control input_number',
                             'placeholder' => __('stock_adjustment.total_amount_recovered'),
+                            'data-confirm-label' => __('stock_adjustment.total_amount_recovered'),
                         ]) !!}
                     </div>
                 </div>

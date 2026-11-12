@@ -1535,9 +1535,30 @@ $(document).ready(function() {
         pos_reindex_product_rows();
 
         if (sell_form.valid()) {
-            window.onbeforeunload = null;
-            $(this).attr('disabled', true);
-            sell_form.submit();
+            var $sell_btn = $(this);
+            var save_sale = function () {
+                window.onbeforeunload = null;
+                $sell_btn.attr('disabled', true);
+                sell_form.submit();
+            };
+            // PosInnova "check before recording": a final sale (drafts and quotations record no money)
+            var sale_status = $('select[name="status"]').length ? $('select[name="status"]').val() : $('input[name="status"]').val();
+            if (window.PosConfirm && PosConfirm.enabled('sell') && (!sale_status || sale_status == 'final')) {
+                var rows = [];
+                var customer = $.trim($('#customer_id option:selected').text());
+                if (customer) { rows.push([PosConfirm.label('customer'), customer]); }
+                rows.push([PosConfirm.label('items'), String($('table#pos_table tbody .product_row').length)]);
+                var $pay = $('#payment_rows_div .payment_row, .payment_row').filter(':visible').first();
+                if ($pay.length) {
+                    var paid = __read_number($pay.find('.payment-amount')) || 0;
+                    rows.push([PosConfirm.label('paid'), __currency_trans_from_en(paid, true)]);
+                    var method = $.trim($pay.find('.payment_types_dropdown option:selected').text());
+                    if (method) { rows.push([PosConfirm.label('method'), method]); }
+                }
+                PosConfirm.ask({ kind: 'sell', amount: __read_number($('#final_total_input')) || 0, rows: rows }, save_sale);
+            } else {
+                save_sale();
+            }
         }
     });
 
@@ -3708,6 +3729,29 @@ function show_pos_preview_for_confirmation() {
     }
     $modal.find('.modal-title')
         .html('<i class="fa fa-check-circle text-success"></i> ' + (LANG.confirm_and_finalize || 'Confirm & Finalize'));
+
+    // PosInnova "check before recording": the totals, and "Confirm & finalize" waits for the tick
+    var $check = $modal.find('#pos_preview_check');
+    if (window.PosConfirm && PosConfirm.enabled('sale') && $check.length) {
+        var total = __read_number($('#final_total_input')) || 0;
+        var paying = 0;
+        if ($('#is_credit_sale').val() != '1') {
+            $('#payment_rows_div .payment-amount').each(function () { paying += __read_number($(this)) || 0; });
+        }
+        var diff = Math.round((paying - total) * 100) / 100;
+        $('#pos_preview_total').text(__currency_trans_from_en(total, true));
+        $('#pos_preview_paying').text(__currency_trans_from_en(paying, true));
+        $('#pos_preview_change').text(__currency_trans_from_en(Math.max(diff, 0), true));
+        $('#pos_preview_due').text(__currency_trans_from_en(Math.max(-diff, 0), true));
+        $('#pos_preview_change_wrap').toggle(diff > 0);
+        $('#pos_preview_due_wrap').toggle(diff < 0);
+        $('#pos_preview_checkbox').prop('checked', false);
+        $check.removeClass('hide');
+        $modal.find('#pos-preview-confirm-finalize').prop('disabled', true);
+    } else {
+        $check.addClass('hide');
+        $modal.find('#pos-preview-confirm-finalize').prop('disabled', false);
+    }
     // Replace the generic "preview only" alert with a clearer call-to-action.
     var $alert = $modal.find('.invoice-preview .alert');
     if ($alert.length) {
@@ -3720,8 +3764,14 @@ function show_pos_preview_for_confirmation() {
 // When the modal is closed by any means while in confirmation mode, reset it
 // back to plain-preview state so the standalone "Preview Invoice" button works
 // normally next time it is clicked.
+$(document).on('change', '#pos_preview_checkbox', function() {
+    $('#pos-preview-confirm-finalize').prop('disabled', !this.checked);
+});
+
 $(document).on('hidden.bs.modal', '#invoice_preview_modal', function() {
-    $(this).find('#pos-preview-confirm-finalize').addClass('hide');
+    $(this).find('#pos-preview-confirm-finalize').addClass('hide').prop('disabled', false);
+    $(this).find('#pos_preview_check').addClass('hide');
+    $('#pos_preview_checkbox').prop('checked', false);
     var $notice = $(this).find('#invoice_preview_notice');
     if ($notice.length && $notice.data('preview')) {
         $notice.text($notice.data('preview')).removeClass('text-warning').addClass('text-muted');
@@ -3731,6 +3781,10 @@ $(document).on('hidden.bs.modal', '#invoice_preview_modal', function() {
 // User clicked "Confirm & Finalize" inside the preview modal: hide the modal,
 // set the one-shot confirmation flag and re-trigger the form submission.
 $(document).on('click', '#pos-preview-confirm-finalize', function() {
+    // the tick is required when the check is on (the button is disabled; this guards keyboard tricks too)
+    if (!$('#pos_preview_check').hasClass('hide') && !$('#pos_preview_checkbox').is(':checked')) {
+        return;
+    }
     window.pos_preview_confirmed = true;
     $('#invoice_preview_modal').modal('hide');
     // Submit the POS form (validator's submitHandler will see the flag and proceed)
@@ -4202,6 +4256,22 @@ $(document).on('hidden.bs.modal', '#expense_modal', function(){
 
 $(document).on('submit', 'form#add_expense_modal_form', function(e) {
     e.preventDefault();
+    // PosInnova "check before recording": the expense's total, category and location
+    var exp_form = this;
+    if (window.PosConfirm && PosConfirm.enabled('expense') && exp_form.getAttribute('data-rc-ok') !== '1') {
+        var rc = PosConfirm.fromForm(exp_form);
+        rc.kind = 'expense';
+        rc.amount = __read_number($(exp_form).find('#expense_final_total')) || 0;
+        var cat = $.trim($(exp_form).find('select[name="expense_category_id"] option:selected').text());
+        if ($(exp_form).find('select[name="expense_category_id"]').val() && cat) { rc.rows.push([PosConfirm.label('category'), cat]); }
+        PosConfirm.ask(rc, function () {
+            exp_form.setAttribute('data-rc-ok', '1');
+            $(exp_form).trigger('submit');
+        });
+        $(exp_form).find('button[type="submit"]').prop('disabled', false);
+        return false;
+    }
+    exp_form.removeAttribute('data-rc-ok');
     var data = $(this).serialize();
 
     $.ajax({

@@ -4,6 +4,8 @@
     {!! Form::open(['url' => action([\App\Http\Controllers\TransactionPaymentController::class, 'postPayContactDue']), 'method' => 'post', 'id' => 'pay_contact_due_form', 'files' => true ]) !!}
 
     {!! Form::hidden("contact_id", $contact_details->contact_id); !!}
+    {{-- PosInnova: what the "check before recording" dialog lists --}}
+    <span style="display:none" data-confirm-label="{{ in_array($due_payment_type, ['purchase', 'purchase_return']) ? __('purchase.supplier') : __('contact.customer') }}">{{ $contact_details->name }}</span>
     {!! Form::hidden("due_payment_type", $due_payment_type); !!}
     {!! Form::hidden("allocation_mode", 'auto', ['id' => 'allocation_mode_input']); !!}
     <div class="modal-header">
@@ -189,7 +191,7 @@
               <span class="input-group-addon">
                 <i class="fas fa-money-bill-alt"></i>
               </span>
-              {!! Form::select("method", $payment_types, $payment_line->method, ['class' => 'form-control select2 payment_types_dropdown', 'required', 'style' => 'width:100%;']); !!}
+              {!! Form::select("method", $payment_types, $payment_line->method, ['class' => 'form-control select2 payment_types_dropdown', 'required', 'style' => 'width:100%;', 'data-confirm-label' => __('purchase.payment_method')]); !!}
             </div>
           </div>
         </div>
@@ -200,7 +202,7 @@
               <span class="input-group-addon">
                 <i class="fa fa-calendar"></i>
               </span>
-              {!! Form::text('paid_on', @format_datetime($payment_line->paid_on), ['class' => 'form-control', 'readonly', 'required']); !!}
+              {!! Form::text('paid_on', @format_datetime($payment_line->paid_on), ['class' => 'form-control', 'readonly', 'required', 'data-confirm-label' => __('lang_v1.paid_on')]); !!}
             </div>
           </div>
         </div>
@@ -212,9 +214,9 @@
                 <i class="fas fa-money-bill-alt"></i>
               </span>
               @if(in_array($due_payment_type, ['sell_return', 'purchase_return']))
-              {!! Form::text("amount", @num_format($payment_line->amount), ['class' => 'form-control input_number payment_amount', 'required', 'placeholder' => __('sale.amount'), 'data-rule-max-value' => $payment_line->amount, 'data-msg-max-value' => __('lang_v1.max_amount_to_be_paid_is', ['amount' => $amount_formated])]); !!}
+              {!! Form::text("amount", @num_format($payment_line->amount), ['class' => 'form-control input_number payment_amount', 'required', 'data-confirm-amount' => 1, 'placeholder' => __('sale.amount'), 'data-rule-max-value' => $payment_line->amount, 'data-msg-max-value' => __('lang_v1.max_amount_to_be_paid_is', ['amount' => $amount_formated])]); !!}
               @else
-                {!! Form::text("amount", @num_format($payment_line->amount), ['class' => 'form-control input_number payment_amount', 'required', 'placeholder' => __('sale.amount')]); !!}
+                {!! Form::text("amount", @num_format($payment_line->amount), ['class' => 'form-control input_number payment_amount', 'required', 'data-confirm-amount' => 1, 'placeholder' => __('sale.amount')]); !!}
               @endif
             </div>
           </div>
@@ -290,7 +292,7 @@
                 <span class="input-group-addon">
                   <i class="fas fa-money-bill-alt"></i>
                 </span>
-                {!! Form::select("account_id", $accounts, !empty($payment_line->account_id) ? $payment_line->account_id : '' , ['class' => 'form-control select2', 'id' => "account_id", 'style' => 'width:100%;']); !!}
+                {!! Form::select("account_id", $accounts, !empty($payment_line->account_id) ? $payment_line->account_id : '' , ['class' => 'form-control select2', 'id' => "account_id", 'style' => 'width:100%;', 'data-confirm-label' => __('lang_v1.payment_account')]); !!}
               </div>
             </div>
           </div>

@@ -1347,4 +1347,9 @@ return [
     'fee_doctor_price' => 'This doctor\'s price',
     'fee_checkin_label' => 'Consultation fee:',
     'fee_checkin_help' => 'It follows the doctor chosen above (a doctor without their own fee: the clinic\'s).',
+
+    // ---- check before recording (clinic pages)
+    'rc_balance_before' => 'Balance before',
+    'rc_claim' => 'Claim',
+    'rc_rebilled' => 'Items sent back to the patient',
 ];

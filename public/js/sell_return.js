@@ -17,6 +17,18 @@ $(document).ready(function() {
 
     pos_form_validator = pos_form_obj.validate({
         submitHandler: function(form) {
+            // PosInnova "check before recording": the return's total and the original invoice
+            if (window.PosConfirm && PosConfirm.enabled('sell_return') && form.getAttribute('data-rc-ok') !== '1') {
+                var rc = PosConfirm.fromForm(form);
+                rc.kind = 'sell_return';
+                rc.amount = typeof __number_uf === 'function' ? __number_uf($('#net_return').text()) : parseFloat($('#net_return').text());
+                PosConfirm.ask(rc, function () {
+                    form.setAttribute('data-rc-ok', '1');
+                    $(form).submit();
+                });
+                return false;
+            }
+            form.removeAttribute('data-rc-ok');
             var cnf = true;
 
             if (cnf) {
