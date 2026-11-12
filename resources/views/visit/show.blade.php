@@ -89,6 +89,23 @@
                             @lang('sale.total'): <strong><span class="display_currency" data-currency_symbol="true">{{ $fee->final_total }}</span></strong>
                             · @lang('clinic.paid_so_far'): <span class="display_currency" data-currency_symbol="true">{{ $fee_paid }}</span>
                         </div>
+                        @if ($visit->cover_until)
+                            {{-- the fee also covers return visits for a while --}}
+                            <div class="tw-text-sm tw-text-green-700" id="cover_info"><i class="fas fa-redo"></i>
+                                {{ __('clinic.cover_paid_until', ['until' => @format_date($visit->cover_until)]) }}
+                                · {{ $visit->cover_max_visits ? __('clinic.cover_used_n_of', ['n' => $cover_used, 'max' => $visit->cover_max_visits]) : trans_choice('clinic.cover_used_n', $cover_used, ['n' => $cover_used]) }}
+                                @if ($visit->cover_same_doctor) · @lang('clinic.cover_desc_same_doctor')@endif
+                            </div>
+                        @endif
+                    </div>
+                @elseif ($visit->covered_by_visit_id)
+                    <div style="min-width:200px;" id="cover_info">
+                        <div class="tw-text-xs tw-uppercase tw-text-gray-500 tw-font-semibold">@lang('clinic.checkin_invoice')</div>
+                        <div class="tw-font-semibold tw-text-green-700"><i class="fas fa-redo"></i> @lang('clinic.cover_return_visit')</div>
+                        @if ($visit->coveredBy)
+                            <div class="tw-text-sm tw-text-gray-700">{{ __('clinic.cover_paid_on', ['date' => @format_date($visit->coveredBy->visit_date)]) }}
+                                · <a href="{{ action([\App\Http\Controllers\VisitController::class, 'show'], [$visit->covered_by_visit_id]) }}">{{ $visit->coveredBy->ref_no }}</a></div>
+                        @endif
                     </div>
                 @elseif ($visit->subscription_period_id)
                     @php $plan_period = $visit->subscriptionPeriod; @endphp
@@ -150,6 +167,27 @@
                     {{ __('clinic.let_through_by', ['user' => optional(\App\User::find($visit->pay_override_by))->user_full_name ?: '-', 'date' => app(\App\Utils\Util::class)->format_date($visit->pay_override_at, true)]) }}</p>
             @endif
         </div>
+
+        {{-- vitals taken at the front desk, before the doctor --}}
+        @if ($visit->queue_no)
+            <div class="tw-bg-white tw-shadow-sm tw-rounded-xl tw-ring-1 tw-ring-gray-200 tw-p-4 tw-mb-4" id="vitals_panel"
+                style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                <div style="flex:1; min-width:220px;">
+                    <div class="tw-text-xs tw-uppercase tw-text-gray-500 tw-font-semibold"><i class="fas fa-heartbeat"></i> @lang('lang_v1.vitals')</div>
+                    @if ($visit->hasVitals())
+                        <div class="tw-font-semibold tw-text-gray-900">{{ $visit->vitalsSummary() }}</div>
+                        @if ($visit->vitals_note)<div class="tw-text-sm tw-text-gray-700"><em>{{ $visit->vitals_note }}</em></div>@endif
+                        <div class="tw-text-xs tw-text-gray-500">{{ __('clinic.vit_taken_by', ['time' => $visit->vitals_taken_at->format('H:i'), 'name' => trim(optional($visit->vitalsTakenBy)->user_full_name)]) }}</div>
+                    @else
+                        <div class="tw-text-gray-500">@lang('clinic.vit_not_taken')</div>
+                    @endif
+                </div>
+                @if ($visit->status == 'open' && auth()->user()->can('visit.record_vitals'))
+                    <a href="{{ action([\App\Http\Controllers\VisitController::class, 'vitals'], [$visit->id]) }}" class="tw-dw-btn tw-dw-btn-sm {{ $visit->hasVitals() ? 'tw-dw-btn-outline' : 'tw-dw-btn-primary tw-text-white' }}">
+                        <i class="fas fa-heartbeat"></i> {{ $visit->hasVitals() ? __('clinic.vit_edit') : __('clinic.vit_take') }}</a>
+                @endif
+            </div>
+        @endif
     @endif
 
     @component('components.widget', ['class' => 'box-primary', 'title' => __('lang_v1.consultations')])

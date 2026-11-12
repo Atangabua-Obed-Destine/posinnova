@@ -443,6 +443,9 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
 
     //Visits / OPD
     //PosInnova: state changes are POST (with CSRF), never plain GET links
+    Route::get('visits/cover', [\App\Http\Controllers\VisitController::class, 'cover']);
+    Route::get('visits/{id}/vitals', [\App\Http\Controllers\VisitController::class, 'vitals']);
+    Route::post('visits/{id}/vitals', [\App\Http\Controllers\VisitController::class, 'saveVitals']);
     Route::post('visits/{id}/close', [\App\Http\Controllers\VisitController::class, 'close']);
     Route::post('visits/{id}/cancel', [\App\Http\Controllers\VisitController::class, 'cancel']);
     Route::resource('visits', \App\Http\Controllers\VisitController::class)->only(['index', 'create', 'store', 'show']);

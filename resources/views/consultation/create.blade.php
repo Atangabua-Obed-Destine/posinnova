@@ -98,19 +98,28 @@
         </div>
     @endcomponent
 
-    {{-- Vitals --}}
+    {{-- Vitals (filled in from the front desk when they were taken there) --}}
+    @php
+        $num = fn ($v) => $v === null ? null : (str_contains((string) $v, '.') ? rtrim(rtrim((string) $v, '0'), '.') : (string) $v);
+        $front_vitals = $visit->hasVitals() ? collect(\App\Visit::VITALS)->mapWithKeys(fn ($f) => [$f => $num($visit->{$f})])->all() : [];
+    @endphp
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.vitals')])
+        @if ($visit->hasVitals())
+            <p class="text-muted" id="front_vitals_note" style="margin-top:0;"><i class="fas fa-heartbeat"></i>
+                {{ __('clinic.vit_from_front_desk', ['time' => $visit->vitals_taken_at->format('H:i'), 'name' => trim(optional($visit->vitalsTakenBy)->user_full_name)]) }}
+                @if ($visit->vitals_note) · <em>{{ $visit->vitals_note }}</em>@endif</p>
+        @endif
         <div class="row">
             <div class="col-sm-2 col-xs-6">
                 <div class="form-group">
                     {!! Form::label('vitals_weight', __('lang_v1.weight_kg') . ':') !!}
-                    {!! Form::number('vitals_weight', null, ['class' => 'form-control vitals-bmi', 'id' => 'vitals_weight', 'step' => '0.01', 'min' => 0]) !!}
+                    {!! Form::number('vitals_weight', $front_vitals['vitals_weight'] ?? null, ['class' => 'form-control vitals-bmi', 'id' => 'vitals_weight', 'step' => '0.01', 'min' => 0]) !!}
                 </div>
             </div>
             <div class="col-sm-2 col-xs-6">
                 <div class="form-group">
                     {!! Form::label('vitals_height', __('lang_v1.height_cm') . ':') !!}
-                    {!! Form::number('vitals_height', null, ['class' => 'form-control vitals-bmi', 'id' => 'vitals_height', 'step' => '0.01', 'min' => 0]) !!}
+                    {!! Form::number('vitals_height', $front_vitals['vitals_height'] ?? null, ['class' => 'form-control vitals-bmi', 'id' => 'vitals_height', 'step' => '0.01', 'min' => 0]) !!}
                 </div>
             </div>
             <div class="col-sm-2 col-xs-6">
@@ -123,9 +132,9 @@
                 <div class="form-group">
                     {!! Form::label('vitals_bp', __('lang_v1.blood_pressure') . ' (mmHg):') !!}
                     <div class="tw-flex tw-items-center tw-gap-1">
-                        {!! Form::number('vitals_bp_systolic', null, ['class' => 'form-control', 'placeholder' => __('lang_v1.systolic'), 'min' => 0]) !!}
+                        {!! Form::number('vitals_bp_systolic', $front_vitals['vitals_bp_systolic'] ?? null, ['class' => 'form-control', 'placeholder' => __('lang_v1.systolic'), 'min' => 0]) !!}
                         <span>/</span>
-                        {!! Form::number('vitals_bp_diastolic', null, ['class' => 'form-control', 'placeholder' => __('lang_v1.diastolic'), 'min' => 0]) !!}
+                        {!! Form::number('vitals_bp_diastolic', $front_vitals['vitals_bp_diastolic'] ?? null, ['class' => 'form-control', 'placeholder' => __('lang_v1.diastolic'), 'min' => 0]) !!}
                     </div>
                 </div>
             </div>
@@ -133,19 +142,19 @@
             <div class="col-sm-2 col-xs-6">
                 <div class="form-group">
                     {!! Form::label('vitals_temperature', __('lang_v1.temperature_c') . ':') !!}
-                    {!! Form::number('vitals_temperature', null, ['class' => 'form-control', 'step' => '0.1', 'min' => 0]) !!}
+                    {!! Form::number('vitals_temperature', $front_vitals['vitals_temperature'] ?? null, ['class' => 'form-control', 'step' => '0.1', 'min' => 0]) !!}
                 </div>
             </div>
             <div class="col-sm-2 col-xs-6">
                 <div class="form-group">
                     {!! Form::label('vitals_pulse', __('lang_v1.pulse_bpm') . ':') !!}
-                    {!! Form::number('vitals_pulse', null, ['class' => 'form-control', 'min' => 0]) !!}
+                    {!! Form::number('vitals_pulse', $front_vitals['vitals_pulse'] ?? null, ['class' => 'form-control', 'min' => 0]) !!}
                 </div>
             </div>
             <div class="col-sm-2 col-xs-6">
                 <div class="form-group">
                     {!! Form::label('vitals_spo2', __('lang_v1.spo2') . ':') !!}
-                    {!! Form::number('vitals_spo2', null, ['class' => 'form-control', 'min' => 0, 'max' => 100]) !!}
+                    {!! Form::number('vitals_spo2', $front_vitals['vitals_spo2'] ?? null, ['class' => 'form-control', 'min' => 0, 'max' => 100]) !!}
                 </div>
             </div>
         </div>

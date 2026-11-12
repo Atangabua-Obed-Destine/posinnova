@@ -62,6 +62,47 @@
                     <p class="help-block">@lang('clinic.visits_per_month_help')</p>
                 </div>
             </div>
+            {{-- per visit: may the fee also cover the patient's return visits for a while? --}}
+            @php $cm = old('cover_mode', $package->cover_mode ?: 'none'); @endphp
+            <div class="col-sm-12" id="cover_wrap">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+                    <label style="margin-bottom:2px;"><i class="fas fa-redo"></i> @lang('clinic.cover_title')</label>
+                    <p class="help-block" style="margin-top:0;">@lang('clinic.cover_help')</p>
+                    <div class="row">
+                        <div class="col-sm-5">
+                            <div class="form-group">
+                                <label for="cover_mode">@lang('clinic.cover_mode'):</label>
+                                <select name="cover_mode" id="cover_mode" class="form-control">
+                                    @foreach (['none', 'days', 'month', 'calendar_month'] as $m)
+                                        <option value="{{ $m }}" {{ $cm == $m ? 'selected' : '' }}>@lang('clinic.cover_mode_' . $m)</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-sm-2 cover-opt" id="cover_days_wrap">
+                            <div class="form-group">
+                                <label for="cover_days">@lang('clinic.cover_days'):</label>
+                                <input type="number" name="cover_days" id="cover_days" class="form-control" min="1" max="366" value="{{ old('cover_days', $package->cover_days ?: 30) }}">
+                            </div>
+                        </div>
+                        <div class="col-sm-2 cover-opt">
+                            <div class="form-group">
+                                <label for="cover_max_visits">@lang('clinic.cover_max'):</label>
+                                <input type="number" name="cover_max_visits" id="cover_max_visits" class="form-control" min="1" max="99" placeholder="{{ __('clinic.visits_unlimited') }}" value="{{ old('cover_max_visits', $package->cover_max_visits) }}">
+                            </div>
+                        </div>
+                        <div class="col-sm-3 cover-opt">
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <div class="checkbox" style="margin-top:4px;">
+                                    <label><input type="checkbox" name="cover_same_doctor" value="1" {{ old('cover_same_doctor', $package->cover_same_doctor) ? 'checked' : '' }}> @lang('clinic.cover_same_doctor')</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="help-block cover-opt" style="margin:0;" id="cover_example"></p>
+                </div>
+            </div>
             <div class="col-sm-3">
                 <div class="form-group">
                     <label>@lang('lang_v1.status'):</label>
@@ -84,10 +125,22 @@
 @section('javascript')
 <script>
     $(function () {
+        @php
+            $cover_examples = [];
+            foreach (['none', 'days', 'month', 'calendar_month'] as $m) { $cover_examples[$m] = __('clinic.cover_example_' . $m); }
+        @endphp
+        var examples = @json($cover_examples);
         function toggleVisits() {
-            $('#visits_per_month_wrap').toggle($('input.pkg_billing:checked').val() === 'monthly');
+            var monthly = $('input.pkg_billing:checked').val() === 'monthly';
+            $('#visits_per_month_wrap').toggle(monthly);
+            $('#cover_wrap').toggle(! monthly);
+            var m = $('#cover_mode').val();
+            $('.cover-opt').toggle(m !== 'none');
+            $('#cover_days_wrap').toggle(m === 'days');
+            $('#cover_example').text((examples[m] || '').replace(':n', $('#cover_days').val() || 30));
         }
-        $(document).on('change', 'input.pkg_billing', toggleVisits);
+        $(document).on('change', 'input.pkg_billing, #cover_mode', toggleVisits);
+        $(document).on('input', '#cover_days', toggleVisits);
         toggleVisits();
     });
 </script>

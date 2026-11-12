@@ -155,6 +155,7 @@
                             </span>
                             <span class="hd-right">
                                 @if ($r['unpaid']) {!! $pill(__('clinic.dash_not_paid'), 'red') !!} @endif
+                                @if (! empty($r['no_vitals'])) {!! $pill(__('clinic.dash_no_vitals'), 'amber') !!} @endif
                                 {!! $pill(__('clinic.queue_' . $r['status']), $queue_tone[$r['status']] ?? 'slate') !!}
                             </span>
                         </a>

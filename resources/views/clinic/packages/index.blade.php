@@ -49,6 +49,9 @@
                                         <br><small class="text-muted">{{ $p->visits_per_month ? __('clinic.visits_per_month_n', ['n' => $p->visits_per_month]) : __('clinic.visits_unlimited') }}</small>
                                     @else
                                         @lang('clinic.billing_per_visit')
+                                        @if (\App\Utils\ClinicCover::covers($p))
+                                            <br><small class="text-success"><i class="fas fa-redo"></i> {{ \App\Utils\ClinicCover::describe($p) }}</small>
+                                        @endif
                                     @endif
                                 </td>
                                 <td class="text-right">{{ $usage[$p->id] ?? 0 }}</td>

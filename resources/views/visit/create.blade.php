@@ -91,6 +91,10 @@
                     {{-- monthly plan of the chosen patient, filled in by the script below --}}
                     <div id="plan_box" style="margin-bottom:10px;"></div>
                 @endif
+                @if ($has_cover)
+                    {{-- a return visit covered by a consultation already paid for, filled in by the script below --}}
+                    <div id="cover_box" style="margin-bottom:10px;"></div>
+                @endif
 
                 @if ($packages->isNotEmpty())
                     <div class="ci-step">{{ empty($doctors) ? 2 : 3 }}. @lang('clinic.package')</div>
@@ -219,6 +223,44 @@
             $('#visit_patient_id').on('change', loadPlan);
             $('input[name=visit_date]').on('change', loadPlan);
             loadPlan();
+            @endif
+
+            @if ($has_cover)
+            // Is this a return visit covered by a consultation the patient already paid for?
+            // Asked again when the patient, the doctor or the date changes; only the latest answer counts.
+            var coverSeq = 0;
+            function loadCover() {
+                var mine = ++coverSeq, cid = $('#visit_patient_id').val();
+                var $box = $('#cover_box');
+                if (! cid) { $box.empty(); $('input[name=package_id][value=cover]').closest('.ci-card').remove(); return; }
+                $.getJSON('{{ action([\App\Http\Controllers\VisitController::class, 'cover']) }}', {
+                    contact_id: cid, date: $('input[name=visit_date]').val(), doctor_id: $('input[name=doctor_id]:checked').val() || ''
+                }, function (c) {
+                    if (mine !== coverSeq) { return; }
+                    var wasOn = $('input[name=package_id][value=cover]').is(':checked');
+                    $box.empty();
+                    if (! c || c.state === 'none') { if (wasOn) { $('input[name=package_id]').first().prop('checked', true).trigger('change'); } return; }
+                    if (c.covers) {
+                        var $card = $('<label class="ci-card is-on" style="max-width:460px;"></label>')
+                            .append($('<input type="radio" name="package_id" value="cover" checked>'))
+                            .append($('<div class="ci-title"></div>').append('<i class="fas fa-redo"></i> ').append(document.createTextNode(@json(__('clinic.cover_card_title')))))
+                            .append($('<div class="ci-price"></div>').text(@json(__('clinic.cover_card_price'))))
+                            .append($('<div class="ci-covers"></div>').text(c.message));
+                        $('input[name=package_id]').not('[value=cover]').closest('.ci-card').removeClass('is-on');
+                        $('input[name=package_id]').not('[value=cover]').prop('checked', false);
+                        $box.append($('<div class="ci-cards"></div>').append($card))
+                            .append($('<p class="help-block" style="margin:6px 0 0;"></p>').text(@json(__('clinic.cover_card_help'))));
+                    } else {
+                        // used up, or only with another doctor: the visit is paid as usual
+                        $box.append($('<div class="callout callout-info" style="margin-bottom:0;"></div>').text(c.message));
+                        if (wasOn) { $('input[name=package_id]').first().prop('checked', true).trigger('change'); }
+                    }
+                });
+            }
+            $('#visit_patient_id').on('change', loadCover);
+            $('input[name=visit_date]').on('change', loadCover);
+            $(document).on('change', 'input[name=doctor_id]', loadCover);
+            loadCover();
             @endif
 
             $('#visit_form').on('submit', function (e) {

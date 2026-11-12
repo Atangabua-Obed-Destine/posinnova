@@ -9,6 +9,7 @@ use App\Consultation;
 use App\Transaction;
 use App\Visit;
 use App\VisitCharge;
+use App\Utils\ClinicCover;
 use App\Utils\ClinicPlans;
 use App\Utils\ClinicQueue;
 use App\Utils\ClinicSettings;
@@ -75,6 +76,8 @@ class VisitController extends Controller
                     'visits.queue_no',
                     'visits.queue_status',
                     'visits.fee_transaction_id',
+                    'visits.covered_by_visit_id',
+                    'visits.vitals_taken_at',
                     'fee.payment_status as fee_payment_status',
                     'fee.final_total as fee_total',
                     'pkg.name as package_name',
@@ -129,6 +132,9 @@ class VisitController extends Controller
                     return $html;
                 })
                 ->addColumn('payment', function ($row) {
+                    if (! empty($row->covered_by_visit_id)) {
+                        return '<span class="label label-info">'.__('clinic.cover_label').'</span>';
+                    }
                     if (empty($row->fee_transaction_id) || $row->fee_total <= 0) {
                         return '<span class="text-muted">-</span>';
                     }
@@ -159,6 +165,10 @@ class VisitController extends Controller
                     }
                     if ($can_pay && ! empty($row->fee_transaction_id) && $row->fee_total > 0 && $row->fee_payment_status != 'paid') {
                         $html .= '<li><a href="'.action([\App\Http\Controllers\TransactionPaymentController::class, 'addPayment'], [$row->fee_transaction_id]).'?post_to_register=1" class="add_payment_modal"><i class="fas fa-money-bill-alt"></i> '.__('clinic.take_payment').'</a></li>';
+                    }
+                    if ($row->status == 'open' && in_array($row->queue_status, ['waiting', 'with_doctor']) && auth()->user()->can('visit.record_vitals')) {
+                        $html .= '<li><a href="'.action([\App\Http\Controllers\VisitController::class, 'vitals'], [$row->id]).'?return=visits"><i class="fas fa-heartbeat"></i> '
+                            .($row->vitals_taken_at ? __('clinic.vit_edit') : __('clinic.vit_take')).'</a></li>';
                     }
                     if ($row->status == 'open' && empty($row->queue_status) && auth()->user()->can('consultation.create')) {
                         $html .= '<li><a href="'.action([\App\Http\Controllers\ConsultationController::class, 'create']).'?visit_id='.$row->id.'"><i class="fas fa-stethoscope"></i> '.__('lang_v1.new_consultation').'</a></li>';
@@ -229,6 +239,9 @@ class VisitController extends Controller
 
         // monthly plans: the screen asks what the chosen patient's plan covers
         $has_plans = \App\ClinicSubscription::forBusiness($business_id)->exists();
+        // return visits covered by a paid consultation: the screen asks the same way
+        $has_cover = ClinicPackage::forBusiness($business_id)->where('cover_mode', '!=', 'none')->exists()
+            || Visit::forBusiness($business_id)->whereDate('cover_until', '>=', \Carbon::today()->toDateString())->exists();
 
         // checking in from the appointments diary
         $appointment = null;
@@ -241,7 +254,33 @@ class VisitController extends Controller
         }
 
         return view('visit.create')->with(compact('business_locations', 'preselected_patient', 'doctors', 'packages',
-            'default_fee', 'wards_on', 'pay_first', 'waiting', 'has_plans', 'appointment'));
+            'default_fee', 'wards_on', 'pay_first', 'waiting', 'has_plans', 'has_cover', 'appointment'));
+    }
+
+    /**
+     * Is the patient's check-in on a date (with a doctor) a return visit covered
+     * by a consultation they already paid for? (JSON for the check-in screen.)
+     */
+    public function cover(Request $request)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('visit.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $business_id = $request->session()->get('user.business_id');
+        $patient = Contact::where('business_id', $business_id)->onlyPatients()->find($request->input('contact_id'));
+        if (! $patient) {
+            return ['state' => 'none'];
+        }
+        $c = ClinicCover::find($business_id, $patient->id, $request->input('date') ?: \Carbon::today()->toDateString(), $request->input('doctor_id'));
+
+        return [
+            'state' => $c['state'],
+            'covers' => $c['state'] == 'covers',
+            'message' => $c['message'],
+            'package' => isset($c['paying']) ? optional($c['paying']->package)->name : null,
+            'doctor_id' => isset($c['paying']) ? $c['paying']->doctor_id : null,
+        ];
     }
 
     public function store(Request $request)
@@ -256,7 +295,7 @@ class VisitController extends Controller
             'contact_id' => 'required',
             'type' => 'required|in:opd,inpatient',
             'doctor_id' => 'nullable|integer',
-            'package_id' => ['nullable', 'regex:/^(plan|\d{1,10})$/'], // a package id, or 'plan'
+            'package_id' => ['nullable', 'regex:/^(plan|cover|\d{1,10})$/'], // a package id, 'plan', or 'cover' (a covered return visit)
         ]);
 
         $business_id = $request->session()->get('user.business_id');
@@ -280,6 +319,7 @@ class VisitController extends Controller
         $doctor_id = null;
         $package = null;
         $plan_period = null;
+        $covered_by = null;
         if ($type == 'opd') {
             $doctors = ClinicQueue::doctors($business_id);
             if (! empty($doctors)) {
@@ -302,6 +342,14 @@ class VisitController extends Controller
                 }
                 $package = $coverage['subscription']->package;
                 $plan_period = $coverage['period'];
+            } elseif ($request->input('package_id') === 'cover') {
+                // a return visit within the cover of a consultation already paid for: nothing to bill
+                $cover = ClinicCover::find($business_id, $patient->id, $visit_date, $doctor_id);
+                if ($cover['state'] != 'covers') {
+                    return $this->fail($cover['message'] ?: __('clinic.cover_none'));
+                }
+                $covered_by = $cover['paying'];
+                $package = $covered_by->package;
             } elseif ($packages->isNotEmpty()) {
                 $package = $packages->get((int) $request->input('package_id'));
                 if (! $package) {
@@ -341,6 +389,7 @@ class VisitController extends Controller
                 'doctor_id' => $doctor_id,
                 'package_id' => optional($package)->id,
                 'subscription_period_id' => optional($plan_period)->id,
+                'covered_by_visit_id' => optional($covered_by)->id,
                 'appointment_id' => optional($appointment)->id,
                 'queue_no' => $type == 'opd' ? ClinicQueue::nextQueueNo($business_id, $visit_date) : null,
                 'queue_status' => $type == 'opd' ? 'waiting' : null,
@@ -357,7 +406,8 @@ class VisitController extends Controller
             //up) the default consultation fee. Consultations on a visit billed
             //here are never charged again.
             $fee_transaction = null;
-            if ($type == 'opd' && ! empty($location_id) && ! $plan_period) { // a plan visit is already paid for by the month
+            // a plan visit is already paid for by the month, a covered return visit by the first consultation
+            if ($type == 'opd' && ! empty($location_id) && ! $plan_period && ! $covered_by) {
                 $billing = new HospitalBillingUtil();
                 if ($package && $package->price > 0) {
                     $service = \App\Utils\ClinicServices::forPackage($package, $user_id);
@@ -393,6 +443,10 @@ class VisitController extends Controller
             }
             if ($fee_transaction) {
                 $visit->fee_transaction_id = $fee_transaction->id;
+                // the fee may cover the patient's return visits for a while (the package's rules, copied)
+                if ($package) {
+                    ClinicCover::stamp($visit, $package);
+                }
                 $visit->save();
             }
             if ($appointment) {
@@ -436,7 +490,7 @@ class VisitController extends Controller
         $business_id = request()->session()->get('user.business_id');
 
         $visit = Visit::forBusiness($business_id)
-            ->with(['patient.patientDetails', 'location', 'openedBy', 'doctor', 'package', 'feeTransaction'])
+            ->with(['patient.patientDetails', 'location', 'openedBy', 'doctor', 'package', 'feeTransaction', 'coveredBy', 'vitalsTakenBy'])
             ->findOrFail($id);
 
         $consultations = Consultation::forBusiness($business_id)
@@ -447,8 +501,99 @@ class VisitController extends Controller
 
         $pay_state = ClinicQueue::payState($visit);
         $pay_blocks = ClinicQueue::payGateBlocks($visit);
+        // a paid visit whose fee covers return visits: how many have been used
+        $cover_used = $visit->cover_until
+            ? Visit::forBusiness($business_id)->where('covered_by_visit_id', $visit->id)->where('status', '!=', 'cancelled')->count() : 0;
 
-        return view('visit.show')->with(compact('visit', 'consultations', 'pay_state', 'pay_blocks'));
+        return view('visit.show')->with(compact('visit', 'consultations', 'pay_state', 'pay_blocks', 'cover_used'));
+    }
+
+    /** Vitals at the front desk: the form (after payment, before the doctor). */
+    public function vitals($id)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('visit.record_vitals')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $business_id = request()->session()->get('user.business_id');
+        $visit = Visit::forBusiness($business_id)->with(['patient.patientDetails', 'doctor', 'vitalsTakenBy'])->findOrFail($id);
+        if ($visit->status != 'open') {
+            return redirect()->action([self::class, 'show'], [$visit->id])
+                ->with('status', ['success' => false, 'msg' => __('clinic.vit_visit_closed')]);
+        }
+
+        // the patient's last recorded vitals, from a visit or a consultation, to compare with
+        $last = Visit::forBusiness($business_id)->where('contact_id', $visit->contact_id)->where('id', '!=', $visit->id)
+            ->whereNotNull('vitals_taken_at')->orderByDesc('vitals_taken_at')->first();
+        $last_consult = Consultation::forBusiness($business_id)->where('contact_id', $visit->contact_id)
+            ->where('visit_id', '!=', $visit->id)
+            ->where(function ($q) {
+                $q->whereNotNull('vitals_weight')->orWhereNotNull('vitals_bp_systolic')->orWhereNotNull('vitals_temperature');
+            })->orderByDesc('created_at')->first();
+        if ($last_consult && (! $last || $last_consult->created_at->gt($last->vitals_taken_at))) {
+            $last = new Visit(collect(Visit::VITALS)->mapWithKeys(fn ($f) => [$f => $last_consult->{$f}])->all());
+            $last->vitals_taken_at = $last_consult->created_at;
+        }
+        $return = in_array(request()->input('return'), ['visit', 'visits', 'home', 'account']) ? request()->input('return') : 'visit';
+
+        return view('visit.vitals', compact('visit', 'last', 'return'));
+    }
+
+    public function saveVitals(Request $request, $id)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('visit.record_vitals')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $business_id = $request->session()->get('user.business_id');
+        $visit = Visit::forBusiness($business_id)->findOrFail($id);
+        if ($visit->status != 'open') {
+            return redirect()->action([self::class, 'show'], [$visit->id])
+                ->with('status', ['success' => false, 'msg' => __('clinic.vit_visit_closed')]);
+        }
+
+        // plausible human ranges: a typo (720 kg, 3.7 °C) is caught before the doctor reads it
+        $request->validate([
+            'vitals_weight' => 'nullable|numeric|min:0.5|max:400',
+            'vitals_height' => 'nullable|numeric|min:20|max:260',
+            'vitals_bp_systolic' => 'nullable|integer|min:40|max:300|required_with:vitals_bp_diastolic',
+            'vitals_bp_diastolic' => 'nullable|integer|min:20|max:200|required_with:vitals_bp_systolic',
+            'vitals_temperature' => 'nullable|numeric|min:30|max:45',
+            'vitals_pulse' => 'nullable|integer|min:20|max:250',
+            'vitals_spo2' => 'nullable|integer|min:50|max:100',
+            'vitals_note' => 'nullable|string|max:191',
+        ], [], [
+            'vitals_weight' => __('lang_v1.weight_kg'), 'vitals_height' => __('lang_v1.height_cm'),
+            'vitals_bp_systolic' => __('lang_v1.systolic'), 'vitals_bp_diastolic' => __('lang_v1.diastolic'),
+            'vitals_temperature' => __('lang_v1.temperature_c'), 'vitals_pulse' => __('lang_v1.pulse_bpm'), 'vitals_spo2' => __('lang_v1.spo2'),
+        ]);
+        $values = [];
+        foreach (Visit::VITALS as $f) {
+            $values[$f] = $request->filled($f) ? $request->input($f) : null;
+        }
+        if (! array_filter($values, fn ($v) => $v !== null)) {
+            return redirect()->back()->withInput()->with('status', ['success' => false, 'msg' => __('clinic.vit_none_entered')]);
+        }
+
+        $first = ! $visit->hasVitals();
+        $visit->fill($values);
+        $visit->vitals_note = $request->filled('vitals_note') ? trim($request->input('vitals_note')) : null;
+        $visit->vitals_taken_by = $request->session()->get('user.id');
+        $visit->vitals_taken_at = now();
+        $visit->save();
+        $this->commonUtil->activityLog($visit, $first ? 'vitals_taken' : 'vitals_updated', null, ['ref_no' => $visit->ref_no]);
+
+        $msg = ['success' => true, 'msg' => __('clinic.vit_saved', ['name' => optional($visit->patient)->name])];
+        switch ($request->input('return')) {
+            case 'visits':
+                return redirect()->action([self::class, 'index'])->with('status', $msg);
+            case 'home':
+                return redirect()->action([\App\Http\Controllers\HomeController::class, 'index'])->with('status', $msg);
+            case 'account':
+                return redirect()->action([\App\Http\Controllers\ClinicAccountController::class, 'show'], [$visit->contact_id])->with('status', $msg);
+        }
+
+        return redirect()->action([self::class, 'show'], [$visit->id])->with('status', $msg);
     }
 
     public function close($id)

@@ -23,6 +23,16 @@
                     @endif
                     @if ($v->notes) · <em>{{ $v->notes }}</em>@endif
                 </div>
+                {{-- vitals from the front desk, so the doctor sees them before calling the patient in --}}
+                <div class="dq-meta dq-vitals" style="margin-top:2px;">
+                    @if ($v->hasVitals())
+                        <i class="fas fa-heartbeat" style="color:#dc2626;"></i> <span style="color:#0f172a;">{{ $v->vitalsSummary() }}</span>
+                        @if ($v->vitals_note) · <em>{{ $v->vitals_note }}</em>@endif
+                    @else
+                        <i class="fas fa-heartbeat" style="color:#cbd5e1;"></i> @lang('clinic.vit_not_taken')
+                    @endif
+                    @if ($v->covered_by_visit_id) · <span class="label label-info"><i class="fas fa-redo"></i> @lang('clinic.cover_label')</span>@endif
+                </div>
                 <div style="margin-top:4px;">
                     @if ($v->queue_status == 'with_doctor')
                         <span class="label label-warning">@lang('clinic.queue_with_doctor')</span>

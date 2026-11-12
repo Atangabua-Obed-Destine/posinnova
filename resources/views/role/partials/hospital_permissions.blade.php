@@ -21,7 +21,7 @@
         return \App\Utils\ClinicSettings::sectionOn($hp_business_id, $section);
     };
     $hp_groups = [
-        'reception' => [null, ['patient.view', 'patient.create', 'patient.update', 'patient.delete', 'patient.reset_portal_pin', 'visit.view', 'visit.create', 'visit.close']],
+        'reception' => [null, ['patient.view', 'patient.create', 'patient.update', 'patient.delete', 'patient.reset_portal_pin', 'visit.view', 'visit.create', 'visit.record_vitals', 'visit.close']],
         'doctor' => [null, ['visit.receive_patients', 'consultation.create', 'consultation.view_own', 'consultation.view_all', 'consultation.prescribe', 'consultation.finalize', 'clinic_report.my_practice', 'appointment.manage_own', 'clinic_schedule.manage_own']],
         'lab' => [null, ['lab_test.manage_catalogue', 'lab_request.view', 'lab_request.create', 'lab_result.enter', 'lab_result.view', 'lab_result.validate', 'lab_result.amend']],
         'imaging' => ['imaging', ['imaging.manage_catalogue', 'imaging_request.view', 'imaging_request.create', 'imaging_result.enter', 'imaging_result.view']],

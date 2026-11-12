@@ -134,6 +134,8 @@ class ClinicDashboard
                         'since' => $v->checked_in_at ? Carbon::parse($v->checked_in_at) : null,
                         'booked' => $v->appointment ? substr($v->appointment->start_time, 0, 5) : null,
                         'unpaid' => $unpaid,
+                        // the front desk takes vitals after payment: flag who still needs them
+                        'no_vitals' => ! $v->hasVitals() && $v->queue_status == 'waiting' && ! $unpaid && $user->can('visit.record_vitals'),
                     ];
                 })->all(),
                 'more' => max(0, $active->count() - self::LIST_SIZE),
