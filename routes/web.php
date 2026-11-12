@@ -578,6 +578,8 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('clinic/claims/{id}/settle', [\App\Http\Controllers\ClinicClaimController::class, 'settle']);
     Route::get('clinic/appointments', [\App\Http\Controllers\ClinicAppointmentController::class, 'index']);
     Route::post('clinic/appointments', [\App\Http\Controllers\ClinicAppointmentController::class, 'store']);
+    Route::get('clinic/fees', [\App\Http\Controllers\ClinicFeeController::class, 'index']);
+    Route::post('clinic/fees', [\App\Http\Controllers\ClinicFeeController::class, 'save']);
     Route::get('clinic/whatsapp', [\App\Http\Controllers\ClinicWhatsAppController::class, 'index']);
     Route::post('clinic/whatsapp', [\App\Http\Controllers\ClinicWhatsAppController::class, 'save']);
     Route::post('clinic/whatsapp/test-connection', [\App\Http\Controllers\ClinicWhatsAppController::class, 'testConnection']);

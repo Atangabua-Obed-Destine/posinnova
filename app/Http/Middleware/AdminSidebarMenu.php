@@ -532,6 +532,10 @@ class AdminSidebarMenu
                 if ($u->can('consultation.view_own') || $u->can('consultation.view_all')) {
                     $item(action([\App\Http\Controllers\ConsultationController::class, 'index']), __('lang_v1.consultations'), 'stethoscope', $seg1 == 'consultations', 5.22);
                 }
+                // a doctor who sets their own fee (admins find every doctor's under Clinic setup)
+                if ($u->can('clinic_fee.manage_own') && ! $u->can('clinic_package.manage') && $u->can('visit.receive_patients')) {
+                    $item(action([\App\Http\Controllers\ClinicFeeController::class, 'index']), __('clinic.fee_title_own'), 'cash', $seg1 == 'clinic' && $seg2 == 'fees', 5.229);
+                }
                 if ($u->can('lab_request.view')) {
                     $item(action([\App\Http\Controllers\LabRequestController::class, 'index']), __('clinic.menu_laboratory'), 'microscope', $seg1 == 'lab-requests', 5.23);
                 }
@@ -609,6 +613,8 @@ class AdminSidebarMenu
                             if ($u->can('clinic_package.manage')) {
                                 $sub->url(action([\App\Http\Controllers\ClinicPackageController::class, 'index']), __('clinic.packages'),
                                     ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'packages']);
+                                $sub->url(action([\App\Http\Controllers\ClinicFeeController::class, 'index']), __('clinic.fee_title'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'fees']);
                             }
                             if ($u->can('lab_test.manage_catalogue')) {
                                 $sub->url(action([\App\Http\Controllers\LabTestController::class, 'index']), __('lang_v1.lab_test_catalogue'),

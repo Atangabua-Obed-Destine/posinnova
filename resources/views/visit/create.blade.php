@@ -103,13 +103,18 @@
                             <label class="ci-card {{ $old_package == $p->id ? 'is-on' : '' }}">
                                 <input type="radio" name="package_id" value="{{ $p->id }}" {{ $old_package == $p->id ? 'checked' : '' }}>
                                 <div class="ci-title">{{ $p->name }}</div>
-                                <div class="ci-price">{{ $fmt($p->price) }}</div>
+                                <div class="ci-price js-fee-price" data-key="{{ $p->id }}" data-clinic="{{ $fmt($p->price) }}">{{ $fmt($p->price) }}</div>
+                                <div class="ci-sub js-fee-own" style="display:none;"><i class="fas fa-user-md"></i> @lang('clinic.fee_doctor_price')</div>
                                 @if ($p->description)<div class="ci-covers">{{ $p->description }}</div>@endif
                             </label>
                         @endforeach
                     </div>
-                @elseif ($default_fee > 0)
-                    <p class="text-muted"><i class="fas fa-info-circle"></i> {{ __('clinic.default_fee_note', ['fee' => $fmt($default_fee)]) }}</p>
+                @elseif ($default_fee > 0 || collect($fee_overrides)->contains(fn ($r) => isset($r[0])))
+                    {{-- no packages: one consultation fee, the chosen doctor's own when they have one --}}
+                    <p class="text-muted" id="fee_line"><i class="fas fa-info-circle"></i>
+                        @lang('clinic.fee_checkin_label') <strong class="js-fee-price" data-key="0" data-clinic="{{ $fmt($default_fee) }}" style="color:#1d4ed8; font-size:16px;">{{ $fmt($default_fee) }}</strong>
+                        <span class="js-fee-own" style="display:none;">· <i class="fas fa-user-md"></i> @lang('clinic.fee_doctor_price')</span>
+                        <br><small>@lang('clinic.fee_checkin_help')</small></p>
                 @endif
 
                 <p class="help-block">
@@ -262,6 +267,21 @@
             $(document).on('change', 'input[name=doctor_id]', loadCover);
             loadCover();
             @endif
+
+            // the chosen doctor's own prices (a doctor without one: the clinic's)
+            @php $fee_own_fmt = collect($fee_overrides)->map(fn ($row) => collect($row)->map(fn ($p) => $fmt($p))->all())->all(); @endphp
+            var feeOwn = @json((object) $fee_own_fmt);
+            function showFees() {
+                var d = $('input[name=doctor_id]:checked').val();
+                $('.js-fee-price').each(function () {
+                    var k = String($(this).data('key')), row = d ? feeOwn[d] : null;
+                    var own = row && row[k] !== undefined ? row[k] : null;
+                    $(this).text(own !== null ? own : $(this).data('clinic'));
+                    $(this).siblings('.js-fee-own').toggle(own !== null);
+                });
+            }
+            $(document).on('change', 'input[name=doctor_id]', showFees);
+            showFees();
 
             $('#visit_form').on('submit', function (e) {
                 if ($('#visit_type_hidden').val() !== 'opd') { return true; }

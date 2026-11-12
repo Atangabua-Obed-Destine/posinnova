@@ -67,7 +67,8 @@ class ConsultationController extends Controller
         $fee_billed = $visit->billedAtCheckin();
 
         $departments = Department::forDropdown($business_id, true);
-        $default_fee = \App\Business::where('id', $business_id)->value('consultation_fee') ?: 0;
+        // the fee proposed when nothing was billed at check-in: the visit's doctor's own (or this doctor's), else the clinic's
+        $default_fee = \App\Utils\ClinicFees::price($business_id, $visit->doctor_id ?: auth()->id());
 
         //Lab tests available to request from within the consultation (Phase 4).
         $lab_tests = auth()->user()->can('lab_request.create')

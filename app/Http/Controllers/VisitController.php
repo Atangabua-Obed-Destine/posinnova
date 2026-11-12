@@ -254,7 +254,9 @@ class VisitController extends Controller
         }
 
         return view('visit.create')->with(compact('business_locations', 'preselected_patient', 'doctors', 'packages',
-            'default_fee', 'wards_on', 'pay_first', 'waiting', 'has_plans', 'has_cover', 'appointment'));
+            'default_fee', 'wards_on', 'pay_first', 'waiting', 'has_plans', 'has_cover', 'appointment'))
+            // doctors' own prices: the cards show the chosen doctor's
+            ->with('fee_overrides', \App\Utils\ClinicFees::overrides($business_id));
     }
 
     /**
@@ -409,30 +411,33 @@ class VisitController extends Controller
             // a plan visit is already paid for by the month, a covered return visit by the first consultation
             if ($type == 'opd' && ! empty($location_id) && ! $plan_period && ! $covered_by) {
                 $billing = new HospitalBillingUtil();
-                if ($package && $package->price > 0) {
+                // the doctor's own fee when they have one, else the clinic's price
+                $fee = \App\Utils\ClinicFees::price($business_id, $doctor_id, $package);
+                $doctor_name = $doctor_id ? ($doctors[$doctor_id] ?? null) : null;
+                if ($package && $fee > 0) {
                     $service = \App\Utils\ClinicServices::forPackage($package, $user_id);
                     $fee_transaction = $billing->chargePatientFee([
                         'business_id' => $business_id,
                         'contact_id' => $patient->id,
                         'lines' => [['variation_id' => $service->id, 'product_id' => $service->product_id,
-                            'quantity' => 1, 'unit_price' => (float) $package->price,
+                            'quantity' => 1, 'unit_price' => $fee,
                             'note' => $visit->ref_no]],
                         'charge_type' => 'consultation',
-                        'description' => __('clinic.package_product_name', ['name' => $package->name]).' · '.$visit->ref_no,
+                        'description' => implode(' · ', array_filter([__('clinic.package_product_name', ['name' => $package->name]), $doctor_name, $visit->ref_no])),
                         'location_id' => $location_id,
                         'visit_id' => $visit->id,
                         'created_by' => $user_id,
                         'reference_type' => 'visit',
                     ]);
                 } elseif (! $package) {
-                    $default_fee = (float) (\App\Business::where('id', $business_id)->value('consultation_fee') ?: 0);
+                    $default_fee = $fee;
                     if ($default_fee > 0) {
                         $fee_transaction = $billing->chargePatientFee([
                             'business_id' => $business_id,
                             'contact_id' => $patient->id,
                             'amount' => $default_fee,
                             'charge_type' => 'consultation',
-                            'description' => __('lang_v1.consultation_fee').' · '.$visit->ref_no,
+                            'description' => implode(' · ', array_filter([__('lang_v1.consultation_fee'), $doctor_name, $visit->ref_no])),
                             'location_id' => $location_id,
                             'visit_id' => $visit->id,
                             'created_by' => $user_id,
