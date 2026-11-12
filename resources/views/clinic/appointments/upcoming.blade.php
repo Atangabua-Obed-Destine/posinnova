@@ -62,12 +62,7 @@
         </form>
     </div>
 
-    @if (session('appt_whatsapp'))
-        <div class="callout callout-success" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <span><i class="fas fa-check"></i> @lang('clinic.appt_tell_patient')</span>
-            <a href="{{ session('appt_whatsapp') }}" target="_blank" rel="noopener" class="btn btn-sm btn-success"><i class="fab fa-whatsapp"></i> @lang('clinic.appt_send_whatsapp')</a>
-        </div>
-    @endif
+    @include('clinic.appointments.partials.wa_callout')
 
     {{-- patients' requests from the portal wait for an answer: first --}}
     @if ($requests->isNotEmpty())
@@ -87,6 +82,7 @@
                         @if (in_array($ap->doctor_id.'|'.$ap->date->toDateString(), $offs))
                             <div class="ap-warn"><i class="fas fa-exclamation-triangle"></i> @lang('clinic.appt_on_day_off')</div>
                         @endif
+                        <div style="margin-top:3px;">@include('clinic.appointments.partials.wa_status')</div>
                         @include('clinic.appointments.partials.appt_actions')
                     </div>
                 </div>
@@ -112,6 +108,7 @@
                         @if (in_array($ap->doctor_id.'|'.$day, $offs))
                             <div class="ap-warn"><i class="fas fa-exclamation-triangle"></i> @lang('clinic.appt_on_day_off')</div>
                         @endif
+                        <div style="margin-top:3px;">@include('clinic.appointments.partials.wa_status')</div>
                         @include('clinic.appointments.partials.appt_actions')
                     </div>
                 </div>

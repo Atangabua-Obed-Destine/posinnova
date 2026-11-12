@@ -109,6 +109,16 @@
                             <tr><th>@lang('lang_v1.age')</th><td>{{ !is_null($age) ? $age . ' ' . __('lang_v1.years') : '-' }}</td></tr>
                             <tr><th>@lang('lang_v1.blood_group')</th><td>{{ optional($pd)->blood_group ?: '-' }}</td></tr>
                             <tr><th>@lang('contact.mobile')</th><td>{{ $contact->mobile ?: '-' }}</td></tr>
+                            <tr><th><i class="fab fa-whatsapp" style="color:#16a34a;"></i> @lang('clinic.wa_messages_short')</th>
+                                <td id="wa_consent_cell">
+                                    @if (optional($pd)->whatsapp_opt_in)
+                                        <span class="text-success"><i class="fas fa-check"></i> {{ __('clinic.wa_consent_yes', ['lang' => optional($pd)->whatsapp_language == 'en' ? 'English' : (optional($pd)->whatsapp_language == 'fr' ? 'Français' : __('clinic.wa_consent_lang_default'))]) }}</span>
+                                    @elseif (optional($pd)->whatsapp_opt_out_at)
+                                        <span class="text-warning"><i class="fas fa-ban"></i> {{ __('clinic.wa_consent_stopped', ['date' => @format_date($pd->whatsapp_opt_out_at)]) }}</span>
+                                    @else
+                                        <span class="text-muted">@lang('clinic.wa_consent_no')</span>
+                                    @endif
+                                </td></tr>
                             <tr><th>@lang('contact.alternate_contact_number')</th><td>{{ $contact->alternate_number ?: '-' }}</td></tr>
                             <tr><th>@lang('business.email')</th><td>{{ $contact->email ?: '-' }}</td></tr>
                             <tr><th>@lang('lang_v1.address')</th><td>{{ implode(', ', array_filter([$contact->address_line_1, $contact->city, $contact->state, $contact->country])) ?: '-' }}</td></tr>

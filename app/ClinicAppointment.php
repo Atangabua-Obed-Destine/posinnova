@@ -19,7 +19,22 @@ class ClinicAppointment extends Model
         'confirmed_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'reminded_at' => 'datetime',
+        'patient_reply_at' => 'datetime',
     ];
+
+    /** WhatsApp messages about this appointment (sent automatically, and the patient's answers). */
+    public function whatsappMessages()
+    {
+        return $this->hasMany(ClinicWhatsappMessage::class, 'appointment_id')->orderBy('id');
+    }
+
+    /** The latest automatic message sent about it, for the diary's delivery tick. */
+    public function lastWhatsappOut()
+    {
+        return $this->relationLoaded('whatsappMessages')
+            ? $this->whatsappMessages->where('direction', 'out')->sortByDesc('id')->first()
+            : $this->whatsappMessages()->where('direction', 'out')->reorder()->orderByDesc('id')->first();
+    }
 
     /** Statuses that hold the slot and still lie ahead. */
     const OPEN = ['requested', 'confirmed'];

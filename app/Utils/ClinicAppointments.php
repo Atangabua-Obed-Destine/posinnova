@@ -117,7 +117,7 @@ class ClinicAppointments
         $date = Carbon::parse($date)->startOfDay();
         $held = ClinicAppointment::forBusiness($business_id)->where('doctor_id', $doctor_id)
             ->whereDate('date', $date->toDateString())->whereNotNull('slot_key')
-            ->with('patient.patientDetails')->get()
+            ->with(['patient.patientDetails', 'whatsappMessages'])->get()
             ->keyBy(fn ($a) => $a->start);
 
         // a day off (or a day without hours) offers nothing, but bookings already
@@ -328,19 +328,10 @@ class ClinicAppointments
      */
     public static function whatsappLink($business_id, $phone, $text)
     {
-        $digits = preg_replace('/\D+/', '', (string) $phone);
-        if (str_starts_with((string) trim($phone), '00')) {
-            $digits = substr($digits, 2);
-        }
-        if (strlen($digits) < 8) {
-            return null;
-        }
-        $cc = preg_replace('/\D+/', '', (string) ClinicSettings::get($business_id, 'whatsapp_country_code'));
-        if ($cc !== '' && ! str_starts_with($digits, $cc) && strlen($digits) <= 10) {
-            $digits = $cc.ltrim($digits, '0');
-        }
+        // the same number the automatic messages use
+        $digits = ClinicWhatsApp::waNumber($business_id, $phone);
 
-        return 'https://wa.me/'.$digits.'?text='.rawurlencode($text);
+        return $digits ? 'https://wa.me/'.$digits.'?text='.rawurlencode($text) : null;
     }
 
     /**

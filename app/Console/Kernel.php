@@ -37,6 +37,9 @@ class Kernel extends ConsoleKernel
             //PosInnova clinic: monthly plan invoices (also caught up at check-in)
             $schedule->command('clinic:bill-plans')->dailyAt('00:30');
 
+            //PosInnova clinic: tomorrow's appointment reminders on WhatsApp, from each clinic's reminder time
+            $schedule->command('clinic:whatsapp-reminders')->everyTenMinutes()->withoutOverlapping(30);
+
         }
 
         if ($env === 'demo') {

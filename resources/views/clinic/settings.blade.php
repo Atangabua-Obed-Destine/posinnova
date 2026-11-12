@@ -129,6 +129,8 @@
                     {!! Form::text('whatsapp_country_code', $s['whatsapp_country_code'], ['class' => 'form-control', 'style' => 'max-width:120px;', 'maxlength' => 5]) !!}
                     <p class="help-block">@lang('clinic.appt_setting_cc_help')</p>
                 </div>
+                <p style="margin:0;"><a href="{{ action([\App\Http\Controllers\ClinicWhatsAppController::class, 'index']) }}" class="btn btn-sm btn-default">
+                    <i class="fab fa-whatsapp" style="color:#16a34a;"></i> @lang('clinic.wa_settings_link')</a></p>
             @endcomponent
 
             @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.patient_portal')])

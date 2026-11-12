@@ -267,6 +267,7 @@ class PortalController extends Controller
             'next_of_kin_phone' => 'nullable|string|max:30',
             'next_of_kin_relationship' => 'nullable|string|max:50',
             'known_allergies' => 'nullable|string|max:500',
+            'whatsapp_language' => 'nullable|in:en,fr',
         ]);
 
         if (! empty($data['mobile'])) {
@@ -274,7 +275,7 @@ class PortalController extends Controller
             $patient->save();
         }
 
-        \App\PatientDetail::updateOrCreate(
+        $details = \App\PatientDetail::updateOrCreate(
             ['contact_id' => $patient->id],
             [
                 'business_id' => $patient->business_id,
@@ -284,6 +285,12 @@ class PortalController extends Controller
                 'known_allergies' => $data['known_allergies'] ?? null,
             ]
         );
+        // the patient's own choice about appointment messages on WhatsApp
+        if ($request->has('whatsapp_opt_in')) {
+            $details->setWhatsappConsent($request->boolean('whatsapp_opt_in'));
+            $details->whatsapp_language = $data['whatsapp_language'] ?? null;
+            $details->save();
+        }
 
         return redirect()->route('portal.profile')->with('status', __('lang_v1.portal_profile_saved'));
     }

@@ -19,7 +19,26 @@ class PatientDetail extends Model
         'date_of_birth' => 'date',
         'insurance_expiry_date' => 'date',
         'insurance_coverage_pct' => 'decimal:2',
+        'whatsapp_opt_in' => 'boolean',
+        'whatsapp_opt_in_at' => 'datetime',
+        'whatsapp_opt_out_at' => 'datetime',
     ];
+
+    /**
+     * Records the patient's WhatsApp consent (patient form, portal, or STOP).
+     * The dates change only when the answer changes.
+     */
+    public function setWhatsappConsent($agrees)
+    {
+        $agrees = (bool) $agrees;
+        if ($agrees && ! $this->whatsapp_opt_in) {
+            $this->whatsapp_opt_in_at = now();
+            $this->whatsapp_opt_out_at = null;
+        } elseif (! $agrees && $this->whatsapp_opt_in) {
+            $this->whatsapp_opt_out_at = now();
+        }
+        $this->whatsapp_opt_in = $agrees;
+    }
 
     public function contact()
     {

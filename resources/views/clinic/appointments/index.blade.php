@@ -64,12 +64,7 @@
         @endif
     </div>
 
-    @if (session('appt_whatsapp'))
-        <div class="callout callout-success" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <span><i class="fas fa-check"></i> @lang('clinic.appt_tell_patient')</span>
-            <a href="{{ session('appt_whatsapp') }}" target="_blank" rel="noopener" class="btn btn-sm btn-success"><i class="fab fa-whatsapp"></i> @lang('clinic.appt_send_whatsapp')</a>
-        </div>
-    @endif
+    @include('clinic.appointments.partials.wa_callout')
 
     @if (empty($with_hours))
         <div class="callout callout-info">
@@ -125,6 +120,7 @@
                                     @if ($ap->reason) · {{ $ap->reason }}@endif
                                     @if ($ap->reminded_at) · <i class="fab fa-whatsapp"></i> {{ __('clinic.appt_reminded', ['date' => @format_datetime($ap->reminded_at)]) }}@endif
                                 </div>
+                                <div style="margin-top:3px;">@include('clinic.appointments.partials.wa_status')</div>
                                 @include('clinic.appointments.partials.appt_actions')
                             @elseif ($s['state'] == 'free')
                                 <span class="ap-free">@lang('clinic.appt_free')</span>

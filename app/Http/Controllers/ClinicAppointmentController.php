@@ -136,7 +136,7 @@ class ClinicAppointmentController extends Controller
         };
         $requests = $scope(ClinicAppointment::forBusiness($business_id)->where('status', 'requested'))
             ->whereDate('date', '>=', Carbon::today()->toDateString())
-            ->with(['patient.patientDetails', 'doctor'])->orderBy('date')->orderBy('start_time')->get();
+            ->with(['patient.patientDetails', 'doctor', 'whatsappMessages'])->orderBy('date')->orderBy('start_time')->get();
         $tomorrow = Carbon::tomorrow();
         $reminders = $scope(ClinicAppointment::forBusiness($business_id)->where('status', 'confirmed'))
             ->whereDate('date', $tomorrow->toDateString())->whereNull('reminded_at');
@@ -169,9 +169,9 @@ class ClinicAppointmentController extends Controller
             $base->where('doctor_id', $doctor_id);
         }
         $requests = (clone $base)->where('status', 'requested')
-            ->with(['patient.patientDetails', 'doctor'])->orderBy('date')->orderBy('start_time')->get();
+            ->with(['patient.patientDetails', 'doctor', 'whatsappMessages'])->orderBy('date')->orderBy('start_time')->get();
         $booked = (clone $base)->where('status', 'confirmed')->whereDate('date', '<=', $to->toDateString())
-            ->with(['patient.patientDetails', 'doctor'])->orderBy('date')->orderBy('start_time')->get();
+            ->with(['patient.patientDetails', 'doctor', 'whatsappMessages'])->orderBy('date')->orderBy('start_time')->get();
         $by_day = $booked->groupBy(fn ($a) => $a->date->toDateString());
 
         // days off in the range, to flag bookings that fall on one
@@ -220,7 +220,27 @@ class ClinicAppointmentController extends Controller
         app(\App\Utils\Util::class)->activityLog($appt, 'appointment_booked', null, ['patient' => optional($appt->patient)->name, 'date' => $appt->date->toDateString(), 'time' => $appt->start]);
 
         return $back->with('status', ['success' => true, 'msg' => __('clinic.appt_booked', ['time' => $appt->start])])
-            ->with('appt_whatsapp', ClinicAppointments::whatsappFor($appt->load(['patient', 'doctor'])));
+            ->with($this->whatsappFlash($appt, 'confirmation'));
+    }
+
+    /**
+     * After a booking event: the automatic WhatsApp message when the clinic sends
+     * them (and the patient agreed), otherwise - or when it failed - the link
+     * reception opens by hand.
+     */
+    private function whatsappFlash(ClinicAppointment $appt, $kind)
+    {
+        $appt->load(['patient.patientDetails', 'doctor']);
+        $sent = \App\Utils\ClinicWhatsApp::notify($appt, $kind, auth()->id());
+        if ($sent && $sent->status != 'failed') {
+            return ['appt_whatsapp_auto' => true];
+        }
+        $flash = ['appt_whatsapp' => ClinicAppointments::whatsappFor($appt, $kind == 'moved')];
+        if ($sent) {
+            $flash['appt_whatsapp_error'] = $sent->error_message;
+        }
+
+        return $flash;
     }
 
     /** Accepts a patient's request from the portal. */
@@ -237,7 +257,7 @@ class ClinicAppointmentController extends Controller
         $appt->save();
 
         return $this->back($request, $appt->date)->with('status', ['success' => true, 'msg' => __('clinic.appt_confirmed')])
-            ->with('appt_whatsapp', ClinicAppointments::whatsappFor($appt->load(['patient', 'doctor'])));
+            ->with($this->whatsappFlash($appt, 'confirmation'));
     }
 
     public function decline(Request $request, $id)
@@ -282,7 +302,7 @@ class ClinicAppointmentController extends Controller
 
         return $this->back($request, $moved->date)
             ->with('status', ['success' => true, 'msg' => __('clinic.appt_moved', ['date' => $util->format_date($moved->date->toDateString()), 'time' => $moved->start])])
-            ->with('appt_whatsapp', ClinicAppointments::whatsappFor($moved->load(['patient', 'doctor']), true));
+            ->with($this->whatsappFlash($moved, 'moved'));
     }
 
     /** The patient did not come (only once the slot has started). */

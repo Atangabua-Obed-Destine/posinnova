@@ -96,6 +96,37 @@
 
         <div class="clearfix"></div>
 
+        {{-- PosInnova: consent to automatic WhatsApp messages about appointments (nothing is sent without it) --}}
+        @php $wa_on = (bool) old('whatsapp_opt_in', optional($pd)->whatsapp_opt_in); @endphp
+        <div class="col-md-12">
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:8px 12px; margin-bottom:14px;" id="wa_consent_box">
+                <div class="checkbox" style="margin:0;">
+                    <label style="font-weight:600;">
+                        <input type="checkbox" name="whatsapp_opt_in" value="1" id="whatsapp_opt_in" {{ $wa_on ? 'checked' : '' }}>
+                        <i class="fab fa-whatsapp" style="color:#16a34a;"></i> @lang('clinic.wa_consent_label')
+                    </label>
+                    <span style="display:inline-flex; gap:6px; align-items:center; margin-left:8px;">
+                        <label for="whatsapp_language" style="margin:0; font-weight:normal;" class="text-muted">@lang('clinic.wa_consent_lang')</label>
+                        <select name="whatsapp_language" id="whatsapp_language" class="form-control input-sm" style="width:auto;">
+                            <option value="">@lang('clinic.wa_consent_lang_default')</option>
+                            <option value="fr" {{ old('whatsapp_language', optional($pd)->whatsapp_language) == 'fr' ? 'selected' : '' }}>Français</option>
+                            <option value="en" {{ old('whatsapp_language', optional($pd)->whatsapp_language) == 'en' ? 'selected' : '' }}>English</option>
+                        </select>
+                    </span>
+                </div>
+                <p class="help-block" style="margin:4px 0 0;">
+                    @lang('clinic.wa_consent_help')
+                    @if (! empty($pd) && $pd->whatsapp_opt_out_at && ! $pd->whatsapp_opt_in)
+                        <br><span class="text-warning"><i class="fas fa-ban"></i> {{ __('clinic.wa_consent_stopped', ['date' => @format_date($pd->whatsapp_opt_out_at)]) }}</span>
+                    @elseif (! empty($pd) && $pd->whatsapp_opt_in && $pd->whatsapp_opt_in_at)
+                        <br><span class="text-success"><i class="fas fa-check"></i> {{ __('clinic.wa_consent_since', ['date' => @format_date($pd->whatsapp_opt_in_at)]) }}</span>
+                    @endif
+                </p>
+            </div>
+        </div>
+
+        <div class="clearfix"></div>
+
         <div class="col-md-6">
             <div class="form-group">
                 {!! Form::label('address_line_1', __('lang_v1.address_line_1') . ':') !!}

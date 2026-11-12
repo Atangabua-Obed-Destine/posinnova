@@ -578,6 +578,17 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('clinic/claims/{id}/settle', [\App\Http\Controllers\ClinicClaimController::class, 'settle']);
     Route::get('clinic/appointments', [\App\Http\Controllers\ClinicAppointmentController::class, 'index']);
     Route::post('clinic/appointments', [\App\Http\Controllers\ClinicAppointmentController::class, 'store']);
+    Route::get('clinic/whatsapp', [\App\Http\Controllers\ClinicWhatsAppController::class, 'index']);
+    Route::post('clinic/whatsapp', [\App\Http\Controllers\ClinicWhatsAppController::class, 'save']);
+    Route::post('clinic/whatsapp/test-connection', [\App\Http\Controllers\ClinicWhatsAppController::class, 'testConnection']);
+    Route::post('clinic/whatsapp/register', [\App\Http\Controllers\ClinicWhatsAppController::class, 'register']);
+    Route::post('clinic/whatsapp/subscribe', [\App\Http\Controllers\ClinicWhatsAppController::class, 'subscribe']);
+    Route::post('clinic/whatsapp/check-templates', [\App\Http\Controllers\ClinicWhatsAppController::class, 'checkTemplates']);
+    Route::post('clinic/whatsapp/send-test', [\App\Http\Controllers\ClinicWhatsAppController::class, 'sendTest']);
+    Route::post('clinic/whatsapp/new-verify-token', [\App\Http\Controllers\ClinicWhatsAppController::class, 'newVerifyToken']);
+    Route::get('clinic/whatsapp/inbox', [\App\Http\Controllers\ClinicWhatsAppController::class, 'inbox']);
+    Route::post('clinic/whatsapp/inbox/{id}/handled', [\App\Http\Controllers\ClinicWhatsAppController::class, 'handled']);
+    Route::post('clinic/whatsapp/inbox/{id}/reply', [\App\Http\Controllers\ClinicWhatsAppController::class, 'reply']);
     Route::get('clinic/appointments/upcoming', [\App\Http\Controllers\ClinicAppointmentController::class, 'upcoming']);
     Route::get('clinic/appointments/free-slots', [\App\Http\Controllers\ClinicAppointmentController::class, 'freeSlots']);
     Route::post('clinic/appointments/{id}/move', [\App\Http\Controllers\ClinicAppointmentController::class, 'move']);
@@ -750,6 +761,11 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
 | Patient Portal (hospital module) — external, separate `patient` guard
 |--------------------------------------------------------------------------
 */
+// PosInnova clinic: Meta's WhatsApp webhook (public; /webhook/* is outside CSRF) and the privacy notice Meta asks for
+Route::get('webhook/whatsapp', [\App\Http\Controllers\WhatsAppWebhookController::class, 'verify']);
+Route::post('webhook/whatsapp', [\App\Http\Controllers\WhatsAppWebhookController::class, 'receive']);
+Route::get('privacy', [\App\Http\Controllers\ClinicWhatsAppController::class, 'privacy'])->middleware('language');
+
 Route::middleware(['setData', 'language'])->prefix('portal')->name('portal.')->group(function () {
     Route::get('login', [\App\Http\Controllers\PatientPortal\AuthController::class, 'showLogin'])->name('login');
     Route::post('login', [\App\Http\Controllers\PatientPortal\AuthController::class, 'login'])->name('login.submit');

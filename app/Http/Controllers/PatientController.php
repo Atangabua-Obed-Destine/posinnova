@@ -242,6 +242,9 @@ class PatientController extends Controller
                 'notes' => $request->input('notes') ?: null,
             ]);
             $details->setPortalPin($portal_pin);
+            // consent to automatic WhatsApp messages about appointments
+            $details->setWhatsappConsent($request->boolean('whatsapp_opt_in'));
+            $details->whatsapp_language = in_array($request->input('whatsapp_language'), ['en', 'fr']) ? $request->input('whatsapp_language') : null;
             $details->save();
 
             event(new ContactCreatedOrModified($input, 'added'));
@@ -484,6 +487,8 @@ class PatientController extends Controller
             if ($new_pin !== '') {
                 $details->setPortalPin($new_pin);
             }
+            $details->setWhatsappConsent($request->boolean('whatsapp_opt_in'));
+            $details->whatsapp_language = in_array($request->input('whatsapp_language'), ['en', 'fr']) ? $request->input('whatsapp_language') : null;
             $details->save();
 
             $this->contactUtil->activityLog($contact, 'edited');

@@ -19,6 +19,7 @@
         ['icon' => 'fa-venus-mars', 'label' => __('lang_v1.sex'), 'value' => optional($pd)->sex ?: '—'],
         ['icon' => 'fa-tint', 'label' => __('lang_v1.blood_group'), 'value' => optional($pd)->blood_group ?: '—'],
         ['icon' => 'fa-mobile-alt', 'label' => __('lang_v1.mobile'), 'value' => $patient->mobile ?: '—'],
+        ['icon' => 'fa-comment-dots', 'label' => __('clinic.wa_portal_row'), 'value' => optional($pd)->whatsapp_opt_in ? __('clinic.wa_portal_row_yes') : __('clinic.wa_portal_row_no')],
         ['icon' => 'fa-exclamation-triangle', 'label' => __('lang_v1.known_allergies'), 'value' => optional($pd)->known_allergies ?: __('lang_v1.none')],
         ['icon' => 'fa-user-shield', 'label' => __('lang_v1.next_of_kin'), 'value' => trim((optional($pd)->next_of_kin_name ?? '').' '.(optional($pd)->next_of_kin_phone ? '('.$pd->next_of_kin_phone.')' : '')) ?: '—'],
         ['icon' => 'fa-shield-alt', 'label' => __('lang_v1.insurance_provider'), 'value' => optional($pd)->insurance_provider ?: '—'],
