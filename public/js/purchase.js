@@ -1293,24 +1293,9 @@ $(document).on('click', 'button#submit_purchase_form', function(e) {
             $purchase_btn.attr('disabled', true);
             $('form#add_purchase_form').submit();
         };
-        // PosInnova "check before recording", once the checks above passed
+        // PosInnova "check before recording", once the checks above passed: the whole purchase, previewed
         if (window.PosConfirm && PosConfirm.enabled('purchase')) {
-            var rows = [];
-            var supplier = $.trim($('#supplier_id option:selected').text());
-            if (supplier) { rows.push([PosConfirm.label('supplier'), supplier]); }
-            var ref = $.trim($('#ref_no').val() || '');
-            if (ref) { rows.push([PosConfirm.label('ref'), ref]); }
-            var status = $.trim($('#add_purchase_form select[name="status"] option:selected').text());
-            if (status) { rows.push([PosConfirm.label('status'), status]); }
-            rows.push([PosConfirm.label('items'), String($('#purchase_entry_table tbody tr').length)]);
-            var $pay = $('.payment_row').filter(':visible').first();
-            if ($pay.length) {
-                rows.push([PosConfirm.label('paid'), __currency_trans_from_en(__read_number($pay.find('.payment-amount')) || 0, true)]);
-                var method = $.trim($pay.find('.payment_types_dropdown option:selected').text());
-                if (method) { rows.push([PosConfirm.label('method'), method]); }
-            }
-            if ($('#payment_due').length) { rows.push([PosConfirm.label('due'), $.trim($('#payment_due').text())]); }
-            PosConfirm.ask({ kind: 'purchase', amount: __read_number($('#grand_total_hidden')) || 0, rows: rows }, save_purchase);
+            PosConfirm.ask(pi_purchase_preview(), save_purchase);
         } else {
             save_purchase();
         }
@@ -1606,3 +1591,161 @@ $(document).on('change', '.per_unit_prices_wrapper input', function() {
         btn.find('.configured_badge').html('');
     }
 });
+
+
+/**
+ * PosInnova: everything the purchase will record, for the "check before recording" dialog:
+ * the details, every product line (quantity, unit costs, discount, tax, line total, lot and expiry),
+ * the totals (discount, tax, shipping, additional expenses) and the payment.
+ * Works on the add and the edit screen (the edit screen has no payment section).
+ */
+function pi_purchase_preview() {
+    var L = PosConfirm.label;
+    var $f = $('form#add_purchase_form');
+    var cur = function (n) { return __currency_trans_from_en(n || 0, true, true); };
+    var numf = function (n) { return __number_f(n || 0, false, true); };
+    var picked = function (sel) {
+        var $s = $f.find(sel);
+        return $s.length && $s.val() ? $.trim($s.find('option:selected').text()) : '';
+    };
+    var val = function (sel) { return $.trim($f.find(sel).val() || ''); };
+    var add = function (rows, label, value, flag) {
+        if (value !== '' && value !== null && value !== undefined) { rows.push([label, value, flag]); }
+    };
+
+    // details
+    var details = [];
+    add(details, L('supplier'), picked('#supplier_id'));
+    add(details, L('ref'), val('[name="ref_no"]'));
+    add(details, L('p_date'), val('[name="transaction_date"]'));
+    add(details, L('location'), picked('select[name="location_id"]'));
+    add(details, L('p_status'), picked('select[name="status"]'));
+    var term = val('[name="pay_term_number"]');
+    if (term) { add(details, L('p_pay_term'), term + ' ' + picked('select[name="pay_term_type"]')); }
+    var $ex = $f.find('[name="exchange_rate"]');
+    if ($ex.length && $ex.is(':visible')) {
+        var ex = parseFloat($ex.val());
+        if (ex && ex !== 1) { add(details, L('p_exchange'), String(ex)); }
+    }
+
+    // product lines
+    var lines = [], any_disc = false, any_tax = false, show_sell = false, total_qty = 0;
+    $('#purchase_entry_table tbody tr').each(function () {
+        var $tr = $(this), $qty = $tr.find('.purchase_quantity');
+        if (!$qty.length) { return; }
+        var $name = $tr.children('td').eq(1).clone();
+        $name.find('small, a, .label, input, select, br').remove();
+        var name = $.trim($name.text().replace(/\s+/g, ' '));
+        var $qtd = $qty.closest('td'), unit = '';
+        if ($qtd.find('.sub_unit').length) {
+            unit = $.trim($qtd.find('.sub_unit option:selected').text());
+        } else {
+            unit = $.trim($qtd.contents().filter(function () { return this.nodeType === 3; }).text().replace(/\s+/g, ' '));
+        }
+        var qty = __read_number($qty, true) || 0;
+        total_qty += qty;
+        var disc = __read_number($tr.find('.inline_discounts'), true) || 0;
+        var $tax = $tr.find('.purchase_line_tax_id');
+        var tax_name = $tax.length && $tax.val() ? $.trim($tax.find('option:selected').text()) : '';
+        if (disc) { any_disc = true; }
+        if (tax_name) { any_tax = true; }
+        var $sell = $tr.find('.default_sell_price');
+        if ($sell.length && $sell.is(':visible')) { show_sell = true; }
+        var sub = [];
+        var lot = $.trim($tr.find('input[name$="[lot_number]"]').val() || '');
+        if (lot) { sub.push(L('p_lot') + ': ' + lot); }
+        var $mfg = $tr.find('.mfg_date');
+        if ($mfg.length && $mfg.val() && $mfg.closest('.hide').length === 0) { sub.push(L('p_mfg') + ': ' + $mfg.val()); }
+        var exp = $.trim($tr.find('.exp_date').val() || '');
+        if (exp) { sub.push(L('p_exp') + ': ' + exp); }
+        var goes = $.trim($tr.find('.pi-row-location-name').text());
+        if (goes) { sub.push(L('goes_to') + ': ' + goes); }
+        lines.push({
+            name: name, sub: sub, qty: numf(qty) + (unit ? ' ' + unit : ''),
+            cost: __read_number($tr.find('.purchase_unit_cost_without_discount'), true) || 0,
+            disc: disc,
+            cost_bt: __read_number($tr.find('.purchase_unit_cost'), true) || 0,
+            tax: tax_name,
+            cost_at: __read_number($tr.find('.purchase_unit_cost_after_tax'), true) || 0,
+            total: __read_number($tr.find('.row_subtotal_after_tax_hidden'), true) || 0,
+            sell: $sell.length ? __read_number($sell, true) : null
+        });
+    });
+    var head = ['#', L('p_product'), { text: L('p_qty'), num: true }, { text: L('p_cost_before_disc'), num: true }];
+    if (any_disc) { head.push({ text: L('p_disc_pct'), num: true }, { text: L('p_cost_before_tax'), num: true }); }
+    if (any_tax) { head.push(L('p_product_tax'), { text: L('p_cost_after_tax'), num: true }); }
+    head.push({ text: L('p_line_total'), num: true });
+    if (show_sell) { head.push({ text: L('p_selling_price'), num: true }); }
+    var item_rows = $.map(lines, function (l, i) {
+        var r = [String(i + 1), { text: l.name, sub: l.sub }, l.qty, cur(l.cost)];
+        if (any_disc) { r.push(l.disc ? numf(l.disc) + ' %' : '-', cur(l.cost_bt)); }
+        if (any_tax) { r.push(l.tax || L('none'), cur(l.cost_at)); }
+        r.push({ text: cur(l.total), strong: true });
+        if (show_sell) { r.push(l.sell === null ? '-' : cur(l.sell)); }
+        return [r];
+    });
+
+    // totals
+    var totals = [];
+    var grand = __read_number($('#grand_total_hidden'), true) || 0;
+    totals.push([L('p_net_total'), cur(__read_number($('#total_subtotal_input'), true))]);
+    var dtype = $f.find('select[name="discount_type"]').val();
+    var damount = __read_number($f.find('[name="discount_amount"]'), true) || 0;
+    if (dtype && damount) {
+        totals.push([L('p_discount') + (dtype === 'percentage' ? ' (' + numf(damount) + ' %)' : ''), '- ' + $.trim($('#discount_calculated_amount').text()), 'minus']);
+    }
+    var $ptax = $f.find('select[name="tax_id"]');
+    if ($ptax.val() && __number_uf($('#tax_calculated_amount').text(), true)) {
+        totals.push([L('p_tax') + ' (' + $.trim($ptax.find('option:selected').text()) + ')', '+ ' + $.trim($('#tax_calculated_amount').text())]);
+    }
+    var ship = __read_number($f.find('[name="shipping_charges"]'), true) || 0;
+    if (ship) { totals.push([L('p_shipping'), '+ ' + cur(ship)]); }
+    var ship_details = val('[name="shipping_details"]');
+    if (ship_details) { totals.push([L('p_shipping_details'), ship_details]); }
+    for (var k = 1; k <= 4; k++) {
+        var ev = __read_number($('#additional_expense_value_' + k), true) || 0;
+        if (ev) { totals.push([$.trim($('#additional_expense_key_' + k).val() || '') || L('expense'), '+ ' + cur(ev)]); }
+    }
+    totals.push([L('p_total'), cur(grand), 'strong']);
+
+    // payment (the add screen only)
+    var payment = [];
+    var $pay = $f.find('.payment_row input.payment-amount').first();
+    if ($pay.length) {
+        var paid = __read_number($pay, true) || 0;
+        if (paid) {
+            payment.push([L('paid'), cur(paid)]);
+            var $prow = $pay.closest('.payment_row');
+            add(payment, L('method'), $.trim($prow.find('.payment_types_dropdown option:selected').text()));
+            var $acc = $prow.find('select.account-dropdown');
+            if ($acc.length && $acc.val() && $acc.closest('.hide').length === 0) { add(payment, L('account'), $.trim($acc.find('option:selected').text())); }
+            add(payment, L('p_paid_on'), $.trim($prow.find('.paid_on').val() || ''));
+            add(payment, L('p_payment_note'), $.trim($prow.find('textarea[id^="note_"]').val() || ''));
+        } else {
+            payment.push([L('paid'), L('nothing_paid'), 'warn']);
+        }
+        var due = grand - paid;
+        payment.push([L('p_payment_due'), cur(due), Math.abs(due) > 0.004 ? 'strong' : null]);
+    }
+
+    var notes = val('[name="additional_notes"]');
+    return {
+        kind: 'purchase',
+        wide: true,
+        amount: grand,
+        amountText: cur(grand),
+        rowsTitle: L('sec_details'),
+        rows: details,
+        items: {
+            title: L('sec_products'),
+            head: head,
+            rows: item_rows,
+            foot: L('lines_units').replace(':lines', lines.length).replace(':qty', numf(total_qty))
+        },
+        groups: [
+            { title: L('sec_totals'), rows: totals, num: true },
+            { title: L('sec_payment'), rows: payment, num: true }
+        ],
+        note: notes ? L('p_notes') + ': ' + notes : ''
+    };
+}

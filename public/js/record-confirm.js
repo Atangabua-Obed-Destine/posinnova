@@ -62,6 +62,17 @@
         return $.trim($el.text());
     }
 
+    /** Label/value rows; a third value 'strong' (a total), 'minus' (a deduction) or 'warn' styles the row. */
+    function fillRows($table, rows, numeric) {
+        $.each(rows || [], function (i, r) {
+            var v = r[1] === '' || r[1] === null || r[1] === undefined ? '-' : r[1];
+            $('<tr>').addClass(r[2] ? 'rc-' + r[2] : '')
+                .append($('<th>').text(r[0]))
+                .append($('<td>').text(v).toggleClass('rc-num', !!numeric))
+                .appendTo($table);
+        });
+    }
+
     /** The dialog's content for a form that opted in. */
     function fromForm(form) {
         var $f = $(form), opts = { kind: $f.data('record-confirm') || 'default', rows: [] };
@@ -96,7 +107,12 @@
             go();
         });
         $modal.on('click', '.rc-back', function () { $modal.modal('hide'); });
-        $modal.on('shown.bs.modal', function () { $('#rc_checkbox').trigger('focus'); });
+        // focus the tick box but open at the top: a long preview starts with its title and total in view
+        $modal.on('shown.bs.modal', function () {
+            var box = document.getElementById('rc_checkbox');
+            try { box.focus({ preventScroll: true }); } catch (e) { box.focus(); }
+            $modal.scrollTop(0);
+        });
         // over another dialog: its own backdrop must sit above that dialog, not under it
         $modal.on('show.bs.modal', function () {
             setTimeout(function () { $('.modal-backdrop').last().addClass('rc-backdrop'); }, 0);
@@ -133,9 +149,47 @@
         } else {
             m.find('.rc-amount-box').hide();
         }
-        var $rows = m.find('.rc-rows').empty();
-        $.each(opts.rows || [], function (i, r) {
-            $('<tr>').append($('<th>').text(r[0])).append($('<td>').text(r[1] === '' || r[1] === null || r[1] === undefined ? '-' : r[1])).appendTo($rows);
+        if (opts.amountText) { m.find('.rc-amount').text(opts.amountText); }
+        m.toggleClass('rc-wide', !!opts.wide);
+        m.find('.rc-rows-title').text(opts.rowsTitle || '');
+        fillRows(m.find('.rc-rows.rc-main').empty(), opts.rows);
+        // a table of lines (the products of a purchase)
+        var it = opts.items, $iw = m.find('.rc-items-wrap');
+        if (it && it.rows && it.rows.length) {
+            var $tb = m.find('.rc-items').empty(), num = {};
+            var $hr = $('<tr>');
+            $.each(it.head || [], function (i, h) {
+                h = typeof h === 'object' ? h : { text: h };
+                if (h.num) { num[i] = true; }
+                $('<th>').text(h.text).toggleClass('rc-num', !!h.num).appendTo($hr);
+            });
+            $('<thead>').append($hr).appendTo($tb);
+            var $body = $('<tbody>').appendTo($tb);
+            $.each(it.rows, function (ri, row) {
+                var $tr = $('<tr>');
+                $.each(row, function (ci, cell) {
+                    var $td = $('<td>').toggleClass('rc-num', !!num[ci]);
+                    cell = (cell !== null && typeof cell === 'object') ? cell : { text: cell };
+                    $td.append(document.createTextNode(cell.text === undefined || cell.text === null || cell.text === '' ? '-' : String(cell.text)));
+                    $.each(cell.sub || [], function (k, s) { if (s) { $('<span class="rc-sub">').text(s).appendTo($td); } });
+                    if (cell.strong) { $td.addClass('rc-strong'); }
+                    $tr.append($td);
+                });
+                $body.append($tr);
+            });
+            m.find('.rc-items-title').text(it.title || '');
+            m.find('.rc-items-foot').text(it.foot || '');
+            $iw.show();
+        } else {
+            $iw.hide();
+        }
+        // titled groups side by side (totals, payment)
+        var $groups = m.find('.rc-groups').empty();
+        $.each(opts.groups || [], function (i, g) {
+            if (!g || !g.rows || !g.rows.length) { return; }
+            var $g = $('<div class="rc-group">').appendTo($groups);
+            $('<div class="rc-sec-title">').text(g.title || '').appendTo($g);
+            fillRows($('<table class="rc-rows">').appendTo($g), g.rows, g.num);
         });
         m.find('.rc-note').text(opts.note || '').toggle(!!opts.note);
         m.find('.rc-check-text').text(opts.check || kind.check || t('check'));
