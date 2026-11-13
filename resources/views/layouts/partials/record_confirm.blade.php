@@ -8,7 +8,7 @@
     $rc_settings = (array) session('business.common_settings', []);
     $rc_kinds = [];
     foreach (['default', 'payment', 'payment_edit', 'pay_due', 'sale', 'sell', 'purchase', 'expense', 'sell_return', 'purchase_return',
-              'register_open', 'register_close', 'transfer', 'deposit', 'checkin', 'opening_balance', 'stock_adjustment', 'clinic_pay', 'account_edit', 'ledger_discount', 'claim_settle', 'plan', 'plan_bill'] as $rc_k) {
+              'register_open', 'register_close', 'transfer', 'deposit', 'checkin', 'opening_balance', 'stock_adjustment', 'clinic_pay', 'account_edit', 'ledger_discount', 'claim_settle', 'plan', 'plan_bill', 'lab_result', 'lab_validate', 'imaging_report'] as $rc_k) {
         $rc_kinds[$rc_k] = [
             'title' => \Illuminate\Support\Facades\Lang::has('lang_v1.rc_title_' . $rc_k) ? __('lang_v1.rc_title_' . $rc_k) : null,
             'intro' => \Illuminate\Support\Facades\Lang::has('lang_v1.rc_intro_' . $rc_k) ? __('lang_v1.rc_intro_' . $rc_k) : null,

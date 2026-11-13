@@ -9,6 +9,9 @@
 @section('content')
 <section class="content">
 
+    {{-- PosInnova: is the fee paid? (and who chose to go on before it was) --}}
+    @include('clinic.partials.request_payment', ['pay' => $pay, 'req' => $ir, 'ack' => false])
+
     <div class="tw-bg-white tw-shadow-sm tw-rounded-xl tw-ring-1 tw-ring-gray-200 tw-p-4 sm:tw-p-5 tw-mb-4">
         <div class="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-4">
             <div>

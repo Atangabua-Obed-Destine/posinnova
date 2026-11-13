@@ -41,6 +41,7 @@
                             <th>@lang('lang_v1.requested_by')</th>
                             <th>@lang('lang_v1.requested_at')</th>
                             <th>@lang('lang_v1.status')</th>
+                            <th>@lang('clinic.pay_col')</th>
                             <th>@lang('messages.action')</th>
                         </tr>
                     </thead>
@@ -67,6 +68,7 @@ $(document).ready(function () {
             { data: 'requested_by_name', name: 'u.first_name' },
             { data: 'requested_at', name: 'imaging_requests.requested_at' },
             { data: 'status', name: 'imaging_requests.status' },
+            { data: 'payment', name: 'payment', searchable: false, orderable: false },
             { data: 'action', name: 'action', searchable: false, orderable: false },
         ],
         order: [[5, 'desc']],

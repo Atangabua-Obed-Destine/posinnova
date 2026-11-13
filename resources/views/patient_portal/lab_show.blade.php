@@ -18,6 +18,15 @@
     </div>
 </div>
 
+@if($locked)
+{{-- PosInnova: the result waits for payment (its values were not sent) --}}
+<div class="tw-rounded-2xl tw-bg-red-50 tw-ring-1 tw-ring-red-200 tw-p-5 tw-text-center tw-shadow-sm">
+    <i class="fas fa-lock tw-text-2xl tw-text-red-600"></i>
+    <p class="tw-font-semibold tw-text-red-800 tw-mt-2">@lang('clinic.portal_pay_locked')</p>
+    <p class="tw-text-sm tw-text-red-700 tw-mt-1">{{ __('clinic.portal_pay_locked_msg', ['due' => (new \App\Utils\Util())->num_f($pay['due'], true)]) }}</p>
+    <a href="{{ route('portal.bills') }}" class="tw-inline-block tw-mt-3 tw-text-sm tw-text-indigo-600 tw-font-medium"><i class="fas fa-file-invoice"></i> @lang('lang_v1.my_bills')</a>
+</div>
+@else
 <div class="tw-rounded-2xl tw-bg-white tw-ring-1 tw-ring-gray-200 tw-overflow-hidden tw-shadow-sm">
     @foreach($lab_request->lines as $line)
         <div class="tw-p-4 tw-border-b tw-border-gray-50 last:tw-border-0">
@@ -37,5 +46,9 @@
     @endforeach
 </div>
 
+@endif
+
+@unless($locked)
 <p class="tw-text-xs tw-text-gray-400 tw-mt-3">@lang('lang_v1.validated_by'): {{ optional($lab_request->validatedBy)->user_full_name ?? optional($lab_request->requestedBy)->user_full_name ?? '—' }}</p>
+@endunless
 @endsection

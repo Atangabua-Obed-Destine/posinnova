@@ -232,7 +232,8 @@ class HospitalBillingUtil extends Util
                 'note' => $test_line->test_name.' · '.$lab_request->ref_no];
         }
 
-        $this->chargePatientFee([
+        // the invoice is kept on the request, so its payment can be shown where the work is done
+        $transaction = $this->chargePatientFee([
             'business_id' => $lab_request->business_id,
             'contact_id' => $lab_request->contact_id,
             'amount' => (float) $total,
@@ -247,6 +248,7 @@ class HospitalBillingUtil extends Util
         ]);
 
         $lab_request->fee_charged = 1;
+        $lab_request->transaction_id = optional($transaction)->id;
         $lab_request->save();
     }
 
@@ -274,7 +276,7 @@ class HospitalBillingUtil extends Util
             return;
         }
 
-        $this->chargePatientFee([
+        $transaction = $this->chargePatientFee([
             'business_id' => $imaging_request->business_id,
             'contact_id' => $imaging_request->contact_id,
             'amount' => $fee,
@@ -288,6 +290,7 @@ class HospitalBillingUtil extends Util
         ]);
 
         $imaging_request->fee_charged = 1;
+        $imaging_request->transaction_id = optional($transaction)->id;
         $imaging_request->save();
     }
 }

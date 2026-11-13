@@ -63,7 +63,10 @@ class LabRequestController extends Controller
                     'pd.file_number',
                     DB::raw("CONCAT(COALESCE(u.surname, ''), ' ', COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as requested_by_name"),
                     DB::raw('(SELECT COUNT(*) FROM lab_request_lines WHERE lab_request_lines.lab_request_id = lab_requests.id) as tests_count'),
-                ]);
+                    'lab_requests.transaction_id',
+                ])
+                // PosInnova: is the fee paid (invoice total and what was paid on it)
+                ->addSelect(\App\Utils\ClinicRequestPayment::listSelects('lab_requests', '(SELECT COALESCE(SUM(lrl.fee), 0) FROM lab_request_lines lrl WHERE lrl.lab_request_id = lab_requests.id)'));
 
             if (! empty(request()->input('status'))) {
                 $query->where('lab_requests.status', request()->input('status'));
@@ -89,6 +92,9 @@ class LabRequestController extends Controller
 
                     return '<span class="label '.$cls.'">'.__('lang_v1.lab_status_'.$row->status).'</span>';
                 })
+                ->addColumn('payment', function ($row) {
+                    return \App\Utils\ClinicRequestPayment::badge(\App\Utils\ClinicRequestPayment::ofRow($row), $this->commonUtil);
+                })
                 ->addColumn('action', function ($row) {
                     $html = '<div class="btn-group">
                         <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-info tw-w-max dropdown-toggle"
@@ -109,7 +115,7 @@ class LabRequestController extends Controller
 
                     return $html;
                 })
-                ->rawColumns(['status', 'action'])
+                ->rawColumns(['status', 'payment', 'action'])
                 ->make(true);
         }
 
@@ -232,8 +238,9 @@ class LabRequestController extends Controller
             ->findOrFail($id);
 
         $amendments = $this->amendmentsFor($lab_request->id);
+        $pay = \App\Utils\ClinicRequestPayment::of($lab_request);
 
-        return view('lab.request_show')->with(compact('lab_request', 'amendments'));
+        return view('lab.request_show')->with(compact('lab_request', 'amendments', 'pay'));
     }
 
     /**
@@ -325,7 +332,9 @@ class LabRequestController extends Controller
                 ->with('status', ['success' => false, 'msg' => __('clinic.result_locked')]);
         }
 
-        return view('lab.enter_result')->with(compact('lab_request'));
+        $pay = \App\Utils\ClinicRequestPayment::of($lab_request);
+
+        return view('lab.enter_result')->with(compact('lab_request', 'pay'));
     }
 
     public function saveResult(Request $request, $id)
@@ -348,9 +357,48 @@ class LabRequestController extends Controller
                     ->with('status', ['success' => false, 'msg' => __('clinic.result_locked')]);
             }
 
+            // PosInnova: results for a request whose fee is not paid go in only when the user chose to
+            // go on (recorded with their name, the amount still due and the reason). Asked once per request.
+            $results = $request->input('results', []);
+            $back = redirect()->back()->withInput($request->except('unpaid_ack'));
+
+            // nothing to save without a result; validating needs every test to have one
+            $filled_now = collect($results)->filter(function ($r) {
+                return trim((string) ($r['value'] ?? '')) !== '';
+            })->count();
+            if ($filled_now == 0) {
+                return $back->with('status', ['success' => false, 'msg' => __('clinic.lab_enter_one')]);
+            }
+            if ($request->input('action') === 'validate') {
+                $missing = $lab_request->lines->filter(function ($l) use ($results) {
+                    $v = array_key_exists($l->id, $results) ? ($results[$l->id]['value'] ?? '') : $l->result_value;
+
+                    return trim((string) $v) === '';
+                })->count();
+                if ($missing > 0) {
+                    return $back->with('status', ['success' => false, 'msg' => __('clinic.lab_fill_all', ['n' => $missing])]);
+                }
+            }
+
+            $pay = \App\Utils\ClinicRequestPayment::of($lab_request);
+            if (empty($lab_request->unpaid_ack_at) && \App\Utils\ClinicRequestPayment::needsDecision($pay)) {
+                if (! $request->boolean('unpaid_ack')) {
+                    return $back->with('status', ['success' => false,
+                        'msg' => __('clinic.pay_ack_required', ['due' => $this->commonUtil->num_f($pay['due'], true)])]);
+                }
+                $lab_request->unpaid_ack_by = $request->session()->get('user.id');
+                $lab_request->unpaid_ack_at = now();
+                $lab_request->unpaid_ack_due = $pay['due'];
+                $lab_request->unpaid_ack_reason = mb_substr(trim((string) $request->input('unpaid_reason')), 0, 191) ?: null;
+            }
+
             DB::beginTransaction();
 
-            $results = $request->input('results', []);
+            // the choice is written now: the request is re-read further down
+            if ($lab_request->isDirty()) {
+                $lab_request->save();
+            }
+
             foreach ($lab_request->lines as $line) {
                 if (! isset($results[$line->id])) {
                     continue;
@@ -455,10 +503,48 @@ class LabRequestController extends Controller
             ->with(['patient.patientDetails', 'requestedBy', 'validatedBy', 'lines', 'location'])
             ->findOrFail($id);
 
+        // PosInnova: printing hands the result to the patient. Not paid yet: ask first (once per request).
+        $pay = \App\Utils\ClinicRequestPayment::of($lab_request);
+        if (\App\Utils\ClinicRequestPayment::needsDecision($pay) && empty($lab_request->unpaid_print_at)) {
+            return view('lab.print_unpaid')->with(compact('lab_request', 'pay'));
+        }
+
         $business = \App\Business::find($business_id);
 
         $amendments = $this->amendmentsFor($lab_request->id);
 
         return view('lab.result_print')->with(compact('lab_request', 'business', 'amendments'));
+    }
+
+    /**
+     * PosInnova: "print anyway" for a result that is not paid yet. Records who chose to, when, how much
+     * was due and why, then goes on to the print.
+     */
+    public function printUnpaid(Request $request, $id)
+    {
+        $this->checkHospitalEnabled();
+
+        if (! auth()->user()->can('lab_request.view') && ! auth()->user()->can('lab_result.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = $request->session()->get('user.business_id');
+        $lab_request = LabRequest::forBusiness($business_id)->with('lines')->findOrFail($id);
+        $print = action([\App\Http\Controllers\LabRequestController::class, 'print'], [$lab_request->id]);
+
+        $pay = \App\Utils\ClinicRequestPayment::of($lab_request);
+        if (\App\Utils\ClinicRequestPayment::needsDecision($pay) && empty($lab_request->unpaid_print_at)) {
+            if (! $request->boolean('unpaid_ack')) {
+                return redirect($print)->with('status', ['success' => false,
+                    'msg' => __('clinic.pay_ack_required', ['due' => $this->commonUtil->num_f($pay['due'], true)])]);
+            }
+            $lab_request->unpaid_print_by = $request->session()->get('user.id');
+            $lab_request->unpaid_print_at = now();
+            $lab_request->unpaid_print_due = $pay['due'];
+            $lab_request->unpaid_print_reason = mb_substr(trim((string) $request->input('unpaid_reason')), 0, 191) ?: null;
+            $lab_request->save();
+        }
+
+        return redirect($print);
     }
 }

@@ -1369,4 +1369,39 @@ return [
     'pf_quick_saving' => 'Saving...',
     'pf_quick_done' => 'New patient registered: :name, file :file, portal PIN :pin. Give the PIN to the patient.',
     'pf_quick_error' => 'The patient could not be registered. Please check the form.',
+
+    // lab / imaging: is the request's fee paid?
+    'pay_col' => 'Payment',
+    'pay_state_paid' => 'Paid',
+    'pay_state_partial' => 'Part paid · :due due',
+    'pay_state_due' => 'Not paid · :due due',
+    'pay_state_none' => 'No charge',
+    'pay_state_not_billed' => 'No invoice',
+    'pay_state_not_billed_help' => 'No invoice was found for this request (made before requests were linked to their invoice, or it could not be billed).',
+    'pay_panel_paid' => 'Paid: invoice :invoice (:total).',
+    'pay_panel_partial' => 'Part paid: :paid of :total paid on invoice :invoice; :due still due.',
+    'pay_panel_due' => 'Not paid yet: :due due on invoice :invoice. The patient pays at the cashier.',
+    'pay_panel_none' => 'Nothing for the patient to pay.',
+    'pay_panel_not_billed' => 'No invoice was found for this request.',
+    'pay_open_account' => 'Patient account',
+    'pay_ack_label' => 'The patient has not paid yet (:due due). Continue anyway: this is recorded with my name.',
+    'pay_ack_reason' => 'Reason (optional)',
+    'pay_ack_reason_ph' => 'e.g. emergency, the patient pays after the result',
+    'pay_ack_required' => 'This request is not paid yet (:due due). Tick "Continue anyway" to go on without payment.',
+    'pay_ack_record' => 'Entered before payment by :user on :date (:due was due then).',
+    'pay_ack_record_reason' => 'Reason: :reason',
+
+    // printing / the patient portal before the lab or imaging fee is paid
+    'pay_print_title' => 'Print the result: not paid yet',
+    'pay_print_intro' => 'This result has not been paid for yet. Printing it gives it to the patient before payment.',
+    'pay_print_ack' => 'Print anyway (:due still due): this is recorded with my name.',
+    'pay_print_btn' => 'Print anyway',
+    'pay_print_record' => 'Printed before payment by :user on :date (:due was due then).',
+    'portal_pay_locked' => 'Available after payment',
+    'portal_pay_locked_msg' => 'Your result is ready. It will appear here once the bill is paid (:due due). You can pay at the clinic.',
+
+    // lab result entry checks
+    'lab_enter_one' => 'Enter at least one result before saving.',
+    'lab_fill_all' => 'Fill in every result to validate (:n missing).',
+    'lab_partial_note' => ':n test(s) left empty: they can be filled in later.',
 ];

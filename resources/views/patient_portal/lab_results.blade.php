@@ -8,7 +8,12 @@
 
 <div class="tw-space-y-3" data-list>
     @forelse($lab_requests as $lr)
-        @php $resulted = in_array($lr->status, ['resulted', 'validated']); @endphp
+        @php
+            $resulted = in_array($lr->status, ['resulted', 'validated']);
+            // a result waits for the patient's payment before it can be opened
+            $pay_locked = $resulted && ! \App\Utils\ClinicRequestPayment::releasedToPatient($pays[$lr->id]);
+            if ($pay_locked) { $resulted = false; }
+        @endphp
         @if($resulted)
         <a href="{{ route('portal.lab-show', $lr->id) }}" class="portal-card tw-block tw-rounded-2xl tw-bg-white tw-ring-1 tw-ring-gray-200 tw-p-4 tw-shadow-sm">
         @else
@@ -19,9 +24,14 @@
                 <div class="tw-flex-1 tw-min-w-0">
                     <p class="tw-text-sm tw-font-semibold tw-text-gray-800 tw-truncate">{{ $lr->lines->pluck('test_name')->take(2)->implode(', ') }}{{ $lr->lines->count() > 2 ? ' +'.($lr->lines->count()-2) : '' }}</p>
                     <p class="tw-text-xs tw-text-gray-500 tw-mt-0.5">{{ @format_date($lr->requested_at) }} · {{ $lr->ref_no }}</p>
+                    @if($pay_locked)
+                        <p class="tw-text-xs tw-text-red-700 tw-mt-1">{{ __('clinic.portal_pay_locked_msg', ['due' => (new \App\Utils\Util())->num_f($pays[$lr->id]['due'], true)]) }}</p>
+                    @endif
                 </div>
                 <div class="tw-flex tw-items-center tw-gap-2 tw-shrink-0">
-                    @if($lr->status == 'validated')
+                    @if($pay_locked)
+                        <span class="tw-text-[10px] tw-px-2 tw-py-0.5 tw-rounded-full tw-bg-red-100 tw-text-red-700"><i class="fas fa-lock"></i> @lang('clinic.portal_pay_locked')</span>
+                    @elseif($lr->status == 'validated')
                         <span class="tw-text-[10px] tw-px-2 tw-py-0.5 tw-rounded-full tw-bg-green-100 tw-text-green-700">@lang('lang_v1.lab_status_validated')</span>
                     @elseif($lr->status == 'resulted')
                         <span class="tw-text-[10px] tw-px-2 tw-py-0.5 tw-rounded-full tw-bg-blue-100 tw-text-blue-700">@lang('lang_v1.lab_status_resulted')</span>

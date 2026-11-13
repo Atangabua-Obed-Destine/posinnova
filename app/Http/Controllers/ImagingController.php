@@ -239,7 +239,10 @@ class ImagingController extends Controller
                     'c.name as patient_name',
                     'pd.file_number',
                     DB::raw("CONCAT(COALESCE(u.surname, ''), ' ', COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as requested_by_name"),
-                ]);
+                    'imaging_requests.transaction_id',
+                ])
+                // PosInnova: is the fee paid (invoice total and what was paid on it)
+                ->addSelect(\App\Utils\ClinicRequestPayment::listSelects('imaging_requests', 'COALESCE(imaging_requests.fee, 0)'));
 
             if (! empty(request()->input('status'))) {
                 $query->where('imaging_requests.status', request()->input('status'));
@@ -254,6 +257,9 @@ class ImagingController extends Controller
                     return $row->status == 'done'
                         ? '<span class="label label-success">'.__('lang_v1.imaging_status_done').'</span>'
                         : '<span class="label label-default">'.__('lang_v1.imaging_status_pending').'</span>';
+                })
+                ->addColumn('payment', function ($row) {
+                    return \App\Utils\ClinicRequestPayment::badge(\App\Utils\ClinicRequestPayment::ofRow($row), $this->commonUtil);
                 })
                 ->addColumn('action', function ($row) {
                     $html = '<div class="btn-group">
@@ -272,7 +278,7 @@ class ImagingController extends Controller
 
                     return $html;
                 })
-                ->rawColumns(['status', 'action'])
+                ->rawColumns(['status', 'payment', 'action'])
                 ->make(true);
         }
 
@@ -379,7 +385,9 @@ class ImagingController extends Controller
             ->with(['patient.patientDetails', 'requestedBy', 'reportedBy', 'location', 'catalogue'])
             ->findOrFail($id);
 
-        return view('imaging.request_show')->with(compact('imaging_request'));
+        $pay = \App\Utils\ClinicRequestPayment::of($imaging_request);
+
+        return view('imaging.request_show')->with(compact('imaging_request', 'pay'));
     }
 
     public function enterReport($id)
@@ -396,7 +404,9 @@ class ImagingController extends Controller
             ->with(['patient.patientDetails'])
             ->findOrFail($id);
 
-        return view('imaging.enter_report')->with(compact('imaging_request'));
+        $pay = \App\Utils\ClinicRequestPayment::of($imaging_request);
+
+        return view('imaging.enter_report')->with(compact('imaging_request', 'pay'));
     }
 
     public function saveReport(Request $request, $id)
@@ -413,6 +423,20 @@ class ImagingController extends Controller
             $business_id = $request->session()->get('user.business_id');
 
             $imaging_request = ImagingRequest::forBusiness($business_id)->findOrFail($id);
+
+            // PosInnova: a report for an unpaid request goes in only when the user chose to go on
+            // (recorded with their name, the amount still due and the reason). Asked once per request.
+            $pay = \App\Utils\ClinicRequestPayment::of($imaging_request);
+            if (empty($imaging_request->unpaid_ack_at) && \App\Utils\ClinicRequestPayment::needsDecision($pay)) {
+                if (! $request->boolean('unpaid_ack')) {
+                    return redirect()->back()->withInput()->with('status', ['success' => false,
+                        'msg' => __('clinic.pay_ack_required', ['due' => $this->commonUtil->num_f($pay['due'], true)])]);
+                }
+                $imaging_request->unpaid_ack_by = $request->session()->get('user.id');
+                $imaging_request->unpaid_ack_at = now();
+                $imaging_request->unpaid_ack_due = $pay['due'];
+                $imaging_request->unpaid_ack_reason = mb_substr(trim((string) $request->input('unpaid_reason')), 0, 191) ?: null;
+            }
 
             $imaging_request->report = $request->input('report');
             $imaging_request->status = 'done';

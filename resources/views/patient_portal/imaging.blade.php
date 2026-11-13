@@ -17,7 +17,14 @@
                 </div>
                 <span class="tw-text-[10px] tw-px-2 tw-py-0.5 tw-rounded-full tw-shrink-0 {{ $ir->status == 'done' ? 'tw-bg-green-100 tw-text-green-700' : 'tw-bg-amber-100 tw-text-amber-700' }}">{{ __('lang_v1.imaging_status_' . $ir->status) }}</span>
             </div>
-            @if($ir->status == 'done' && $ir->report)
+            @php $img_locked = $ir->status == 'done' && $ir->report && ! \App\Utils\ClinicRequestPayment::releasedToPatient($pays[$ir->id]); @endphp
+            @if($img_locked)
+                {{-- PosInnova: the report waits for payment (it is not sent) --}}
+                <div class="tw-mt-2 tw-rounded-xl tw-bg-red-50 tw-ring-1 tw-ring-red-200 tw-p-3 tw-text-sm tw-text-red-700">
+                    <i class="fas fa-lock"></i> <strong>@lang('clinic.portal_pay_locked')</strong> ·
+                    {{ __('clinic.portal_pay_locked_msg', ['due' => (new \App\Utils\Util())->num_f($pays[$ir->id]['due'], true)]) }}
+                </div>
+            @elseif($ir->status == 'done' && $ir->report)
                 <div class="tw-mt-2 tw-rounded-xl tw-bg-gray-50 tw-p-3 tw-text-sm tw-text-gray-700" style="white-space: pre-wrap;">{{ $ir->report }}</div>
                 <p class="tw-text-[11px] tw-text-gray-400 tw-mt-1">@lang('lang_v1.reported_by'): {{ optional($ir->reportedBy)->user_full_name ?? '—' }}</p>
             @endif

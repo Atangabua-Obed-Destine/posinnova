@@ -139,8 +139,10 @@ class PortalController extends Controller
         $patient = $this->patient();
         $lab_requests = LabRequest::forBusiness($patient->business_id)->where('contact_id', $patient->id)
             ->with('lines')->orderBy('requested_at', 'desc')->paginate(15);
+        // PosInnova: a result is shown once the patient's part is paid
+        $pays = $lab_requests->getCollection()->mapWithKeys(fn ($lr) => [$lr->id => \App\Utils\ClinicRequestPayment::of($lr)]);
 
-        return view('patient_portal.lab_results')->with(compact('patient', 'lab_requests'));
+        return view('patient_portal.lab_results')->with(compact('patient', 'lab_requests', 'pays'));
     }
 
     public function labShow($id)
@@ -150,8 +152,20 @@ class PortalController extends Controller
             ->where('contact_id', $patient->id) // ownership guard
             ->with(['lines', 'requestedBy', 'validatedBy'])
             ->findOrFail($id);
+        // PosInnova: not paid yet: the values are not sent at all, only that the result waits for payment
+        $pay = \App\Utils\ClinicRequestPayment::of($lab_request);
+        $locked = ! \App\Utils\ClinicRequestPayment::releasedToPatient($pay);
+        if ($locked) {
+            $lab_request->setRelation('lines', $lab_request->lines->map(function ($l) {
+                $l->result_value = null;
+                $l->result_flag = null;
+                $l->result_notes = null;
 
-        return view('patient_portal.lab_show')->with(compact('patient', 'lab_request'));
+                return $l;
+            }));
+        }
+
+        return view('patient_portal.lab_show')->with(compact('patient', 'lab_request', 'pay', 'locked'));
     }
 
     public function imaging()
@@ -160,8 +174,10 @@ class PortalController extends Controller
         $patient = $this->patient();
         $imaging_requests = ImagingRequest::forBusiness($patient->business_id)->where('contact_id', $patient->id)
             ->with('reportedBy')->orderBy('requested_at', 'desc')->paginate(15);
+        // PosInnova: a report is shown once the patient's part is paid
+        $pays = $imaging_requests->getCollection()->mapWithKeys(fn ($ir) => [$ir->id => \App\Utils\ClinicRequestPayment::of($ir)]);
 
-        return view('patient_portal.imaging')->with(compact('patient', 'imaging_requests'));
+        return view('patient_portal.imaging')->with(compact('patient', 'imaging_requests', 'pays'));
     }
 
     public function admissions()

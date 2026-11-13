@@ -1370,4 +1370,39 @@ return [
     'pf_quick_saving' => 'Enregistrement...',
     'pf_quick_done' => 'Nouveau patient enregistré : :name, dossier :file, code PIN du portail :pin. Remettez le code au patient.',
     'pf_quick_error' => 'Le patient n\'a pas pu être enregistré. Vérifiez le formulaire.',
+
+    // laboratoire / imagerie : les frais de la demande sont-ils payés ?
+    'pay_col' => 'Paiement',
+    'pay_state_paid' => 'Payé',
+    'pay_state_partial' => 'Payé en partie · :due dû',
+    'pay_state_due' => 'Non payé · :due dû',
+    'pay_state_none' => 'Sans frais',
+    'pay_state_not_billed' => 'Pas de facture',
+    'pay_state_not_billed_help' => 'Aucune facture trouvée pour cette demande (créée avant que les demandes soient liées à leur facture, ou facturation impossible).',
+    'pay_panel_paid' => 'Payé : facture :invoice (:total).',
+    'pay_panel_partial' => 'Payé en partie : :paid sur :total payés sur la facture :invoice ; reste :due.',
+    'pay_panel_due' => 'Pas encore payé : :due dû sur la facture :invoice. Le patient paie à la caisse.',
+    'pay_panel_none' => 'Rien à payer pour le patient.',
+    'pay_panel_not_billed' => 'Aucune facture trouvée pour cette demande.',
+    'pay_open_account' => 'Compte du patient',
+    'pay_ack_label' => 'Le patient n\'a pas encore payé (:due dû). Continuer quand même : c\'est enregistré à mon nom.',
+    'pay_ack_reason' => 'Motif (facultatif)',
+    'pay_ack_reason_ph' => 'ex. urgence, le patient paie après le résultat',
+    'pay_ack_required' => 'Cette demande n\'est pas encore payée (:due dû). Cochez « Continuer quand même » pour poursuivre sans paiement.',
+    'pay_ack_record' => 'Saisi avant paiement par :user le :date (:due dû à ce moment).',
+    'pay_ack_record_reason' => 'Motif : :reason',
+
+    // impression / portail patient avant le paiement des frais de laboratoire ou d'imagerie
+    'pay_print_title' => 'Imprimer le résultat : pas encore payé',
+    'pay_print_intro' => 'Ce résultat n\'est pas encore payé. L\'imprimer le remet au patient avant le paiement.',
+    'pay_print_ack' => 'Imprimer quand même (:due encore dû) : c\'est enregistré à mon nom.',
+    'pay_print_btn' => 'Imprimer quand même',
+    'pay_print_record' => 'Imprimé avant paiement par :user le :date (:due dû à ce moment).',
+    'portal_pay_locked' => 'Disponible après paiement',
+    'portal_pay_locked_msg' => 'Votre résultat est prêt. Il apparaîtra ici dès que la facture sera payée (:due dû). Vous pouvez payer à la clinique.',
+
+    // contrôles de saisie des résultats de laboratoire
+    'lab_enter_one' => 'Saisissez au moins un résultat avant d\'enregistrer.',
+    'lab_fill_all' => 'Remplissez tous les résultats pour valider (:n manquant(s)).',
+    'lab_partial_note' => ':n analyse(s) laissée(s) vide(s) : elles pourront être remplies plus tard.',
 ];

@@ -24,6 +24,9 @@
 
     {!! Form::open(['url' => action([\App\Http\Controllers\ImagingController::class, 'saveReport'], [$ir->id]), 'method' => 'post', 'id' => 'imaging_report_form']) !!}
 
+    {{-- PosInnova: is the study paid? an unpaid one asks before the report goes in --}}
+    @include('clinic.partials.request_payment', ['pay' => $pay, 'req' => $ir, 'ack' => true])
+
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.radiologist_report')])
         <div class="form-group">
             {!! Form::label('report', __('lang_v1.report') . ':*') !!}
@@ -42,4 +45,28 @@
 
     {!! Form::close() !!}
 </section>
+
+@php
+    $img_js_labels = ['patient' => __('lang_v1.patient'), 'name' => optional($ir->patient)->name, 'study' => __('lang_v1.study'), 'study_name' => $ir->study_name, 'report' => __('lang_v1.report')];
+@endphp
+<script>
+    // PosInnova: the report is checked in the "check before recording" dialog before it is written
+    (function () {
+        var form = document.getElementById('imaging_report_form');
+        var L = @json($img_js_labels);
+        document.addEventListener('submit', function (e) {
+            if (e.target !== form) { return; }
+            if (form.getAttribute('data-rc-ok') === '1') { form.removeAttribute('data-rc-ok'); return; }
+            var report = (form.querySelector('textarea[name=report]').value || '').trim();
+            if (!report || !window.PosConfirm) { return; }
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            var btn = e.submitter && e.submitter.form === form ? e.submitter : null;
+            PosConfirm.ask({ kind: 'imaging_report', rows: [[L.patient, L.name], [L.study, L.study_name], [L.report, report.length > 400 ? report.slice(0, 400) + '…' : report]] }, function () {
+                form.setAttribute('data-rc-ok', '1');
+                if (form.requestSubmit) { form.requestSubmit(btn || undefined); } else { form.submit(); }
+            });
+        }, true);
+    })();
+</script>
 @endsection

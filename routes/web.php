@@ -465,6 +465,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('lab-requests/{id}/validate', [\App\Http\Controllers\LabRequestController::class, 'validateResult']);
     Route::post('lab-requests/{id}/amend', [\App\Http\Controllers\LabRequestController::class, 'amendResult']);
     Route::get('lab-requests/{id}/print', [\App\Http\Controllers\LabRequestController::class, 'print']);
+    Route::post('lab-requests/{id}/print', [\App\Http\Controllers\LabRequestController::class, 'printUnpaid']);
     Route::resource('lab-requests', \App\Http\Controllers\LabRequestController::class)->only(['index', 'create', 'store', 'show']);
 
     //Imaging / Radiology
