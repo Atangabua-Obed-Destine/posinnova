@@ -218,9 +218,12 @@ class SellController extends Controller
             // Expose shipment-only flag to table rendering
             $only_shipments = request()->only_shipments == 'true' ? true : false;
 
-            // Subqueries for Profit and COGS calculation identical to Profit/Loss report
-            $sells->addSelect(
-                \DB::raw('(SELECT SUM(IF (TSPL.id IS NULL AND P.type=\'combo\', ( 
+            // Profit and COGS per invoice, identical to the Profit/Loss report.
+            // PosInnova: as columns of the main query they were worked out for every sale of the period
+            // before the page of 25 was picked (seconds on a busy shop, and paid by the POS list and the
+            // sales-rep report, which do not even show them). Now only when the table is sorted by one of
+            // them; otherwise each shown row gets them from the same SQL, for that one invoice.
+            $gross_profit_sql = '(SELECT SUM(IF (TSPL.id IS NULL AND P.type=\'combo\', ( 
                     SELECT Sum((tspl2.quantity - tspl2.qty_returned) * (tsl.unit_price_inc_tax - pl2.purchase_price_inc_tax)) AS total
                         FROM transaction_sell_lines AS tsl
                             JOIN transaction_sell_lines_purchase_lines AS tspl2
@@ -235,8 +238,8 @@ class SellController extends Controller
                     JOIN products AS P ON transaction_sell_lines.product_id = P.id
                     WHERE transaction_sell_lines.transaction_id = transactions.id
                     AND transaction_sell_lines.children_type != \'combo\'
-                ) as gross_profit'),
-                \DB::raw('(SELECT SUM(IF (TSPL.id IS NULL AND P.type=\'combo\', ( 
+                )';
+            $total_cogs_sql = '(SELECT SUM(IF (TSPL.id IS NULL AND P.type=\'combo\', ( 
                     SELECT Sum((tspl2.quantity - tspl2.qty_returned) * pl2.purchase_price_inc_tax) AS total
                         FROM transaction_sell_lines AS tsl
                             JOIN transaction_sell_lines_purchase_lines AS tspl2
@@ -251,8 +254,23 @@ class SellController extends Controller
                     JOIN products AS P ON transaction_sell_lines.product_id = P.id
                     WHERE transaction_sell_lines.transaction_id = transactions.id
                     AND transaction_sell_lines.children_type != \'combo\'
-                ) as total_cogs')
-            );
+                )';
+            $order_index = request()->input('order.0.column');
+            $profit_in_sql = $order_index !== null && in_array(request()->input('columns.'.$order_index.'.data'), ['total_cogs', 'invoice_profit']);
+            if ($profit_in_sql) {
+                $sells->addSelect(\DB::raw($gross_profit_sql.' as gross_profit'), \DB::raw($total_cogs_sql.' as total_cogs'));
+            }
+            $profit_memo = [];
+            $profit_of = function ($row) use ($profit_in_sql, $gross_profit_sql, $total_cogs_sql, &$profit_memo) {
+                if ($profit_in_sql) {
+                    return ['gross_profit' => $row->gross_profit, 'total_cogs' => $row->total_cogs];
+                }
+                if (! isset($profit_memo[$row->id])) {
+                    $r = \DB::selectOne('SELECT '.$gross_profit_sql.' as gross_profit, '.$total_cogs_sql.' as total_cogs FROM transactions WHERE transactions.id = ?', [$row->id]);
+                    $profit_memo[$row->id] = ['gross_profit' => $r->gross_profit ?? 0, 'total_cogs' => $r->total_cogs ?? 0];
+                }
+                return $profit_memo[$row->id];
+            };
 
             $datatable = Datatables::of($sells)
                 ->addColumn(
@@ -485,15 +503,16 @@ class SellController extends Controller
                     return $status;
                 })
                 ->addColumn('conatct_name', '@if(!empty($supplier_business_name)) {{$supplier_business_name}}, <br> @endif {{$name}}')
-                ->addColumn('total_cogs', function ($row) {
-                    return '<span class="display_currency total_cogs" data-currency_symbol="true" data-orig-value="' . $row->total_cogs . '">' . $this->transactionUtil->num_f($row->total_cogs, true) . '</span>';
+                ->addColumn('total_cogs', function ($row) use ($profit_of) {
+                    $total_cogs = $profit_of($row)['total_cogs'];
+                    return '<span class="display_currency total_cogs" data-currency_symbol="true" data-orig-value="' . $total_cogs . '">' . $this->transactionUtil->num_f($total_cogs, true) . '</span>';
                 })
-                ->addColumn('invoice_profit', function ($row) {
+                ->addColumn('invoice_profit', function ($row) use ($profit_of) {
                     $discount = $row->discount_amount;
                     if ($row->discount_type == 'percentage') {
                         $discount = ($row->discount_amount * $row->total_before_tax) / 100;
                     }
-                    $profit = $row->gross_profit - $discount;
+                    $profit = $profit_of($row)['gross_profit'] - $discount;
                     return '<span class="display_currency invoice_profit" data-currency_symbol="true" data-orig-value="' . $profit . '">' . $this->transactionUtil->num_f($profit, true) . '</span>';
                 })
                 ->editColumn('total_items', '{{@format_quantity($total_items)}}')

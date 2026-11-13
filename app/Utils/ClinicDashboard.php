@@ -249,7 +249,9 @@ class ClinicDashboard
             $received = DB::table('transaction_payments as tp')->join('transactions as t', 't.id', '=', 'tp.transaction_id')
                 ->join('contacts as c', 'c.id', '=', 't.contact_id')
                 ->where('t.business_id', $business_id)->where('t.type', 'sell')->where('t.status', 'final')->where('c.is_patient', 1)
-                ->whereDate('tp.paid_on', $today->toDateString())
+                // a range rather than DATE(paid_on), so only today's payments are read (paid_on index)
+                ->where('tp.paid_on', '>=', $today->copy()->startOfDay())
+                ->where('tp.paid_on', '<', $today->copy()->addDay()->startOfDay())
                 ->sum(DB::raw('IF(tp.is_return = 1, -1 * tp.amount, tp.amount)'));
             $url = action([\App\Http\Controllers\ClinicAccountController::class, 'index']);
             $d['tiles'][] = ['key' => 'received', 'icon' => 'cash', 'tone' => 'green', 'url' => $url,

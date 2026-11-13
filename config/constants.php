@@ -20,6 +20,8 @@ return [
     'image_size_limit' => '5000000', //in Bytes
 
     'asset_version' => 771,
+    // public/js/vendor.js + public/css/vendor.css: bump ONLY when those two files change (they are cached a year)
+    'vendor_asset_version' => 2,
 
     // Phase 6 — Inventory count recount queue thresholds.
     // A counted line is flagged for recount when |diff_qty| / theoretical * 100 >= pct

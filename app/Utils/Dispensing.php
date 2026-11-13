@@ -168,12 +168,16 @@ class Dispensing
      */
     public static function waitingCountSql()
     {
+        // Start from the prescription's own sell lines (tsl_consultation_rx_index), then check their sale.
+        // Left to itself the database started from every final sale of the shop instead (thousands of
+        // rows per prescription line); STRAIGHT_JOIN fixes the order, and IFNULL(parent, -1) = -1 (same
+        // as IS NULL: ids are never negative) keeps it off the parent_sell_line_id index.
         return "(SELECT COUNT(*) FROM consultation_prescriptions rx
             WHERE rx.consultation_id = consultations.id AND rx.closed_at IS NULL
             AND rx.quantity > COALESCE(rx.legacy_given, 0) + COALESCE((
                 SELECT SUM(tsl.quantity - tsl.quantity_returned) FROM transaction_sell_lines tsl
-                JOIN transactions t ON t.id = tsl.transaction_id
-                WHERE tsl.consultation_prescription_id = rx.id AND tsl.parent_sell_line_id IS NULL
+                STRAIGHT_JOIN transactions t ON t.id = tsl.transaction_id
+                WHERE tsl.consultation_prescription_id = rx.id AND IFNULL(tsl.parent_sell_line_id, -1) = -1
                 AND t.type = 'sell' AND t.status = 'final'), 0))";
     }
 }

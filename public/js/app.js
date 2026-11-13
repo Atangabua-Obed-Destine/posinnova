@@ -2826,7 +2826,14 @@ $(document).on('click', 'button.activate-deactivate-location', function(){
     });
 });
 
+// PosInnova: a tab nobody is looking at does not ask the server every minute (each ask costs the server a
+// whole request); it asks once as soon as it is shown again.
+document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { getTotalUnreadNotifications(); }
+});
+
 function getTotalUnreadNotifications(){
+    if (document.hidden) { return; }
     if ($('span.notifications_count').length) {
         var href = '/get-total-unread';
         $.ajax({

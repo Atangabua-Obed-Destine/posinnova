@@ -3612,6 +3612,11 @@ class TransactionUtil extends Util
                     )->get();
 
             $purchase_sell_map = [];
+            // PosInnova: start each line with an empty adjustment map too. It used to keep every earlier
+            // line's rows and insert them all again after each line, so an adjustment of N lines wrote the
+            // first line's links N times (inventory counts left hundreds of thousands of duplicates, which
+            // made stock reports crawl and made deleting an adjustment take far too much stock back).
+            $purchase_adjustment_map = [];
 
             //Iterate over the rows, assign the purchase line to sell lines.
             $qty_selling = $line->quantity;
@@ -4164,28 +4169,40 @@ class TransactionUtil extends Util
             $query->where('purchase.created_by', $filters['user_id']);
         }
 
+        // PosInnova: "on or before $date" written as "< the next day" so the transaction_date index can
+        // be used (date(column) cannot), with bindings instead of the date pasted into the SQL.
+        $next_day = \Carbon::createFromFormat('Y-m-d', $date)->addDay()->format('Y-m-d');
+
         //If opening
         if ($is_opening) {
-            $next_day = \Carbon::createFromFormat('Y-m-d', $date)->addDay()->format('Y-m-d');
+            $day_after_next = \Carbon::createFromFormat('Y-m-d', $date)->addDays(2)->format('Y-m-d');
 
-            $query->where(function ($query) use ($date, $next_day) {
-                $query->whereRaw("date(transaction_date) <= '$date'")
-                    ->orWhereRaw("date(transaction_date) = '$next_day' AND purchase.type='opening_stock' ");
+            $query->where(function ($query) use ($next_day, $day_after_next) {
+                $query->where('purchase.transaction_date', '<', $next_day)
+                    ->orWhere(function ($q) use ($next_day, $day_after_next) {
+                        $q->where('purchase.transaction_date', '>=', $next_day)
+                            ->where('purchase.transaction_date', '<', $day_after_next)
+                            ->where('purchase.type', 'opening_stock');
+                    });
             });
         } else {
-            $query->whereRaw("date(transaction_date) <= '$date'");
+            $query->where('purchase.transaction_date', '<', $next_day);
         }
+
+        // PosInnova: what was sold from each purchase line up to $date, worked out once for all lines
+        // (it used to be a sub-query run again for every purchase line, which took minutes on a big shop).
+        $sold = DB::table('transaction_sell_lines_purchase_lines as tspl')
+            ->join('transaction_sell_lines as tsl', 'tspl.sell_line_id', '=', 'tsl.id')
+            ->join('transactions as sale', 'tsl.transaction_id', '=', 'sale.id')
+            ->where('sale.business_id', $business_id)
+            ->where('sale.transaction_date', '<', $next_day)
+            ->groupBy('tspl.purchase_line_id')
+            ->select('tspl.purchase_line_id', DB::raw('SUM(tspl.quantity - tspl.qty_returned) as qty'));
+        $query->leftJoinSub($sold, 'sold_upto', 'sold_upto.purchase_line_id', '=', 'purchase_lines.id');
 
         $query->select(
             DB::raw("SUM((purchase_lines.quantity - purchase_lines.quantity_returned - purchase_lines.quantity_adjusted -
-                            (SELECT COALESCE(SUM(tspl.quantity - tspl.qty_returned), 0) FROM 
-                            transaction_sell_lines_purchase_lines AS tspl
-                            JOIN transaction_sell_lines as tsl ON 
-                            tspl.sell_line_id=tsl.id 
-                            JOIN transactions as sale ON 
-                            tsl.transaction_id=sale.id 
-                            WHERE tspl.purchase_line_id = purchase_lines.id AND 
-                            date(sale.transaction_date) <= '$date') ) * $price_query_part
+                            COALESCE(sold_upto.qty, 0)) * $price_query_part
                         ) as stock")
         );
 

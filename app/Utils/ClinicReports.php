@@ -167,9 +167,10 @@ class ClinicReports
     /** SQL: quantity given so far on a prescription line (same rule as the dispensary). */
     private static function givenSql()
     {
+        // from the prescription's sell lines to their sale, not every sale of the shop (see Dispensing::waitingCountSql)
         return "(COALESCE(rx.legacy_given, 0) + COALESCE((SELECT SUM(tsl.quantity - tsl.quantity_returned) FROM transaction_sell_lines tsl
-            JOIN transactions t ON t.id = tsl.transaction_id
-            WHERE tsl.consultation_prescription_id = rx.id AND tsl.parent_sell_line_id IS NULL
+            STRAIGHT_JOIN transactions t ON t.id = tsl.transaction_id
+            WHERE tsl.consultation_prescription_id = rx.id AND IFNULL(tsl.parent_sell_line_id, -1) = -1
             AND t.type = 'sell' AND t.status = 'final'), 0))";
     }
 

@@ -2000,8 +2000,10 @@ class ReportController extends Controller
                     'u.short_name as unit',
                     'transaction_sell_lines.parent_sell_line_id',
                     DB::raw('((transaction_sell_lines.quantity - transaction_sell_lines.quantity_returned) * transaction_sell_lines.unit_price_inc_tax) as subtotal')
-                )
-                ->groupBy('transaction_sell_lines.id');
+                );
+            // PosInnova: no GROUP BY transaction_sell_lines.id: every join here is to one parent row, so each
+            // sell line is already one row, and the grouping only made DataTables count the rows by running
+            // the whole report inside a sub-query (seconds); without it the count is a plain COUNT.
 
             if (! empty($variation_id)) {
                 $query->where('transaction_sell_lines.variation_id', $variation_id);

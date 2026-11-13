@@ -4,7 +4,7 @@
      which draws native checkboxes, radios and date pickers dark on a white page: keep them light. --}}
 <style>:root { color-scheme: light; }</style>
 
-<link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
+<link rel="stylesheet" href="{{ asset('css/vendor.css?v=' . $vendor_v) }}">
 
 @if( in_array(session()->get('user.language', config('app.locale')), config('constants.langs_rtl')) )
 	<link rel="stylesheet" href="{{ asset('css/rtl.css?v='.$asset_v) }}">

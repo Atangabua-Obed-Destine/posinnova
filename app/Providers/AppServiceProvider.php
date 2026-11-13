@@ -101,6 +101,9 @@ class AppServiceProvider extends ServiceProvider
 
         $asset_v = config('constants.asset_version', 1);
         View::share('asset_v', $asset_v);
+        // PosInnova: vendor.js (8.6 MB) / vendor.css change rarely: their own version, so a deploy that only
+        // touches the app's scripts does not make every browser download them again.
+        View::share('vendor_v', config('constants.vendor_asset_version', $asset_v));
 
         // Share the list of modules enabled in sidebar
         View::composer(

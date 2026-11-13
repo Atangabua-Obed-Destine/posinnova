@@ -6,7 +6,7 @@
     <title>@lang('lang_v1.patient_portal')</title>
     <link href="{{ asset('css/tailwind/app.css?v='.$asset_v) }}" rel="stylesheet">
     <link href="{{ asset('css/tailwind/portal.css?v='.$asset_v) }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
+    <link rel="stylesheet" href="{{ asset('css/vendor.css?v=' . $vendor_v) }}">
 </head>
 <body class="tw-min-h-screen tw-bg-gradient-to-br tw-from-indigo-600 tw-to-blue-500 tw-flex tw-items-center tw-justify-center tw-p-6">
     <div class="tw-text-center tw-text-white">

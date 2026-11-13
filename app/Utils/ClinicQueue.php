@@ -35,6 +35,8 @@ class ClinicQueue
             ->where('status', 'active')
             ->where('user_type', 'user')
             ->orderBy('first_name')
+            // roles and permissions in a few queries for everyone, not two queries per user
+            ->with(['roles.permissions', 'permissions'])
             ->get()
             ->filter(function ($user) use ($business_id, $admin_doctors) {
                 if ($user->hasRole('Admin#'.$business_id)) {
@@ -59,6 +61,7 @@ class ClinicQueue
             ->where('status', 'active')
             ->where('user_type', 'user')
             ->orderBy('first_name')
+            ->with('roles')
             ->get()
             ->filter(function ($user) use ($business_id) {
                 return $user->hasRole('Admin#'.$business_id);

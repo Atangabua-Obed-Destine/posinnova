@@ -19,7 +19,7 @@
 
     <link href="{{ asset('css/tailwind/app.css?v='.$asset_v) }}" rel="stylesheet">
     <link href="{{ asset('css/tailwind/portal.css?v='.$asset_v) }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
+    <link rel="stylesheet" href="{{ asset('css/vendor.css?v=' . $vendor_v) }}">
     <link rel="stylesheet" href="{{ asset('css/app.css?v='.$asset_v) }}">
     @include('patient_portal.partials.styles')
 </head>
@@ -188,7 +188,7 @@
 
 @include('patient_portal.partials.toast')
 
-<script src="{{ asset('js/vendor.js?v=' . $asset_v) }}"></script>
+<script src="{{ asset('js/vendor.js?v=' . $vendor_v) }}"></script>
 <script src="{{ asset('js/functions.js?v=' . $asset_v) }}"></script>
 <script>
     // Initialise currency globals from the hidden inputs (lighter than loading common.js).

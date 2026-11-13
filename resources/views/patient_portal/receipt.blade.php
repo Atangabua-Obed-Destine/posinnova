@@ -6,7 +6,7 @@
     <title>{{ $charge->invoice_no }} · {{ session('business.name', config('app.name')) }}</title>
     <link href="{{ asset('css/tailwind/app.css?v='.$asset_v) }}" rel="stylesheet">
     <link href="{{ asset('css/tailwind/portal.css?v='.$asset_v) }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
+    <link rel="stylesheet" href="{{ asset('css/vendor.css?v=' . $vendor_v) }}">
     <input type="hidden" id="__symbol" value="{{ session('currency')['symbol'] ?? '' }}">
     <input type="hidden" id="__thousand" value="{{ session('currency')['thousand_separator'] ?? ',' }}">
     <input type="hidden" id="__decimal" value="{{ session('currency')['decimal_separator'] ?? '.' }}">
@@ -36,7 +36,7 @@
     <button onclick="window.print()" class="no-print tw-w-full tw-mt-4 tw-rounded-xl tw-bg-indigo-600 tw-text-white tw-py-2.5 tw-text-sm tw-font-semibold"><i class="fas fa-print"></i> @lang('messages.print')</button>
     <a href="{{ route('portal.bills') }}" class="no-print tw-block tw-text-center tw-mt-2 tw-text-sm tw-text-indigo-600" style="padding:10px 0;"><i class="fas fa-arrow-left"></i> @lang('messages.back')</a>
 </div>
-<script src="{{ asset('js/vendor.js?v='.$asset_v) }}"></script>
+<script src="{{ asset('js/vendor.js?v=' . $vendor_v) }}"></script>
 <script src="{{ asset('js/functions.js?v='.$asset_v) }}"></script>
 <script>
     var __currency_symbol=$('#__symbol').val()||'',__currency_thousand_separator=$('#__thousand').val()||',',__currency_decimal_separator=$('#__decimal').val()||'.',__currency_symbol_placement=$('#__symbol_placement').val()||'before',__currency_precision=parseInt($('#__precision').val()||2,10);

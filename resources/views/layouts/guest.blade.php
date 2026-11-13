@@ -17,7 +17,7 @@
     <link href="{{ asset('css/tailwind/app-extra.css?v='.$asset_v) }}" rel="stylesheet">
     <style>:root { color-scheme: light; }</style>
 
-    <link rel="stylesheet" href="{{ asset('css/vendor.css?v='.$asset_v) }}">
+    <link rel="stylesheet" href="{{ asset('css/vendor.css?v=' . $vendor_v) }}">
 
     <!-- app css -->
     <link rel="stylesheet" href="{{ asset('css/app.css?v='.$asset_v) }}">
@@ -41,7 +41,7 @@
     <![endif]-->
 
     <!-- jQuery 2.2.3 -->
-    <script src="{{ asset('js/vendor.js?v=' . $asset_v) }}"></script>
+    <script src="{{ asset('js/vendor.js?v=' . $vendor_v) }}"></script>
     <script src="{{ asset('js/functions.js?v=' . $asset_v) }}"></script>
     @yield('javascript')
 @include('layouts.partials.support_ticker')
