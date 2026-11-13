@@ -519,7 +519,9 @@ class SellController extends Controller
                 ->filterColumn('conatct_name', function ($query, $keyword) {
                     $query->where(function ($q) use ($keyword) {
                         $q->where('contacts.name', 'like', "%{$keyword}%")
-                        ->orWhere('contacts.supplier_business_name', 'like', "%{$keyword}%");
+                        ->orWhere('contacts.supplier_business_name', 'like', "%{$keyword}%")
+                        // PosInnova: the name typed for a walk-in customer finds the sale too
+                        ->orWhere('transactions.walk_in_customer_name', 'like', "%{$keyword}%");
                     });
                 })
                 ->addColumn('payment_methods', function ($row) use ($payment_types) {
@@ -1517,7 +1519,9 @@ class SellController extends Controller
                 ->filterColumn('conatct_name', function ($query, $keyword) {
                     $query->where(function ($q) use ($keyword) {
                         $q->where('contacts.name', 'like', "%{$keyword}%")
-                        ->orWhere('contacts.supplier_business_name', 'like', "%{$keyword}%");
+                        ->orWhere('contacts.supplier_business_name', 'like', "%{$keyword}%")
+                        // PosInnova: the name typed for a walk-in customer finds the sale too
+                        ->orWhere('transactions.walk_in_customer_name', 'like', "%{$keyword}%");
                     });
                 })
                 ->filterColumn('added_by', function ($query, $keyword) {

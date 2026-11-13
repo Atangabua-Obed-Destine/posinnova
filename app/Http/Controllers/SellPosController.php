@@ -586,7 +586,7 @@ class SellPosController extends Controller
             $input = $request->except('_token');
 
             //Optional walk-in customer name (only stored when contact is the default walk-in customer)
-            $input['walk_in_customer_name'] = !empty($input['walk_in_customer_name']) ? trim($input['walk_in_customer_name']) : null;
+            $input['walk_in_customer_name'] = !empty($input['walk_in_customer_name']) ? (mb_substr(trim($input['walk_in_customer_name']), 0, 191) ?: null) : null; // the column holds 191
             if (!empty($input['walk_in_customer_name']) && !empty($input['contact_id'])) {
                 $wk_business_id = $request->session()->get('user.business_id');
                 $is_walk_in_contact = \App\Contact::where('business_id', $wk_business_id)
@@ -1657,7 +1657,7 @@ class SellPosController extends Controller
             $input = $request->except('_token');
 
             //Optional walk-in customer name (only stored when contact is the default walk-in)
-            $input['walk_in_customer_name'] = !empty($input['walk_in_customer_name']) ? trim($input['walk_in_customer_name']) : null;
+            $input['walk_in_customer_name'] = !empty($input['walk_in_customer_name']) ? (mb_substr(trim($input['walk_in_customer_name']), 0, 191) ?: null) : null; // the column holds 191
             $business_id_for_walk_in = $request->session()->get('user.business_id');
             if (!empty($input['walk_in_customer_name']) && !empty($input['contact_id'])) {
                 $is_walk_in_contact = \App\Contact::where('business_id', $business_id_for_walk_in)

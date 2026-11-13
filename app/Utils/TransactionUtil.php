@@ -1242,6 +1242,16 @@ class TransactionUtil extends Util
         //Customer show_customer
         $customer = Contact::find($transaction->contact_id);
 
+        // PosInnova: a walk-in sale with a name typed at the till shows that name everywhere on the
+        // receipt (every layout), not the default "Walk-In Customer". The default contact is cloned so
+        // its address block (customer_info, which starts with the name) carries the typed name too.
+        $walk_in_name = (! empty($transaction->walk_in_customer_name) && ! empty($customer->is_default)) ? $transaction->walk_in_customer_name : null;
+        if ($walk_in_name) {
+            $customer = clone $customer;
+            $customer->name = $walk_in_name;
+            $customer->supplier_business_name = null;
+        }
+
         $output['contact_id'] = $customer->contact_id;
         $output['contact_name'] = $customer->name;
         $output['customer_info'] = '';
@@ -1253,11 +1263,6 @@ class TransactionUtil extends Util
             $output['customer_name'] = ! empty($customer->name) ? $customer->name : $customer->supplier_business_name;
             $output['customer_mobile'] = $customer->mobile;
 
-            //PosInnova: override walk-in customer name when an optional custom name was captured at POS
-            if (! empty($transaction->walk_in_customer_name) && ! empty($customer->is_default)) {
-                $output['customer_name'] = $transaction->walk_in_customer_name;
-                $output['contact_name'] = $transaction->walk_in_customer_name;
-            }
 
             if ($receipt_printer_type != 'printer') {
                 $output['customer_info'] .= $customer->contact_address;
@@ -1301,7 +1306,7 @@ class TransactionUtil extends Util
                 if (! empty($contact_custom_labels['custom_field_4'])) {
                     $temp[] = $contact_custom_labels['custom_field_4'].': '.$customer->custom_field4;
                 } else {
-                    $temp[] = $customer->custom_field1;
+                    $temp[] = $customer->custom_field4;
                 }
             }
             if (! empty($temp)) {
@@ -2559,36 +2564,58 @@ class TransactionUtil extends Util
                     $prefix = $scheme->prefix.date('Y').config('constants.invoice_scheme_separator');
                 }
 
-                //Count
-                $count = $scheme->start_number + $scheme->invoice_count;
-                if ($scheme->number_type == 'random') {
-                    $max = (int) str_pad(1, $scheme->total_digits, '1');
-                    $count = rand(1000, 9 * $max);
-                }
-                $count = str_pad($count, $scheme->total_digits, '0', STR_PAD_LEFT);
+                // PosInnova: a number the business already uses is skipped. Two schemes of the same
+                // format (or a year scheme and the drafts' "2026/0006" numbers) used to hand out a
+                // number that was taken, and the sale failed on the unique index.
+                $tries = 0;
+                do {
+                    //Count
+                    $count = $scheme->start_number + $scheme->invoice_count;
+                    if ($scheme->number_type == 'random') {
+                        $max = (int) str_pad(1, $scheme->total_digits, '1');
+                        $count = rand(1000, 9 * $max);
+                    }
+                    $count = str_pad($count, $scheme->total_digits, '0', STR_PAD_LEFT);
 
-                //Prefix + count
-                $invoice_no = $prefix.$count;
+                    //Prefix + count
+                    $invoice_no = $prefix.$count;
 
-                //Increment the invoice count
-                $scheme->invoice_count = $scheme->invoice_count + 1;
+                    //Increment the invoice count
+                    $scheme->invoice_count = $scheme->invoice_count + 1;
+                } while ($this->invoiceNumberTaken($business_id, $invoice_no) && ++$tries < 5000);
                 $scheme->save();
 
                 return $invoice_no;
             });
         } elseif ($status == 'draft') {
-            $ref_count = $this->setAndGetReferenceCount('draft', $business_id);
-            $invoice_no = $this->generateReferenceNumber('draft', $ref_count, $business_id);
+            // PosInnova: skip a number already used (e.g. one a year invoice scheme gave a sale)
+            $tries = 0;
+            do {
+                $ref_count = $this->setAndGetReferenceCount('draft', $business_id);
+                $invoice_no = $this->generateReferenceNumber('draft', $ref_count, $business_id);
+            } while ($this->invoiceNumberTaken($business_id, $invoice_no) && ++$tries < 5000);
 
             return $invoice_no;
         } elseif ($sale_type == 'sales_order') {
-            $ref_count = $this->setAndGetReferenceCount('sales_order', $business_id);
-            $invoice_no = $this->generateReferenceNumber('sales_order', $ref_count, $business_id);
+            $tries = 0;
+            do {
+                $ref_count = $this->setAndGetReferenceCount('sales_order', $business_id);
+                $invoice_no = $this->generateReferenceNumber('sales_order', $ref_count, $business_id);
+            } while ($this->invoiceNumberTaken($business_id, $invoice_no) && ++$tries < 5000);
 
             return $invoice_no;
         } else {
             return Str::random(5);
         }
+    }
+
+    /**
+     * PosInnova: is this sale number already used in the business? (the unique index is on
+     * business, type and invoice number)
+     */
+    private function invoiceNumberTaken($business_id, $invoice_no)
+    {
+        return Transaction::where('business_id', $business_id)->where('type', 'sell')->where('invoice_no', $invoice_no)->exists();
     }
 
     private function getInvoiceScheme($business_id, $location_id)

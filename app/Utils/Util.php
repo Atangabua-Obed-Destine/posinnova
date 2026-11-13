@@ -839,6 +839,10 @@ class Util
             //Replace contact name
             if (strpos($value, '{contact_name}') !== false) {
                 $contact_name = empty($contact) ? $transaction->contact->name : $contact->name;
+                // PosInnova: a walk-in sale with a typed name uses that name
+                if (! empty($transaction->walk_in_customer_name) && ! empty(optional($transaction->contact)->is_default)) {
+                    $contact_name = $transaction->walk_in_customer_name;
+                }
 
                 $data[$key] = str_replace('{contact_name}', $contact_name, $data[$key]);
             }
