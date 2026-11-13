@@ -84,6 +84,7 @@ class PatientController extends Controller
                     'pd.sex',
                     'pd.blood_group',
                     'pd.date_of_birth',
+                    'pd.dob_estimated',
                     'pd.insurance_provider',
                 ]);
 
@@ -101,7 +102,8 @@ class PatientController extends Controller
                         return '';
                     }
 
-                    return \Carbon::parse($row->date_of_birth)->age;
+                    // an age given instead of a birth date is marked as approximate
+                    return ($row->dob_estimated ? '≈ ' : '').\Carbon::parse($row->date_of_birth)->age;
                 })
                 ->editColumn('name', function ($row) {
                     $name = e($row->name);
@@ -176,6 +178,10 @@ class PatientController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
+        if ($age_error = $this->ageError($request)) {
+            return $age_error;
+        }
+
         try {
             $business_id = $request->session()->get('user.business_id');
 
@@ -223,11 +229,13 @@ class PatientController extends Controller
             //Generate file number atomically and create the clinical row.
             $file_number = $this->generateFileNumber($business_id);
 
+            [$dob, $dob_estimated] = $this->dobFromRequest($request);
             $details = PatientDetail::create([
                 'contact_id' => $contact->id,
                 'business_id' => $business_id,
                 'file_number' => $file_number,
-                'date_of_birth' => $request->filled('date_of_birth') ? $request->input('date_of_birth') : null,
+                'date_of_birth' => $dob,
+                'dob_estimated' => $dob_estimated,
                 'sex' => $request->input('sex') ?: null,
                 'blood_group' => $request->input('blood_group') ?: null,
                 'known_allergies' => $request->input('known_allergies') ?: null,
@@ -256,6 +264,11 @@ class PatientController extends Controller
                 'success' => true,
                 'msg' => __('lang_v1.patient_added_success').'. '.__('clinic.portal_pin_saved', ['file' => $file_number, 'pin' => $portal_pin]),
                 'id' => $contact->id,
+                // for the quick registration at check-in: the new patient goes straight into the search box
+                'name' => $contact->name,
+                'file_number' => $file_number,
+                'pin' => $portal_pin,
+                'text' => $contact->name.' ('.implode(' · ', array_filter([$file_number, $contact->mobile])).')',
             ];
         } catch (\Exception $e) {
             DB::rollBack();
@@ -415,6 +428,10 @@ class PatientController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
+        if ($age_error = $this->ageError($request)) {
+            return $age_error;
+        }
+
         try {
             $business_id = $request->session()->get('user.business_id');
 
@@ -459,8 +476,10 @@ class PatientController extends Controller
             }
             $contact->save();
 
+            [$dob, $dob_estimated] = $this->dobFromRequest($request, PatientDetail::where('contact_id', $contact->id)->first());
             $clinical = [
-                'date_of_birth' => $request->filled('date_of_birth') ? $request->input('date_of_birth') : null,
+                'date_of_birth' => $dob,
+                'dob_estimated' => $dob_estimated,
                 'sex' => $request->input('sex') ?: null,
                 'blood_group' => $request->input('blood_group') ?: null,
                 'known_allergies' => $request->input('known_allergies') ?: null,
@@ -627,6 +646,52 @@ class PatientController extends Controller
     private function pinError(Request $request)
     {
         $output = ['success' => false, 'msg' => __('clinic.portal_pin_invalid')];
+        if ($request->ajax()) {
+            return $output;
+        }
+
+        return redirect()->back()->withInput($request->except('portal_pin'))->with('status', $output);
+    }
+
+    /**
+     * PosInnova: the birth date to store, and whether it is an estimate. Reception can give the age
+     * (years, or months for a baby) when the patient does not know the date; the date is then worked
+     * out from today. Saving again with the same age keeps the stored estimate (no drift).
+     *
+     * @return array [date string|null, bool estimated]
+     */
+    private function dobFromRequest(Request $request, $current = null)
+    {
+        if ($request->input('dob_mode') === 'age' && $request->filled('age_value')) {
+            $n = (int) $request->input('age_value');
+            $months = $request->input('age_unit') === 'months';
+            if ($current && $current->dob_estimated && $current->date_of_birth) {
+                $had = $months ? $current->date_of_birth->diffInMonths(now()) : $current->date_of_birth->age;
+                if ($had == $n) {
+                    return [$current->date_of_birth->toDateString(), true];
+                }
+            }
+            $date = $months ? \Carbon::today()->subMonths($n) : \Carbon::today()->subYears($n);
+
+            return [$date->toDateString(), true];
+        }
+
+        return [$request->filled('date_of_birth') ? $request->input('date_of_birth') : null, false];
+    }
+
+    /**
+     * PosInnova: an age that is not a whole number from 0 to 150 is refused, with the form kept.
+     */
+    private function ageError(Request $request)
+    {
+        if ($request->input('dob_mode') !== 'age' || ! $request->filled('age_value')) {
+            return null;
+        }
+        $v = trim((string) $request->input('age_value'));
+        if (ctype_digit($v) && (int) $v <= 150) {
+            return null;
+        }
+        $output = ['success' => false, 'msg' => __('clinic.pf_age_invalid')];
         if ($request->ajax()) {
             return $output;
         }

@@ -17,6 +17,7 @@ class PatientDetail extends Model
 
     protected $casts = [
         'date_of_birth' => 'date',
+        'dob_estimated' => 'boolean',
         'insurance_expiry_date' => 'date',
         'insurance_coverage_pct' => 'decimal:2',
         'whatsapp_opt_in' => 'boolean',
@@ -64,6 +65,25 @@ class PatientDetail extends Model
     public function mother()
     {
         return $this->belongsTo(Contact::class, 'mother_contact_id');
+    }
+
+    /**
+     * PosInnova: the birth date as shown to people. An estimated one (the patient gave an age, not a
+     * date) is shown as "about N years" rather than as a precise date nobody gave.
+     */
+    public function dobLabel($format = 'd-m-Y')
+    {
+        if (empty($this->date_of_birth)) {
+            return null;
+        }
+        if ($this->dob_estimated) {
+            $months = $this->date_of_birth->diffInMonths(now());
+            $age = $months < 24 ? trans_choice('clinic.pf_age_months_n', $months, ['n' => $months]) : trans_choice('clinic.pf_age_years_n', $this->date_of_birth->age, ['n' => $this->date_of_birth->age]);
+
+            return __('clinic.pf_dob_estimated', ['age' => $age]);
+        }
+
+        return $this->date_of_birth->format($format);
     }
 
     /**

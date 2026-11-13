@@ -36,10 +36,42 @@
 
         <div class="clearfix"></div>
 
-        <div class="col-md-3">
-            <div class="form-group">
+        {{-- PosInnova: birth date, or the age when the patient does not know the date (the date is then
+             estimated from it and marked as such). An estimated date is never shown as if it were real. --}}
+        @php
+            $dob_est = (bool) optional($pd)->dob_estimated && optional($pd)->date_of_birth;
+            $dob_mode = old('dob_mode', $dob_est ? 'age' : 'date');
+            $age_cur = null;
+            $age_unit_cur = 'years';
+            if ($dob_est) {
+                $age_months = $pd->date_of_birth->diffInMonths(now());
+                if ($age_months < 24) {
+                    $age_unit_cur = 'months';
+                    $age_cur = $age_months;
+                } else {
+                    $age_cur = $pd->date_of_birth->age;
+                }
+            }
+            $age_unit_cur = old('age_unit', $age_unit_cur);
+        @endphp
+        <div class="col-md-3 pf-dob">
+            <input type="hidden" name="dob_mode" class="pf-dob-mode" value="{{ $dob_mode }}">
+            <div class="form-group pf-dob-date" @if ($dob_mode === 'age') style="display:none;" @endif>
                 {!! Form::label('date_of_birth', __('lang_v1.date_of_birth') . ':') !!}
-                {!! Form::date('date_of_birth', optional($pd)->date_of_birth ? optional($pd)->date_of_birth->format('Y-m-d') : null, ['class' => 'form-control', 'max' => date('Y-m-d')]) !!}
+                {!! Form::date('date_of_birth', old('date_of_birth', ! $dob_est && optional($pd)->date_of_birth ? $pd->date_of_birth->format('Y-m-d') : null), ['class' => 'form-control', 'max' => date('Y-m-d')]) !!}
+                <a href="#" class="pf-dob-switch" data-to="age" style="font-size:12px;"><i class="fas fa-question-circle"></i> @lang('clinic.pf_dob_unknown')</a>
+            </div>
+            <div class="form-group pf-dob-age" @if ($dob_mode !== 'age') style="display:none;" @endif>
+                <label>@lang('clinic.pf_age'):</label>
+                <div style="display:flex; gap:6px;">
+                    <input type="number" name="age_value" class="form-control pf-age" min="0" max="150" step="1" inputmode="numeric" value="{{ old('age_value', $age_cur) }}" style="flex:1 1 auto; min-width:0;">
+                    <select name="age_unit" class="form-control" style="width:auto; flex:0 0 auto;">
+                        <option value="years" {{ $age_unit_cur !== 'months' ? 'selected' : '' }}>@lang('clinic.pf_age_years')</option>
+                        <option value="months" {{ $age_unit_cur === 'months' ? 'selected' : '' }}>@lang('clinic.pf_age_months')</option>
+                    </select>
+                </div>
+                <a href="#" class="pf-dob-switch" data-to="date" style="font-size:12px;"><i class="fas fa-calendar-alt"></i> @lang('clinic.pf_dob_known')</a>
+                <p class="help-block" style="margin:2px 0 0; font-size:12px;">@lang('clinic.pf_age_help')</p>
             </div>
         </div>
         <div class="col-md-3">
@@ -64,7 +96,7 @@
 @endcomponent
 
 {{-- Contact details --}}
-@component('components.widget', ['class' => 'box-solid', 'title' => __('contact.contact_info')])
+@component('components.widget', ['class' => 'box-solid', 'title' => __('contact.contact_info', ['contact' => __('lang_v1.patient')])])
     <div class="row">
         <div class="col-md-3">
             <div class="form-group">
@@ -97,7 +129,17 @@
         <div class="clearfix"></div>
 
         {{-- PosInnova: consent to automatic WhatsApp messages about appointments (nothing is sent without it) --}}
-        @php $wa_on = (bool) old('whatsapp_opt_in', optional($pd)->whatsapp_opt_in); @endphp
+        @php
+            // a new patient starts ticked (reception still asks, and unticks if the patient says no);
+            // an existing patient keeps their answer; a form sent back with an error keeps what was sent
+            if (empty($pf_quick) && session()->hasOldInput()) {
+                $wa_on = (bool) old('whatsapp_opt_in');
+            } elseif (! empty($pd)) {
+                $wa_on = (bool) $pd->whatsapp_opt_in;
+            } else {
+                $wa_on = true;
+            }
+        @endphp
         <div class="col-md-12">
             <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:8px 12px; margin-bottom:14px;" id="wa_consent_box">
                 <div class="checkbox" style="margin:0;">
@@ -148,8 +190,32 @@
     </div>
 @endcomponent
 
+{{-- PosInnova: Next of kin and Insurance are folded until opened (or when they already hold something) --}}
+@php
+    $pf_fold_header = function ($title, $key, $open) {
+        return '<button type="button" class="pf-fold" data-fold="'.$key.'" aria-expanded="'.($open ? 'true' : 'false').'"'
+            .' style="background:none;border:0;padding:0;width:100%;text-align:left;display:flex;align-items:center;gap:8px;cursor:pointer;">'
+            .'<h3 class="box-title" style="margin:0;">'.e($title).'</h3>'
+            .'<small class="text-muted pf-fold-hint" style="'.($open ? 'display:none;' : '').'">'.e(__('clinic.pf_fold_hint')).'</small>'
+            .'<i class="fas fa-chevron-down pf-fold-icon" style="margin-left:auto;transition:transform .2s;'.($open ? 'transform:rotate(180deg);' : '').'"></i>'
+            .'</button>';
+    };
+    $pf_filled = function (array $fields) use ($pd) {
+        foreach ($fields as $f) {
+            if (filled(old($f, optional($pd)->$f))) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+    $kin_open = $pf_filled(['next_of_kin_name', 'next_of_kin_phone', 'next_of_kin_relationship']);
+    $ins_open = $pf_filled(['insurer_id', 'insurance_number', 'insurance_coverage_pct', 'insurance_expiry_date']);
+@endphp
+
 {{-- Next of kin --}}
-@component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.next_of_kin')])
+@component('components.widget', ['class' => 'box-solid', 'header' => $pf_fold_header(__('lang_v1.next_of_kin'), 'kin', $kin_open)])
+    <div class="pf-fold-body" data-fold-body="kin" @unless ($kin_open) style="display:none;" @endunless>
     <div class="row">
         <div class="col-md-4">
             <div class="form-group">
@@ -170,10 +236,12 @@
             </div>
         </div>
     </div>
+    </div>
 @endcomponent
 
 {{-- Insurance --}}
-@component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.insurance')])
+@component('components.widget', ['class' => 'box-solid', 'header' => $pf_fold_header(__('lang_v1.insurance'), 'ins', $ins_open)])
+    <div class="pf-fold-body" data-fold-body="ins" @unless ($ins_open) style="display:none;" @endunless>
     <div class="row">
         <div class="col-md-3">
             {{-- PosInnova clinic phase 5: the insurer is chosen from the insurer list --}}
@@ -219,6 +287,7 @@
             </div>
         </div>
     </div>
+    </div>
 @endcomponent
 
 <script>
@@ -235,12 +304,46 @@
     });
 </script>
 
+<script>
+    // PosInnova: birth date / age switch and the folded sections. Plain JS on the document, so it also
+    // works when this form is in the quick-registration dialog (and is set up once).
+    if (! window.__pfFormBound) {
+        window.__pfFormBound = true;
+        document.addEventListener('click', function (e) {
+            var sw = e.target.closest && e.target.closest('.pf-dob-switch');
+            if (sw) {
+                e.preventDefault();
+                var box = sw.closest('.pf-dob'), to = sw.getAttribute('data-to');
+                box.querySelector('.pf-dob-mode').value = to;
+                box.querySelector('.pf-dob-date').style.display = to === 'date' ? '' : 'none';
+                box.querySelector('.pf-dob-age').style.display = to === 'age' ? '' : 'none';
+                var f = box.querySelector(to === 'age' ? '.pf-age' : 'input[type=date]');
+                if (f) { f.focus(); }
+                return;
+            }
+            var fold = e.target.closest && e.target.closest('.pf-fold');
+            if (fold) {
+                e.preventDefault();
+                var form = fold.closest('form') || document;
+                var body = form.querySelector('[data-fold-body="' + fold.getAttribute('data-fold') + '"]');
+                if (!body) { return; }
+                var open = body.style.display === 'none';
+                body.style.display = open ? '' : 'none';
+                fold.setAttribute('aria-expanded', open ? 'true' : 'false');
+                var icon = fold.querySelector('.pf-fold-icon'), hint = fold.querySelector('.pf-fold-hint');
+                if (icon) { icon.style.transform = open ? 'rotate(180deg)' : ''; }
+                if (hint) { hint.style.display = open ? 'none' : ''; }
+            }
+        });
+    }
+</script>
+
 {{-- Notes --}}
 @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.additional_notes')])
     <div class="row">
         <div class="col-md-12">
             <div class="form-group">
-                {!! Form::textarea('notes', optional($pd)->notes, ['class' => 'form-control', 'rows' => 3, 'placeholder' => __('lang_v1.additional_notes')]) !!}
+                {!! Form::textarea('notes', ! empty($pf_quick) ? '' : optional($pd)->notes, ['class' => 'form-control', 'rows' => 3, 'id' => 'patient_notes', 'placeholder' => __('lang_v1.additional_notes')]) !!}
             </div>
         </div>
     </div>

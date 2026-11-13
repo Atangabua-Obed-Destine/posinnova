@@ -105,7 +105,7 @@
                     <div class="col-md-6">
                         <table class="table table-bordered">
                             <tr><th width="40%">@lang('lang_v1.sex')</th><td>{{ optional($pd)->sex ? __('lang_v1.' . ['M'=>'male','F'=>'female','Other'=>'other'][$pd->sex]) : '-' }}</td></tr>
-                            <tr><th>@lang('lang_v1.date_of_birth')</th><td>{{ optional($pd)->date_of_birth ? optional($pd)->date_of_birth->format('d-m-Y') : '-' }}</td></tr>
+                            <tr><th>@lang('lang_v1.date_of_birth')</th><td>{{ optional($pd)->dobLabel() ?: '-' }}</td></tr>
                             <tr><th>@lang('lang_v1.age')</th><td>{{ !is_null($age) ? $age . ' ' . __('lang_v1.years') : '-' }}</td></tr>
                             <tr><th>@lang('lang_v1.blood_group')</th><td>{{ optional($pd)->blood_group ?: '-' }}</td></tr>
                             <tr><th>@lang('contact.mobile')</th><td>{{ $contact->mobile ?: '-' }}</td></tr>

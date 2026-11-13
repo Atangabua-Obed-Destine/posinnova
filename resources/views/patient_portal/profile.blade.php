@@ -15,7 +15,7 @@
 
 @php
     $rows = [
-        ['icon' => 'fa-birthday-cake', 'label' => __('lang_v1.date_of_birth'), 'value' => optional($pd)->date_of_birth ? \Carbon::parse($pd->date_of_birth)->format('d/m/Y') : '—'],
+        ['icon' => 'fa-birthday-cake', 'label' => __('lang_v1.date_of_birth'), 'value' => optional($pd)->dobLabel('d/m/Y') ?: '—'],
         ['icon' => 'fa-venus-mars', 'label' => __('lang_v1.sex'), 'value' => optional($pd)->sex ?: '—'],
         ['icon' => 'fa-tint', 'label' => __('lang_v1.blood_group'), 'value' => optional($pd)->blood_group ?: '—'],
         ['icon' => 'fa-mobile-alt', 'label' => __('lang_v1.mobile'), 'value' => $patient->mobile ?: '—'],

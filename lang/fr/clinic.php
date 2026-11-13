@@ -1353,4 +1353,21 @@ return [
     'rc_balance_before' => 'Solde avant',
     'rc_claim' => 'Demande',
     'rc_rebilled' => 'Lignes renvoyées au patient',
+
+    // fiche patient : âge à la place de la date de naissance, sections repliées, enregistrement rapide à l'accueil
+    'pf_dob_unknown' => 'Ne connaît pas sa date de naissance ? Saisir l\'âge',
+    'pf_dob_known' => 'Saisir plutôt la date de naissance',
+    'pf_age' => 'Âge',
+    'pf_age_years' => 'ans',
+    'pf_age_months' => 'mois',
+    'pf_age_help' => 'La date de naissance est estimée à partir de l\'âge et marquée comme estimée.',
+    'pf_age_years_n' => '{1} :n an|[0,*] :n ans',
+    'pf_age_months_n' => '{1} :n mois|[0,*] :n mois',
+    'pf_dob_estimated' => 'environ :age (estimé, date de naissance inconnue)',
+    'pf_age_invalid' => 'L\'âge doit être un nombre entier entre 0 et 150.',
+    'pf_fold_hint' => 'facultatif, cliquer pour ouvrir',
+    'pf_quick_title' => 'Enregistrer un nouveau patient',
+    'pf_quick_saving' => 'Enregistrement...',
+    'pf_quick_done' => 'Nouveau patient enregistré : :name, dossier :file, code PIN du portail :pin. Remettez le code au patient.',
+    'pf_quick_error' => 'Le patient n\'a pas pu être enregistré. Vérifiez le formulaire.',
 ];

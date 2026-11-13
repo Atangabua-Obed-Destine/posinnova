@@ -1352,4 +1352,21 @@ return [
     'rc_balance_before' => 'Balance before',
     'rc_claim' => 'Claim',
     'rc_rebilled' => 'Items sent back to the patient',
+
+    // patient form: age instead of birth date, folded sections, quick registration at check-in
+    'pf_dob_unknown' => 'Does not know the birth date? Enter the age',
+    'pf_dob_known' => 'Enter the birth date instead',
+    'pf_age' => 'Age',
+    'pf_age_years' => 'years',
+    'pf_age_months' => 'months',
+    'pf_age_help' => 'The birth date is estimated from the age and marked as estimated.',
+    'pf_age_years_n' => '{1} :n year|[0,*] :n years',
+    'pf_age_months_n' => '{1} :n month|[0,*] :n months',
+    'pf_dob_estimated' => 'about :age (estimated, birth date not known)',
+    'pf_age_invalid' => 'The age must be a whole number between 0 and 150.',
+    'pf_fold_hint' => 'optional, click to open',
+    'pf_quick_title' => 'Register a new patient',
+    'pf_quick_saving' => 'Saving...',
+    'pf_quick_done' => 'New patient registered: :name, file :file, portal PIN :pin. Give the PIN to the patient.',
+    'pf_quick_error' => 'The patient could not be registered. Please check the form.',
 ];

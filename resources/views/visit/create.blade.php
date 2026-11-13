@@ -58,10 +58,14 @@
                                 @endif
                             </select>
                         </div>
+                        @can('patient.create')
                         <p class="help-block">
                             @lang('lang_v1.patient_not_found_hint')
-                            <a href="{{ action([\App\Http\Controllers\PatientController::class, 'create']) }}" target="_blank" class="pos-tap-link">@lang('lang_v1.add_patient')</a>
+                            {{-- PosInnova: register right here, in a dialog; the new patient is then picked for check-in --}}
+                            <a href="#" class="pos-tap-link" id="quick_patient_open" data-toggle="modal" data-target="#quick_patient_modal">@lang('lang_v1.add_patient')</a>
                         </p>
+                        @endcan
+                        <div id="quick_patient_done" class="alert alert-success" style="display:none; margin:6px 0 0; padding:8px 12px;"></div>
                     </div>
                 </div>
                 @if ($wards_on)
@@ -158,6 +162,32 @@
 
         {!! Form::close() !!}
     </section>
+
+    {{-- PosInnova: register a new patient without leaving check-in --}}
+    @can('patient.create')
+    <div class="modal fade" id="quick_patient_modal" tabindex="-1" role="dialog" aria-labelledby="quick_patient_title">
+        <div class="modal-dialog modal-lg" role="document" style="max-width:1100px; width:auto; margin-left:auto; margin-right:auto;">
+            <div class="modal-content" style="border-radius:10px; overflow:hidden;">
+                <form id="quick_patient_form" action="{{ action([\App\Http\Controllers\PatientController::class, 'store']) }}" method="post" autocomplete="off">
+                    @csrf
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('messages.close') }}"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="quick_patient_title"><i class="fas fa-user-plus"></i> @lang('clinic.pf_quick_title')</h4>
+                    </div>
+                    <div class="modal-body" style="background:#f3f4f6; max-height:calc(100vh - 190px); overflow-y:auto;">
+                        @include('patient.partials.form_fields', ['pf_quick' => true])
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="tw-dw-btn tw-dw-btn-outline" data-dismiss="modal">@lang('messages.cancel')</button>
+                        <button type="submit" class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-border-none tw-font-bold" id="quick_patient_save">
+                            <i class="fas fa-save"></i> <span>@lang('messages.save')</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endcan
 @endsection
 
 @section('javascript')
@@ -320,4 +350,62 @@
             });
         });
     </script>
+    @can('patient.create')
+    <script>
+        // PosInnova: quick registration at check-in. The patient form opens in a dialog, is saved in the
+        // background, and the new patient is picked in the search box (plans, cover and fees follow).
+        $(function () {
+            var $m = $('#quick_patient_modal'), $f = $('#quick_patient_form');
+            $m.on('shown.bs.modal', function () {
+                // the dropdowns inside the dialog open inside it (they are on top of the dialog and can be typed in)
+                $m.find('select.select2').each(function () {
+                    var $s = $(this);
+                    if ($s.data('select2')) { $s.select2('destroy'); }
+                    $s.select2({ dropdownParent: $m, width: '100%' });
+                });
+                $f.find('input[name=first_name]').trigger('focus');
+            });
+            $f.on('submit', function (e) {
+                e.preventDefault();
+                if (this.checkValidity && !this.checkValidity()) {
+                    if (this.reportValidity) { this.reportValidity(); }
+                    return;
+                }
+                var $btn = $('#quick_patient_save').prop('disabled', true);
+                var label = $btn.find('span').text();
+                $btn.find('span').text(@json(__('clinic.pf_quick_saving')));
+                $.ajax({ url: this.action, method: 'POST', data: $f.serialize(), dataType: 'json' })
+                    .done(function (r) {
+                        if (r && r.success && r.id) {
+                            var opt = new Option(r.text || r.name, r.id, true, true);
+                            $('#visit_patient_id').append(opt).trigger('change');
+                            $('#quick_patient_done').text(@json(__('clinic.pf_quick_done'))
+                                .replace(':name', r.name).replace(':file', r.file_number).replace(':pin', r.pin)).show();
+                            toastr.success(r.msg);
+                            $m.modal('hide');
+                            $f[0].reset();
+                            $f.find('select.select2').val('').trigger('change.select2');
+                            // back to "birth date" for the next one
+                            $f.find('.pf-dob-mode').val('date');
+                            $f.find('.pf-dob-date').show();
+                            $f.find('.pf-dob-age').hide();
+                        } else {
+                            toastr.error(r && r.msg ? r.msg : @json(__('clinic.pf_quick_error')));
+                        }
+                    })
+                    .fail(function (x) {
+                        var msg = @json(__('clinic.pf_quick_error'));
+                        if (x.responseJSON) {
+                            msg = x.responseJSON.msg || x.responseJSON.message || msg;
+                            if (x.responseJSON.errors) { msg = Object.values(x.responseJSON.errors).map(function (v) { return v[0]; }).join(' '); }
+                        }
+                        toastr.error(msg);
+                    })
+                    .always(function () {
+                        $btn.prop('disabled', false).find('span').text(label);
+                    });
+            });
+        });
+    </script>
+    @endcan
 @endsection
