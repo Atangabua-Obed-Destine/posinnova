@@ -2079,25 +2079,18 @@ class ProductUtil extends Util
             $location_filter = 'AND transactions.location_id=l.id';
         }
 
-        $products = $query->select(
-            // DB::raw("(SELECT SUM(quantity) FROM transaction_sell_lines LEFT JOIN transactions ON transaction_sell_lines.transaction_id=transactions.id WHERE transactions.status='final' $location_filter AND
-            //     transaction_sell_lines.product_id=products.id) as total_sold"),
+        // PosInnova: the per-product totals (sold, transferred, adjusted, stock value) are sub-queries.
+        // With 'stock_totals_per_row' they are left out of this query and the caller gets them for the
+        // shown rows only (stockRowTotals); in the main query DataTables also had to work them out for
+        // every product just to count the rows.
+        $totals_select = [];
+        if (empty($filters['stock_totals_per_row'])) {
+            foreach ($this->stockRowTotalsSql('vld.location_id', 'variations.id', false) as $alias => $sql) {
+                $totals_select[] = DB::raw($sql.' as '.$alias);
+            }
+        }
 
-            DB::raw("(SELECT SUM(TSL.quantity - TSL.quantity_returned) FROM transactions 
-                  JOIN transaction_sell_lines AS TSL ON transactions.id=TSL.transaction_id
-                  WHERE transactions.status='final' AND transactions.type='sell' AND transactions.location_id=vld.location_id
-                  AND TSL.variation_id=variations.id) as total_sold"),
-            DB::raw("(SELECT SUM(IF(transactions.type='sell_transfer', TSL.quantity, 0) ) FROM transactions 
-                  JOIN transaction_sell_lines AS TSL ON transactions.id=TSL.transaction_id
-                  WHERE transactions.status='final' AND transactions.type='sell_transfer' AND transactions.location_id=vld.location_id AND (TSL.variation_id=variations.id)) as total_transfered"),
-            DB::raw("(SELECT SUM(IF(transactions.type='stock_adjustment', SAL.quantity, 0) ) FROM transactions 
-                  JOIN stock_adjustment_lines AS SAL ON transactions.id=SAL.transaction_id
-                  WHERE transactions.type='stock_adjustment' AND transactions.location_id=vld.location_id 
-                    AND (SAL.variation_id=variations.id)) as total_adjusted"),
-            DB::raw("(SELECT SUM( COALESCE(pl.quantity - ($pl_query_string), 0) * purchase_price_inc_tax) FROM transactions 
-                  JOIN purchase_lines AS pl ON transactions.id=pl.transaction_id
-                  WHERE (transactions.status='received' OR transactions.type='purchase_return')  AND transactions.location_id=vld.location_id 
-                  AND (pl.variation_id=variations.id)) as stock_price"),
+        $products = $query->select(array_merge($totals_select, [
             DB::raw('SUM(vld.qty_available) as stock'),
             'variations.sub_sku as sku',
             'p.name as product',
@@ -2116,17 +2109,11 @@ class ProductUtil extends Util
             'p.product_custom_field1',
             'p.product_custom_field2',
             'p.product_custom_field3',
-            'p.product_custom_field4'
-        )->groupBy('variations.id', 'vld.location_id');
+            'p.product_custom_field4',
+        ]))->groupBy('variations.id', 'vld.location_id');
 
-        if (isset($filters['show_manufacturing_data']) && $filters['show_manufacturing_data']) {
-            $pl_query_string = $this->get_pl_quantity_sum_string('PL');
-            $products->addSelect(
-                DB::raw("(SELECT COALESCE(SUM(PL.quantity - ($pl_query_string)), 0) FROM transactions 
-                    JOIN purchase_lines AS PL ON transactions.id=PL.transaction_id
-                    WHERE transactions.status='received' AND transactions.type='production_purchase' AND transactions.location_id=vld.location_id  
-                    AND (PL.variation_id=variations.id)) as total_mfg_stock")
-            );
+        if (isset($filters['show_manufacturing_data']) && $filters['show_manufacturing_data'] && empty($filters['stock_totals_per_row'])) {
+            $products->addSelect(DB::raw($this->stockRowTotalsSql('vld.location_id', 'variations.id', true)['total_mfg_stock'].' as total_mfg_stock'));
         }
 
         if (! empty($filters['product_id'])) {
@@ -2141,6 +2128,57 @@ class ProductUtil extends Util
         } else {
             return $products;
         }
+    }
+
+    /**
+     * PosInnova: the stock report's per-product totals as SQL, for a location and a variation given as
+     * SQL expressions (columns of the main query, or plain numbers for one row).
+     *
+     * @return array alias => SQL sub-query
+     */
+    public function stockRowTotalsSql($location_expr, $variation_expr, $with_mfg = false)
+    {
+        $pl_query_string = $this->get_pl_quantity_sum_string('pl');
+        $sql = [
+            'total_sold' => "(SELECT SUM(TSL.quantity - TSL.quantity_returned) FROM transactions
+                  JOIN transaction_sell_lines AS TSL ON transactions.id=TSL.transaction_id
+                  WHERE transactions.status='final' AND transactions.type='sell' AND transactions.location_id=$location_expr
+                  AND TSL.variation_id=$variation_expr)",
+            'total_transfered' => "(SELECT SUM(IF(transactions.type='sell_transfer', TSL.quantity, 0) ) FROM transactions
+                  JOIN transaction_sell_lines AS TSL ON transactions.id=TSL.transaction_id
+                  WHERE transactions.status='final' AND transactions.type='sell_transfer' AND transactions.location_id=$location_expr AND (TSL.variation_id=$variation_expr))",
+            'total_adjusted' => "(SELECT SUM(IF(transactions.type='stock_adjustment', SAL.quantity, 0) ) FROM transactions
+                  JOIN stock_adjustment_lines AS SAL ON transactions.id=SAL.transaction_id
+                  WHERE transactions.type='stock_adjustment' AND transactions.location_id=$location_expr
+                    AND (SAL.variation_id=$variation_expr))",
+            'stock_price' => "(SELECT SUM( COALESCE(pl.quantity - ($pl_query_string), 0) * purchase_price_inc_tax) FROM transactions
+                  JOIN purchase_lines AS pl ON transactions.id=pl.transaction_id
+                  WHERE (transactions.status='received' OR transactions.type='purchase_return')  AND transactions.location_id=$location_expr
+                  AND (pl.variation_id=$variation_expr))",
+        ];
+        if ($with_mfg) {
+            $PL_query_string = $this->get_pl_quantity_sum_string('PL');
+            $sql['total_mfg_stock'] = "(SELECT COALESCE(SUM(PL.quantity - ($PL_query_string)), 0) FROM transactions
+                    JOIN purchase_lines AS PL ON transactions.id=PL.transaction_id
+                    WHERE transactions.status='received' AND transactions.type='production_purchase' AND transactions.location_id=$location_expr
+                    AND (PL.variation_id=$variation_expr))";
+        }
+
+        return $sql;
+    }
+
+    /**
+     * PosInnova: the per-product totals of one stock-report row (same SQL as in the main query).
+     */
+    public function stockRowTotals($variation_id, $location_id, $with_mfg = false)
+    {
+        $loc = $location_id === null || $location_id === '' ? 'NULL' : (int) $location_id;
+        $parts = [];
+        foreach ($this->stockRowTotalsSql($loc, (int) $variation_id, $with_mfg) as $alias => $sql) {
+            $parts[] = $sql.' as '.$alias;
+        }
+
+        return DB::selectOne('SELECT '.implode(', ', $parts));
     }
 
     /**

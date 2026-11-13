@@ -361,6 +361,28 @@ class ReportController extends Controller
             //Return the details in ajax call
             $for = request()->input('for') == 'view_product' ? 'view_product' : 'datatables';
 
+            // PosInnova: the sold / transferred / adjusted / stock-value totals for the shown rows only,
+            // unless the table is sorted by one of them (then the database has to work them out for all).
+            $order_index = request()->input('order.0.column');
+            $order_col = $order_index !== null ? request()->input('columns.'.$order_index.'.data') : null;
+            // (a page of up to 100 rows; "All" / exports load every row, where one big query is quicker)
+            $page_length = (int) request()->input('length', 25);
+            $filters['stock_totals_per_row'] = $for == 'datatables' && $page_length > 0 && $page_length <= 100
+                && ! in_array($order_col, ['total_sold', 'total_transfered', 'total_adjusted', 'stock_price', 'total_mfg_stock']);
+            $per_row = $filters['stock_totals_per_row'];
+            $totals_done = [];
+            $totals_of = function ($row) use ($per_row, $show_manufacturing_data, &$totals_done) {
+                if ($per_row && ! isset($totals_done[spl_object_id($row)])) {
+                    $t = $this->productUtil->stockRowTotals($row->variation_id, $row->location_id, (bool) $show_manufacturing_data);
+                    foreach ((array) $t as $k => $v) {
+                        $row->setAttribute($k, $v);
+                    }
+                    $totals_done[spl_object_id($row)] = true;
+                }
+
+                return $row;
+            };
+
             $products = $this->productUtil->getProductStockDetails($business_id, $filters, $for);
             //To show stock details on view product modal
             if ($for == 'view_product' && ! empty(request()->input('product_id'))) {
@@ -397,7 +419,8 @@ class ReportController extends Controller
 
                     return $variation;
                 })
-                ->editColumn('total_sold', function ($row) {
+                ->editColumn('total_sold', function ($row) use ($totals_of) {
+                    $totals_of($row);
                     $total_sold = 0;
                     if ($row->total_sold) {
                         $total_sold = (float) $row->total_sold;
@@ -405,7 +428,8 @@ class ReportController extends Controller
 
                     return '<span data-is_quantity="true" class="total_sold" data-orig-value="'.$total_sold.'" data-unit="'.$row->unit.'" >'.$this->transactionUtil->num_f($total_sold, false, null, true).'</span> '.$row->unit;
                 })
-                ->editColumn('total_transfered', function ($row) {
+                ->editColumn('total_transfered', function ($row) use ($totals_of) {
+                    $totals_of($row);
                     $total_transfered = 0;
                     if ($row->total_transfered) {
                         $total_transfered = (float) $row->total_transfered;
@@ -414,7 +438,8 @@ class ReportController extends Controller
                     return '<span class="total_transfered" data-is_quantity="true" data-orig-value="'.$total_transfered.'" data-unit="'.$row->unit.'" >'.$this->transactionUtil->num_f($total_transfered, false, null, true).'</span> '.$row->unit;
                 })
 
-                ->editColumn('total_adjusted', function ($row) {
+                ->editColumn('total_adjusted', function ($row) use ($totals_of) {
+                    $totals_of($row);
                     $total_adjusted = 0;
                     if ($row->total_adjusted) {
                         $total_adjusted = (float) $row->total_adjusted;
@@ -434,7 +459,8 @@ class ReportController extends Controller
 
                     return $html;
                 })
-                ->editColumn('stock_price', function ($row) {
+                ->editColumn('stock_price', function ($row) use ($totals_of) {
+                    $totals_of($row);
                     $html = '<span class="total_stock_price" data-orig-value="'
                         .$row->stock_price.'">'.
                         $this->transactionUtil->num_f($row->stock_price, true).'</span>';
@@ -448,7 +474,8 @@ class ReportController extends Controller
 
                     return  '<span class="stock_value_by_sale_price" data-orig-value="'.(float) $stock_price.'" > '.$this->transactionUtil->num_f($stock_price, true).'</span>';
                 })
-                ->addColumn('potential_profit', function ($row) {
+                ->addColumn('potential_profit', function ($row) use ($totals_of) {
+                    $totals_of($row);
                     $stock = $row->stock ? $row->stock : 0;
                     $unit_selling_price = (float) $row->group_price > 0 ? $row->group_price : $row->unit_price;
                     $stock_price_by_sp = $stock * $unit_selling_price;
@@ -471,7 +498,8 @@ class ReportController extends Controller
                 'potential_profit', 'action', ];
 
             if ($show_manufacturing_data) {
-                $datatable->editColumn('total_mfg_stock', function ($row) {
+                $datatable->editColumn('total_mfg_stock', function ($row) use ($totals_of) {
+                    $totals_of($row);
                     $total_mfg_stock = 0;
                     if ($row->total_mfg_stock) {
                         $total_mfg_stock = (float) $row->total_mfg_stock;
