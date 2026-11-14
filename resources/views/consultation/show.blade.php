@@ -116,7 +116,7 @@
                     <tbody>
                         @foreach($c->prescriptions as $rx)
                             <tr>
-                                <td>{{ optional($rx->product)->name }} {{ optional($rx->variation)->name && optional($rx->variation)->name != 'DUMMY' ? '(' . $rx->variation->name . ')' : '' }}</td>
+                                <td>{{ $rx->displayName() }}@if ($rx->isFreeText()) <br><small class="text-muted"><i class="fas fa-store-slash"></i> @lang('clinic.rx_not_in_stock_tag')</small>@endif</td>
                                 <td>{{ $rx->dosage ?: '-' }}</td>
                                 <td>{{ $rx->frequency ?: '-' }}</td>
                                 <td>{{ $rx->duration ?: '-' }}</td>

@@ -144,6 +144,10 @@ class ClinicDispensaryController extends Controller
         $this->authorize_dispensary();
         $rx = $this->findLine($rx_id);
 
+        if ($rx->isFreeText()) {
+            // typed by the doctor: not a product here, nothing the dispensary could give
+            return redirect()->back()->with('status', ['success' => false, 'msg' => __('clinic.rx_free_text_no_reopen')]);
+        }
         if ($rx->closed_at) {
             $rx->closed_at = null;
             $rx->closed_by = null;

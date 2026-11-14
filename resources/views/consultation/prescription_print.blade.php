@@ -14,6 +14,11 @@
         table.rx-items { width: 100%; border-collapse: collapse; margin-top: 8px; }
         table.rx-items th, table.rx-items td { border: 1px solid #999; padding: 6px 8px; text-align: left; font-size: 12px; }
         table.rx-items th { background: #f2f2f2; }
+        .rx-section { margin-top: 14px; page-break-inside: avoid; }
+        .rx-section h3 { margin: 0 0 4px; font-size: 14px; }
+        .rx-section-elsewhere h3 { color: #b91c1c; }
+        .rx-section-elsewhere table.rx-items th { background: #fde8e8; }
+        .rx-section-not_given { color: #666; }
         .rx-diagnosis { margin: 8px 0; padding: 6px; background: #f8f8f8; border-left: 3px solid #666; }
         .rx-footer { margin-top: 40px; font-size: 12px; }
         .rx-sign { margin-top: 50px; border-top: 1px solid #333; width: 220px; padding-top: 4px; }
@@ -58,30 +63,54 @@
 
     <div class="rx-symbol">&#8478;</div>
 
-    <table class="rx-items">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>@lang('lang_v1.medicine')</th>
-                <th>@lang('lang_v1.dosage')</th>
-                <th>@lang('lang_v1.frequency')</th>
-                <th>@lang('lang_v1.duration')</th>
-                <th>@lang('sale.qty')</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($consultation->prescriptions as $i => $rx)
-                <tr>
-                    <td>{{ $i + 1 }}</td>
-                    <td>{{ optional($rx->product)->name }}</td>
-                    <td>{{ $rx->dosage ?: '-' }}</td>
-                    <td>{{ $rx->frequency ?: '-' }}</td>
-                    <td>{{ $rx->duration ?: '-' }}</td>
-                    <td>{{ $rx->quantity + 0 }}</td>
-                </tr>
-            @endforeach
-        </tbody>
-    </table>
+    @php
+        // PosInnova: one prescription, in the sections the patient acts on. A line partly given and the
+        // rest to buy outside shows in both, each with its own quantity.
+        $rx_all = $consultation->prescriptions;
+        $rx_sections = [
+            ['key' => 'given', 'title' => __('clinic.rx_print_given'), 'qty_label' => __('clinic.rx_print_qty_given'), 'icon' => '&#10003;',
+                'lines' => $rx_all->filter(fn ($rx) => $rx->given_qty > 0), 'qty' => fn ($rx) => $rx->given_qty],
+            ['key' => 'collect', 'title' => __('clinic.rx_print_to_collect'), 'qty_label' => __('sale.qty'), 'icon' => '&#9679;',
+                'lines' => $rx_all->filter(fn ($rx) => $rx->outstanding_qty > 0), 'qty' => fn ($rx) => $rx->outstanding_qty],
+            ['key' => 'elsewhere', 'title' => __('clinic.rx_print_elsewhere'), 'qty_label' => __('clinic.rx_print_qty_to_buy'), 'icon' => '&#10148;',
+                'lines' => $rx_all->filter(fn ($rx) => $rx->elsewhere_qty > 0), 'qty' => fn ($rx) => $rx->elsewhere_qty],
+            ['key' => 'not_given', 'title' => __('clinic.rx_print_not_given'), 'qty_label' => __('sale.qty'), 'icon' => '&#8211;',
+                'lines' => $rx_all->filter(fn ($rx) => $rx->closed_at && $rx->elsewhere_qty <= 0 && $rx->given_qty < (float) $rx->quantity), 'qty' => fn ($rx) => max(0, (float) $rx->quantity - $rx->given_qty)],
+        ];
+    @endphp
+    @foreach($rx_sections as $sec)
+        @continue($sec['lines']->isEmpty())
+        <div class="rx-section rx-section-{{ $sec['key'] }}">
+            <h3>{!! $sec['icon'] !!} {{ $sec['title'] }}</h3>
+            <table class="rx-items">
+                <thead>
+                    <tr>
+                        <th style="width:4%;">#</th>
+                        <th>@lang('lang_v1.medicine')</th>
+                        <th>@lang('lang_v1.dosage')</th>
+                        <th>@lang('lang_v1.frequency')</th>
+                        <th>@lang('lang_v1.duration')</th>
+                        <th style="width:12%;">{{ $sec['qty_label'] }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($sec['lines']->values() as $i => $rx)
+                        <tr>
+                            <td>{{ $i + 1 }}</td>
+                            <td><strong>{{ $rx->displayName() }}</strong>
+                                @if ($sec['key'] == 'not_given' && $rx->close_reason)<br><small>{{ \App\Utils\Dispensing::reasonLabel($rx->close_reason) }}</small>@endif
+                                @if ($rx->notes)<br><small>{{ $rx->notes }}</small>@endif
+                            </td>
+                            <td>{{ $rx->dosage ?: '-' }}</td>
+                            <td>{{ $rx->frequency ?: '-' }}</td>
+                            <td>{{ $rx->duration ?: '-' }}</td>
+                            <td>{{ $sec['qty']($rx) + 0 }}@if ($sec['qty']($rx) + 0 != $rx->quantity + 0) <small>/ {{ $rx->quantity + 0 }}</small>@endif</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endforeach
 
     <div class="rx-footer">
         <div class="rx-sign">

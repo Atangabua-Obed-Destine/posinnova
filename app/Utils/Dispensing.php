@@ -21,7 +21,12 @@ use Illuminate\Support\Facades\DB;
  *   waiting       nothing given yet, still to dispense
  *   partly_given  some given; still waiting unless the line was closed
  *   given         given quantity reached the prescribed quantity
- *   not_given     closed by the dispensary with nothing given
+ *   elsewhere     closed with nothing given, to buy at another pharmacy (out of stock, a medicine the
+ *                 clinic does not have, or the doctor's "buys outside")
+ *   not_given     closed by the dispensary with nothing given (declined, substituted, other)
+ *
+ * elsewhere_qty is what the patient still has to buy outside: the part not given of a line closed for
+ * one of ConsultationPrescription::ELSEWHERE_REASONS (also on a partly given line).
  */
 class Dispensing
 {
@@ -65,13 +70,14 @@ class Dispensing
             $got = max(0, ($given[$rx->id] ?? 0) + (float) $rx->legacy_given);
             $rx->given_qty = $got;
             $rx->outstanding_qty = $rx->closed_at ? 0 : max(0, $qty - $got);
+            $rx->elsewhere_qty = $rx->isElsewhere() ? max(0, $qty - $got) : 0;
 
             if ($qty > 0 && $got >= $qty) {
                 $rx->dispense_state = 'given';
             } elseif ($got > 0) {
                 $rx->dispense_state = 'partly_given';
             } elseif ($rx->closed_at) {
-                $rx->dispense_state = 'not_given';
+                $rx->dispense_state = $rx->elsewhere_qty > 0 ? 'elsewhere' : 'not_given';
             } else {
                 $rx->dispense_state = 'waiting';
             }
@@ -149,7 +155,8 @@ class Dispensing
         }
         $parts = explode(': ', $close_reason, 2);
         $key = $parts[0];
-        $label = in_array($key, \App\Http\Controllers\ClinicDispensaryController::CLOSE_REASONS) ? __('clinic.rx_reason_'.$key) : $key;
+        $known = array_merge(\App\Http\Controllers\ClinicDispensaryController::CLOSE_REASONS, ConsultationPrescription::ELSEWHERE_REASONS);
+        $label = in_array($key, $known) ? __('clinic.rx_reason_'.$key) : $key;
 
         return isset($parts[1]) && $parts[1] !== '' ? $label.': '.$parts[1] : $label;
     }

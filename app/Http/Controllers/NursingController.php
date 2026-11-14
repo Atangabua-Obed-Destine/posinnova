@@ -200,7 +200,7 @@ class NursingController extends Controller
         $prescriptions = ConsultationPrescription::whereHas('consultation', function ($q) use ($business_id, $admission) {
             $q->where('business_id', $business_id)->where('contact_id', $admission->contact_id);
         })
-            ->with('product')
+            ->with(['product', 'variation'])
             ->orderBy('created_at', 'desc')
             ->get();
 

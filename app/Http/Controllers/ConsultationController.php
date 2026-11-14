@@ -284,6 +284,7 @@ class ConsultationController extends Controller
         $consultation = Consultation::forBusiness($business_id)
             ->with(['visit', 'patient.patientDetails', 'consultedBy', 'prescriptions.variation', 'prescriptions.product'])
             ->findOrFail($id);
+        \App\Utils\Dispensing::attach($consultation->prescriptions);
 
         $business = \App\Business::find($business_id);
 
@@ -291,8 +292,32 @@ class ConsultationController extends Controller
     }
 
     /**
-     * Persist prescription rows from the dynamic table. Each row carries a
-     * variation_id (required), product_id and the free-text dosage fields.
+     * PosInnova: the doctor's medicine search, with what the clinic can give at the visit's location
+     * (stock, expired stock, nearest expiry, other locations). See App\Utils\DrugAvailability.
+     */
+    public function drugSearch(Request $request)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('consultation.prescribe')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $business_id = $request->session()->get('user.business_id');
+
+        $location_id = $request->input('location_id');
+        if ($request->filled('visit_id')) {
+            $location_id = optional(Visit::forBusiness($business_id)->find($request->input('visit_id')))->location_id ?: $location_id;
+        }
+        $location_id = BusinessLocation::where('business_id', $business_id)->where('id', $location_id)->value('id');
+
+        return response()->json(\App\Utils\DrugAvailability::search($business_id, $request->input('term'), $location_id));
+    }
+
+    /**
+     * Persist prescription rows from the dynamic table. A row is either a product of the clinic
+     * (variation_id; product_id is taken from the variation, never from the form) or a medicine the
+     * doctor typed (drug_name). A typed medicine is closed as "not_stocked" and a ticked "buys
+     * outside" row as "prescribed_outside": both are to buy at another pharmacy and never wait at
+     * the dispensary.
      */
     private function savePrescriptions(Request $request, Consultation $consultation)
     {
@@ -300,22 +325,45 @@ class ConsultationController extends Controller
         if (empty($rows) || ! is_array($rows)) {
             return;
         }
+        $user_id = auth()->user()->id;
+
+        $variation_ids = collect($rows)->pluck('variation_id')->filter()->map(fn ($v) => (int) $v)->unique()->all();
+        $products = empty($variation_ids) ? collect() : DB::table('variations as v')->join('products as p', 'p.id', '=', 'v.product_id')
+            ->where('p.business_id', $consultation->business_id)->whereIn('v.id', $variation_ids)
+            ->pluck('p.id', 'v.id');
 
         foreach ($rows as $row) {
-            if (empty($row['variation_id']) || empty($row['product_id'])) {
+            if (! is_array($row)) {
                 continue;
             }
-
-            ConsultationPrescription::create([
+            $line = [
                 'consultation_id' => $consultation->id,
-                'product_id' => $row['product_id'],
-                'variation_id' => $row['variation_id'],
-                'dosage' => $row['dosage'] ?? null,
-                'frequency' => $row['frequency'] ?? null,
-                'duration' => $row['duration'] ?? null,
-                'quantity' => ! empty($row['quantity']) ? $this->commonUtil->num_uf($row['quantity']) : 1,
+                'dosage' => isset($row['dosage']) ? mb_substr((string) $row['dosage'], 0, 100) : null,
+                'frequency' => isset($row['frequency']) ? mb_substr((string) $row['frequency'], 0, 100) : null,
+                'duration' => isset($row['duration']) ? mb_substr((string) $row['duration'], 0, 100) : null,
+                'quantity' => ! empty($row['quantity']) ? max(0, $this->commonUtil->num_uf($row['quantity'])) : 1,
                 'notes' => $row['notes'] ?? null,
-            ]);
+            ];
+
+            if (! empty($row['variation_id'])) {
+                $product_id = $products[(int) $row['variation_id']] ?? null;
+                if (! $product_id) {
+                    continue; // not a product of this business
+                }
+                $line += ['product_id' => $product_id, 'variation_id' => (int) $row['variation_id']];
+                if (! empty($row['outside'])) {
+                    $line += ['closed_at' => now(), 'closed_by' => $user_id, 'close_reason' => 'prescribed_outside'];
+                }
+            } else {
+                $name = trim(preg_replace('/\s+/u', ' ', (string) ($row['drug_name'] ?? '')));
+                if ($name === '') {
+                    continue;
+                }
+                $line += ['product_id' => null, 'variation_id' => null, 'drug_name' => mb_substr($name, 0, 191),
+                    'closed_at' => now(), 'closed_by' => $user_id, 'close_reason' => 'not_stocked'];
+            }
+
+            ConsultationPrescription::create($line);
         }
     }
 

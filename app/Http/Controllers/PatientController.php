@@ -372,7 +372,7 @@ class PatientController extends Controller
             $timeline->push(['t' => $v->visit_date, 'icon' => 'fa-stethoscope', 'cls' => 'sky', 'title' => __('lang_v1.visit_type_' . $v->type), 'sub' => optional($v->location)->name, 'url' => auth()->user()->can('visit.view') ? action([\App\Http\Controllers\VisitController::class, 'show'], [$v->id]) : null]);
         }
         foreach ($prescriptions as $rx) {
-            $timeline->push(['t' => optional($rx->consultation)->created_at, 'icon' => 'fa-pills', 'cls' => 'indigo', 'title' => __('lang_v1.prescription') . ': ' . optional($rx->product)->name, 'sub' => trim(($rx->dosage ?? '') . ' ' . ($rx->frequency ?? '')), 'url' => null]);
+            $timeline->push(['t' => optional($rx->consultation)->created_at, 'icon' => 'fa-pills', 'cls' => 'indigo', 'title' => __('lang_v1.prescription') . ': ' . $rx->displayName(), 'sub' => trim(($rx->dosage ?? '') . ' ' . ($rx->frequency ?? '')), 'url' => null]);
         }
         foreach ($lab_requests as $lr) {
             $timeline->push(['t' => $lr->requested_at, 'icon' => 'fa-vial', 'cls' => 'amber', 'title' => __('lang_v1.lab_request') . ' · ' . $lr->ref_no, 'sub' => __('lang_v1.lab_status_' . $lr->status), 'url' => auth()->user()->can('lab_request.view') ? action([\App\Http\Controllers\LabRequestController::class, 'show'], [$lr->id]) : null]);

@@ -339,17 +339,18 @@ class ClinicReports
             $q->where('co.consulted_by', $f['doctor_id']);
         }
         $lines = $q->select('rx.id', 'rx.variation_id', 'rx.product_id', 'rx.quantity', 'rx.closed_at', 'rx.close_reason', 'co.contact_id', 'co.id as consultation_id',
-            'p.name as product', 'v.name as variation', DB::raw(self::givenSql().' as given'))->get();
+            'p.name as product', 'v.name as variation', 'rx.drug_name', DB::raw(self::givenSql().' as given'))->get();
 
         $drugs = [];
         $tot = ['lines' => 0, 'full' => 0, 'part' => 0, 'none' => 0, 'oos' => 0, 'waiting' => 0, 'qty' => 0, 'given' => 0];
-        $reasons = \App\Http\Controllers\ClinicDispensaryController::CLOSE_REASONS;
+        // not_stocked: a medicine the doctor typed (the clinic does not have it); prescribed_outside: the doctor's "buys outside"
+        $reasons = array_values(array_unique(array_merge(\App\Http\Controllers\ClinicDispensaryController::CLOSE_REASONS, \App\ConsultationPrescription::ELSEWHERE_REASONS)));
         foreach ($lines as $l) {
             $qty = (float) $l->quantity;
             $given = max(0, (float) $l->given);
             $given_capped = min($given, $qty);
-            $key = $l->variation_id ?: 'p'.$l->product_id;
-            $d = $drugs[$key] ?? ['name' => self::drugName($l->product, $l->variation), 'lines' => 0, 'patients' => [], 'qty' => 0, 'given' => 0, 'waiting' => 0, 'reasons' => array_fill_keys($reasons, 0)];
+            $key = $l->variation_id ?: ($l->product_id ? 'p'.$l->product_id : 't'.mb_strtolower(trim((string) $l->drug_name)));
+            $d = $drugs[$key] ?? ['name' => $l->product !== null ? self::drugName($l->product, $l->variation) : $l->drug_name, 'lines' => 0, 'patients' => [], 'qty' => 0, 'given' => 0, 'waiting' => 0, 'reasons' => array_fill_keys($reasons, 0)];
             $d['lines']++;
             $d['patients'][$l->contact_id] = true;
             $d['qty'] += $qty;
@@ -369,7 +370,7 @@ class ClinicReports
                     $code = trim(explode(':', (string) $l->close_reason)[0]);
                     $code = in_array($code, $reasons) ? $code : 'other';
                     $d['reasons'][$code]++;
-                    if ($code == 'out_of_stock') {
+                    if ($code == 'out_of_stock' || $code == 'not_stocked') {
                         $tot['oos']++;
                     }
                 } else {
@@ -397,8 +398,9 @@ class ClinicReports
                 'qty' => $d['qty'], 'given' => $d['given'], 'pct' => $d['qty'] > 0 ? $d['given'] / $d['qty'] * 100 : 0,
                 'waiting' => $d['waiting'] ?: '', 'why' => implode(', ', $why),
             ];
-            if ($d['reasons']['out_of_stock']) {
-                $oos[] = ['drug' => $d['name'], 'times' => $d['reasons']['out_of_stock'], 'lines' => $d['lines']];
+            $missing = $d['reasons']['out_of_stock'] + $d['reasons']['not_stocked'];
+            if ($missing) {
+                $oos[] = ['drug' => $d['name'], 'times' => $missing, 'lines' => $d['lines']];
             }
         }
         usort($oos, function ($a, $b) {

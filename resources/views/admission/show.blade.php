@@ -213,8 +213,8 @@
                         <div class="tw-flex tw-flex-wrap tw-gap-2">
                             @foreach($nursing['prescriptions'] as $rx)
                                 <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline mar_quick"
-                                    data-drug="{{ e(optional($rx->product)->name) }}" data-dose="{{ e($rx->dosage) }}" data-rx="{{ $rx->id }}" data-product="{{ $rx->product_id }}">
-                                    <i class="fas fa-prescription-bottle"></i> {{ optional($rx->product)->name }}
+                                    data-drug="{{ e($rx->displayName()) }}" data-dose="{{ e($rx->dosage) }}" data-rx="{{ $rx->id }}" data-product="{{ $rx->product_id }}">
+                                    <i class="fas fa-prescription-bottle"></i> {{ $rx->displayName() }}
                                     @if($rx->frequency)<small class="text-muted">· {{ $rx->frequency }}</small>@endif
                                 </button>
                             @endforeach

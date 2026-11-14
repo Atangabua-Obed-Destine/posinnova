@@ -51,6 +51,7 @@
                     @forelse ($consultation->prescriptions as $rx)
                         <tr>
                             <td><strong>{{ $rx->displayName() }}</strong>
+                                @if ($rx->isFreeText())<br><small class="text-warning"><i class="fas fa-store-slash"></i> @lang('clinic.rx_not_in_stock_tag')</small>@endif
                                 @if ($rx->notes)<br><small class="text-muted">{{ $rx->notes }}</small>@endif
                             </td>
                             <td>{{ collect([$rx->dosage, $rx->frequency, $rx->duration])->filter()->implode(' · ') ?: '-' }}</td>
@@ -62,12 +63,20 @@
                             </td>
                             <td>
                                 @if ($rx->outstanding_qty > 0)
+                                    {{-- one click: the patient gets what is not given at another pharmacy --}}
+                                    <form method="POST" action="{{ action([\App\Http\Controllers\ClinicDispensaryController::class, 'close'], [$rx->id]) }}" style="margin-bottom:6px;">
+                                        @csrf
+                                        <input type="hidden" name="reason" value="out_of_stock">
+                                        <button type="submit" class="btn btn-sm btn-warning rx_mark_elsewhere" title="{{ __('clinic.rx_mark_elsewhere_title') }}"><i class="fas fa-store-slash"></i> @lang('clinic.rx_mark_elsewhere')</button>
+                                    </form>
                                     <form method="POST" action="{{ action([\App\Http\Controllers\ClinicDispensaryController::class, 'close'], [$rx->id]) }}" class="form-inline" style="display:flex; gap:4px; flex-wrap:wrap;">
                                         @csrf
-                                        {!! Form::select('reason', $reasons, null, ['class' => 'form-control input-sm', 'required', 'placeholder' => __('clinic.rx_close_reason'), 'aria-label' => __('clinic.rx_close_reason')]) !!}
+                                        {!! Form::select('reason', $reasons, null, ['class' => 'form-control input-sm', 'required', 'placeholder' => __('clinic.rx_or_other_reason'), 'aria-label' => __('clinic.rx_close_reason')]) !!}
                                         <input type="text" name="note" class="form-control input-sm" maxlength="120" placeholder="{{ __('clinic.rx_close_note') }}">
                                         <button type="submit" class="btn btn-sm btn-default"><i class="fas fa-ban"></i> @lang('clinic.rx_close')</button>
                                     </form>
+                                @elseif ($rx->closed_at && $rx->isFreeText())
+                                    <small class="text-muted">@lang('clinic.rx_free_text_no_reopen')</small>
                                 @elseif ($rx->closed_at)
                                     <form method="POST" action="{{ action([\App\Http\Controllers\ClinicDispensaryController::class, 'reopen'], [$rx->id]) }}">
                                         @csrf

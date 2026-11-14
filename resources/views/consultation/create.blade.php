@@ -7,6 +7,14 @@
     $age = optional($pd)->date_of_birth ? \Carbon::parse($pd->date_of_birth)->age : null;
     $has_allergies = ! empty(optional($pd)->known_allergies);
     $can_prescribe = auth()->user()->can('consultation.prescribe');
+    // texts for the prescription search (built here: @json takes no multi-line array)
+    $rx_js_text = ['_location' => optional($visit->location)->name ?: ''];
+    foreach (['rx_avail_in_stock', 'rx_avail_low', 'rx_avail_out', 'rx_avail_expired_only', 'rx_avail_not_tracked', 'rx_avail_not_here',
+        'rx_avail_other_loc', 'rx_avail_expiry', 'rx_avail_expires_soon', 'rx_avail_expired_qty', 'rx_buys_outside', 'rx_buys_outside_help',
+        'rx_qty_over_stock', 'rx_free_text_option', 'rx_not_in_stock_tag'] as $k) {
+        // placeholders stay as :qty / :location... for the script to fill in
+        $rx_js_text[$k] = trans('clinic.'.$k);
+    }
 @endphp
 
 @section('content')
@@ -186,21 +194,31 @@
                 <div class="form-group">
                     <div class="input-group">
                         <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                        {!! Form::text('search_prescription_product', null, ['class' => 'form-control', 'id' => 'search_prescription_product', 'placeholder' => __('lang_v1.search_medicine')]) !!}
+                        {!! Form::text('search_prescription_product', null, ['class' => 'form-control', 'id' => 'search_prescription_product', 'placeholder' => __('lang_v1.search_medicine'), 'autocomplete' => 'off']) !!}
                     </div>
+                    <p class="help-block" style="margin-bottom:0;"><i class="fas fa-info-circle"></i> @lang('clinic.rx_search_hint', ['location' => optional($visit->location)->name ?: '-'])</p>
                 </div>
             </div>
         </div>
+        <style>
+            .rx-avail { margin-top:3px; display:flex; flex-wrap:wrap; gap:3px 6px; align-items:center; font-size:11px; line-height:1.5; }
+            .rx-avail .label { font-size:10.5px; font-weight:600; }
+            .rx-ac-item { display:flex; flex-direction:column; gap:1px; padding:2px 0; }
+            .rx-ac-free { font-style:italic; color:#92400e; }
+            .rx-outside-lbl { font-weight:normal; font-size:12px; margin:4px 0 0; cursor:pointer; display:inline-flex; align-items:center; gap:4px; }
+            .rx-over { font-size:11.5px; margin-top:3px; }
+            #prescription_rows tr.rx-is-outside > td:first-child strong { text-decoration: none; color:#92400e; }
+        </style>
         <div class="table-responsive">
             <table class="table table-bordered table-condensed" id="prescription_table">
                 <thead>
                     <tr>
-                        <th style="width:28%;">@lang('lang_v1.medicine')</th>
+                        <th style="width:30%;">@lang('lang_v1.medicine')</th>
                         <th style="width:14%;">@lang('lang_v1.dosage')</th>
                         <th style="width:16%;">@lang('lang_v1.frequency')</th>
                         <th style="width:14%;">@lang('lang_v1.duration')</th>
                         <th style="width:12%;">@lang('sale.qty')</th>
-                        <th style="width:12%;">@lang('lang_v1.notes')</th>
+                        <th style="width:10%;">@lang('lang_v1.notes')</th>
                         <th style="width:4%;"><i class="fa fa-trash"></i></th>
                     </tr>
                 </thead>
@@ -341,48 +359,128 @@ $(document).ready(function () {
 
     @if($can_prescribe)
     var rxIndex = 0;
+    var RX_T = @json($rx_js_text);
+    function rxEsc(s) {
+        return $('<div>').text(s == null ? '' : String(s)).html();
+    }
+    function rxT(key, rep) {
+        var s = RX_T[key] || key;
+        $.each(rep || {}, function (k, v) { s = s.split(':' + k).join(v); });
+        return s;
+    }
+    function rxNum(n) {
+        n = parseFloat(n) || 0;
+        return (Math.round(n * 100) / 100).toLocaleString();
+    }
+    // availability of one medicine at the visit's location, as small labels
+    function rxAvailHtml(d) {
+        var unit = d.unit ? ' ' + rxEsc(d.unit) : '';
+        var cls = {in_stock: 'success', low: 'warning', out: 'danger', expired_only: 'danger', not_tracked: 'success', not_here: 'default'}[d.status] || 'default';
+        var txt = {
+            in_stock: rxT('rx_avail_in_stock', {qty: rxNum(d.here) + unit}),
+            low: rxT('rx_avail_low', {qty: rxNum(d.here) + unit}),
+            out: rxT('rx_avail_out'),
+            expired_only: rxT('rx_avail_expired_only', {qty: rxNum(d.expired_here)}),
+            not_tracked: rxT('rx_avail_not_tracked'),
+            not_here: rxT('rx_avail_not_here', {location: rxEsc(RX_T._location)}),
+        }[d.status];
+        var h = '<span class="label label-' + cls + ' rx-avail-status" data-status="' + d.status + '">' + txt + '</span>';
+        if (d.next_expiry && (d.status == 'in_stock' || d.status == 'low')) {
+            h += d.expires_soon
+                ? '<span class="text-warning rx-avail-expiry"><i class="fas fa-hourglass-half"></i> ' + rxT('rx_avail_expires_soon', {date: rxEsc(d.next_expiry_formatted)}) + '</span>'
+                : '<span class="text-muted rx-avail-expiry">' + rxT('rx_avail_expiry', {date: rxEsc(d.next_expiry_formatted)}) + '</span>';
+        }
+        if (d.expired_here > 0 && d.status != 'expired_only') {
+            h += '<span class="text-danger rx-avail-expired"><i class="fas fa-exclamation-triangle"></i> ' + rxT('rx_avail_expired_qty', {qty: rxNum(d.expired_here)}) + '</span>';
+        }
+        $.each(d.elsewhere || [], function (_, e) {
+            h += '<span class="text-muted rx-avail-other"><i class="fas fa-warehouse"></i> ' + rxT('rx_avail_other_loc', {qty: rxNum(e.qty), location: rxEsc(e.location)}) + '</span>';
+        });
+        return '<div class="rx-avail">' + h + '</div>';
+    }
+    // "only N in stock here" under a line the clinic is to give, when the quantity is above it
+    function rxCheckRow($tr) {
+        var here = $tr.data('here');
+        var outside = $tr.find('.rx_outside').is(':checked') || $tr.data('free') == 1;
+        $tr.toggleClass('rx-is-outside', outside);
+        var $w = $tr.find('.rx-over');
+        var qty = parseFloat($tr.find('.rx_qty').val()) || 0;
+        if (! outside && here !== undefined && here !== '' && here !== null && qty > parseFloat(here)) {
+            $w.html('<i class="fas fa-exclamation-triangle"></i> ' + rxT('rx_qty_over_stock', {qty: rxNum(here)})).show();
+        } else {
+            $w.hide().empty();
+        }
+    }
     function addPrescriptionRow(item) {
         var i = rxIndex++;
-        var row = '<tr>' +
-            '<td>' + item.name +
-                '<input type="hidden" name="prescriptions[' + i + '][product_id]" value="' + item.product_id + '">' +
-                '<input type="hidden" name="prescriptions[' + i + '][variation_id]" value="' + item.variation_id + '"></td>' +
+        var cell, attrs;
+        if (item.free_text) {
+            // not in the system: the typed name, always "to buy elsewhere"
+            attrs = ' data-free="1"';
+            cell = '<input type="text" name="prescriptions[' + i + '][drug_name]" class="form-control input-sm rx_drug_name" maxlength="191" required value="' + rxEsc(item.name) + '" aria-label="{{ __('lang_v1.medicine') }}">' +
+                '<div class="rx-avail"><span class="label label-warning"><i class="fas fa-store-slash"></i> ' + rxT('rx_not_in_stock_tag') + '</span></div>';
+        } else {
+            attrs = ' data-variation="' + parseInt(item.variation_id, 10) + '" data-status="' + rxEsc(item.status) + '"' + (item.here !== null && item.here !== undefined ? ' data-here="' + parseFloat(item.here) + '"' : '');
+            cell = '<strong>' + rxEsc(item.name) + '</strong>' + rxAvailHtml(item) +
+                '<input type="hidden" name="prescriptions[' + i + '][variation_id]" value="' + parseInt(item.variation_id, 10) + '">' +
+                '<label class="rx-outside-lbl" title="' + rxEsc(rxT('rx_buys_outside_help')) + '"><input type="checkbox" class="rx_outside" name="prescriptions[' + i + '][outside]" value="1"' + (item.can_give ? '' : ' checked') + '> ' + rxT('rx_buys_outside') + '</label>' +
+                '<div class="rx-over text-warning" style="display:none;"></div>';
+        }
+        var row = '<tr' + attrs + '>' +
+            '<td>' + cell + '</td>' +
             '<td><input type="text" name="prescriptions[' + i + '][dosage]" aria-label="{{ __('lang_v1.dosage') }}" class="form-control input-sm" placeholder="{{ __('lang_v1.dosage_eg') }}"></td>' +
             '<td><input type="text" name="prescriptions[' + i + '][frequency]" aria-label="{{ __('lang_v1.frequency') }}" class="form-control input-sm" placeholder="{{ __('lang_v1.frequency_eg') }}"></td>' +
             '<td><input type="text" name="prescriptions[' + i + '][duration]" aria-label="{{ __('lang_v1.duration') }}" class="form-control input-sm" placeholder="{{ __('lang_v1.duration_eg') }}"></td>' +
-            '<td><input type="number" step="0.01" min="0" name="prescriptions[' + i + '][quantity]" aria-label="{{ __('sale.qty') }}" class="form-control input-sm" value="1"></td>' +
+            '<td><input type="number" step="0.01" min="0" name="prescriptions[' + i + '][quantity]" aria-label="{{ __('sale.qty') }}" class="form-control input-sm rx_qty" value="1"></td>' +
             '<td><input type="text" name="prescriptions[' + i + '][notes]" aria-label="{{ __('lang_v1.notes') }}" class="form-control input-sm"></td>' +
             '<td class="text-center"><a href="#" class="text-danger remove_rx_row"><i class="fa fa-trash"></i></a></td>' +
         '</tr>';
-        $('#prescription_rows').append(row);
+        var $tr = $(row).appendTo('#prescription_rows');
+        rxCheckRow($tr);
+        $tr.find(item.free_text ? '.rx_drug_name' : 'input[name$="[dosage]"]').trigger('focus');
     }
 
     $('#search_prescription_product').autocomplete({
         source: function (request, response) {
-            $.getJSON('{{ action([\App\Http\Controllers\ProductController::class, 'getProducts']) }}', {
-                term: request.term,
-                not_for_selling: 0,
-            }, response);
+            var term = $.trim(request.term);
+            $.getJSON('{{ action([\App\Http\Controllers\ConsultationController::class, 'drugSearch']) }}', {
+                term: term,
+                visit_id: {{ (int) $visit->id }},
+            }).done(function (data) {
+                // last choice: a medicine the clinic does not have, typed as it is
+                (data = data || []).push({free_text: true, name: term});
+                response(data);
+            }).fail(function () {
+                response([{free_text: true, name: term}]);
+            });
         },
         minLength: 2,
-        response: function (event, ui) {
-            if (ui.content.length == 1) {
-                ui.item = ui.content[0];
-                $(this).data('ui-autocomplete')._trigger('select', 'autocompleteselect', ui);
-                $(this).autocomplete('close');
-            }
+        delay: 250,
+        autoFocus: true,
+        focus: function () {
+            return false; // keep what the doctor typed in the box
         },
         select: function (event, ui) {
-            if (ui.item.variation_id) {
+            if (ui.item.free_text || ui.item.variation_id) {
                 addPrescriptionRow(ui.item);
             }
             $(this).val('');
             return false;
         },
+    }).on('keydown', function (e) {
+        if (e.which == 13) {
+            e.preventDefault(); // Enter picks the highlighted medicine; never submits the consultation
+        }
     }).autocomplete('instance')._renderItem = function (ul, item) {
-        return $('<li>').append('<div>' + item.name + '</div>').appendTo(ul);
+        var html = item.free_text
+            ? '<div class="rx-ac-item rx-ac-free"><span><i class="fas fa-pen"></i> ' + rxT('rx_free_text_option', {name: rxEsc(item.name)}) + '</span></div>'
+            : '<div class="rx-ac-item"><span>' + rxEsc(item.name) + '</span>' + rxAvailHtml(item) + '</div>';
+        return $('<li>').append(html).appendTo(ul);
     };
 
+    $(document).on('input change', '#prescription_rows .rx_qty, #prescription_rows .rx_outside', function () {
+        rxCheckRow($(this).closest('tr'));
+    });
     $(document).on('click', '.remove_rx_row', function (e) {
         e.preventDefault();
         $(this).closest('tr').remove();

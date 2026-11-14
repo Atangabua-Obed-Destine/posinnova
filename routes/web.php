@@ -453,6 +453,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     //Consultations
     Route::get('consultations', [\App\Http\Controllers\ConsultationController::class, 'index']);
     Route::get('consultations/create', [\App\Http\Controllers\ConsultationController::class, 'create']);
+    Route::get('consultations/drug-search', [\App\Http\Controllers\ConsultationController::class, 'drugSearch']);
     Route::post('consultations', [\App\Http\Controllers\ConsultationController::class, 'store']);
     Route::get('consultations/{id}', [\App\Http\Controllers\ConsultationController::class, 'show'])->whereNumber('id');
     Route::post('consultations/{id}/finalize', [\App\Http\Controllers\ConsultationController::class, 'finalize']);
