@@ -58,6 +58,51 @@ class ConsultationController extends Controller
         if ($blocked = $this->payGateResponse($visit)) {
             return $blocked;
         }
+        // PosInnova: a consultation saved to go on later (e.g. while the lab works) is continued, not
+        // started again: the doctor lands back in it, with the results that came in meanwhile.
+        if (! $request->boolean('new')) {
+            $draft = Consultation::forBusiness($business_id)->where('visit_id', $visit->id)->where('status', 'draft')->orderByDesc('id')->first();
+            if ($draft && $this->mayContinue($draft)) {
+                return redirect()->action([self::class, 'edit'], [$draft->id]);
+            }
+        }
+
+        return $this->formView($visit, null);
+    }
+
+    /**
+     * PosInnova: continue a consultation saved as a draft (the same form, filled in, with the lab and
+     * imaging results of the tests asked for in it).
+     */
+    public function edit($id)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('consultation.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $business_id = request()->session()->get('user.business_id');
+        $consultation = Consultation::forBusiness($business_id)->findOrFail($id);
+        if ($consultation->status != 'draft' || ! $this->mayContinue($consultation)) {
+            return redirect()->action([self::class, 'show'], [$consultation->id])
+                ->with('status', ['success' => false, 'msg' => __('clinic.cons_not_editable')]);
+        }
+        $visit = Visit::forBusiness($business_id)->with(['patient.patientDetails', 'package'])->findOrFail($consultation->visit_id);
+
+        return $this->formView($visit, $consultation);
+    }
+
+    /** The doctor who wrote it, or someone who sees every consultation. */
+    private function mayContinue(Consultation $consultation)
+    {
+        return $consultation->consulted_by == auth()->id() || auth()->user()->can('consultation.view_all');
+    }
+
+    /**
+     * The consultation form, empty (new) or filled in (continuing a draft).
+     */
+    private function formView($visit, $consultation)
+    {
+        $business_id = $visit->business_id;
         if ($visit->status == 'open' && $visit->queue_status == 'waiting') {
             $visit->queue_status = 'with_doctor';
             $visit->called_at = now();
@@ -89,8 +134,83 @@ class ConsultationController extends Controller
             ->whereIn('status', ['resulted', 'validated'])->with('lines')
             ->orderByDesc('requested_at')->limit(3)->get();
 
+        // PosInnova: the lists doctors pick from (specialty, complaint, findings, diagnosis, dosage...)
+        $doctor_lists = \App\Utils\ClinicOptions::all($business_id);
+
+        // continuing: the prescription lines as they are, and what the lab / imaging sent back
+        $rx_rows = $consultation ? $this->rxRowsForForm($consultation, $visit) : [];
+        [$lab_requests, $imaging_requests] = $consultation ? $this->requestsOf($consultation) : [collect(), collect()];
+
         return view('consultation.create')
-            ->with(compact('visit', 'departments', 'default_fee', 'lab_tests', 'imaging_catalogue', 'fee_billed', 'history', 'history_labs'));
+            ->with(compact('visit', 'departments', 'default_fee', 'lab_tests', 'imaging_catalogue', 'fee_billed', 'history', 'history_labs',
+                'consultation', 'doctor_lists', 'rx_rows', 'lab_requests', 'imaging_requests'));
+    }
+
+    /** Lab and imaging requests made from a consultation, with results and files. */
+    private function requestsOf(Consultation $consultation)
+    {
+        $lab = \App\LabRequest::forBusiness($consultation->business_id)->where('consultation_id', $consultation->id)
+            ->with(['lines', 'attachments.uploadedBy'])->orderBy('id')->get();
+        $img = \App\ImagingRequest::forBusiness($consultation->business_id)->where('consultation_id', $consultation->id)
+            ->with(['attachments.uploadedBy'])->orderBy('id')->get();
+
+        return [$lab, $img];
+    }
+
+    /**
+     * PosInnova: the results panel alone, to refresh it while the doctor waits for the lab.
+     */
+    public function results($id)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('consultation.view_own') && ! auth()->user()->can('consultation.view_all') && ! auth()->user()->can('consultation.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $consultation = Consultation::forBusiness(request()->session()->get('user.business_id'))->findOrFail($id);
+        if (! auth()->user()->can('consultation.view_all') && $consultation->consulted_by != auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+        [$lab_requests, $imaging_requests] = $this->requestsOf($consultation);
+
+        return view('consultation.partials.results', compact('lab_requests', 'imaging_requests'));
+    }
+
+    /**
+     * Prescription lines of a draft, for the form: values, availability, and whether they can still be
+     * changed (a line already given, or closed by the dispensary, stays as it is).
+     */
+    private function rxRowsForForm(Consultation $consultation, $visit)
+    {
+        $rxs = \App\Utils\Dispensing::attach(ConsultationPrescription::where('consultation_id', $consultation->id)
+            ->with(['product', 'variation'])->orderBy('id')->get());
+        $avail = \App\Utils\DrugAvailability::forVariations($consultation->business_id, $rxs->pluck('variation_id')->filter()->all(), $visit->location_id);
+        $units = DB::table('variations as v')->join('products as p', 'p.id', '=', 'v.product_id')->leftJoin('units as u', 'u.id', '=', 'p.unit_id')
+            ->whereIn('v.id', $rxs->pluck('variation_id')->filter()->all())->pluck('u.short_name', 'v.id');
+
+        return $rxs->map(function ($rx) use ($avail, $units) {
+            $row = [
+                'id' => $rx->id,
+                'variation_id' => $rx->variation_id,
+                'free_text' => $rx->isFreeText(),
+                'name' => $rx->displayName(),
+                'dosage' => $rx->dosage, 'frequency' => $rx->frequency, 'duration' => $rx->duration,
+                'quantity' => (float) $rx->quantity, 'notes' => $rx->notes,
+                'outside' => $rx->closeReasonKey() == 'prescribed_outside',
+                'locked' => $this->rxLocked($rx),
+                'state' => $rx->dispense_state,
+                'state_label' => __('clinic.rx_state_'.$rx->dispense_state).' · '.__('clinic.rx_given_of', ['given' => $rx->given_qty + 0, 'qty' => $rx->quantity + 0]),
+                'unit' => $units[$rx->variation_id] ?? null,
+                'can_give' => true,
+            ];
+
+            return array_merge($row, $avail[$rx->variation_id] ?? []);
+        })->values()->all();
+    }
+
+    /** A line the doctor can no longer change: something was given, or the dispensary closed it. */
+    private function rxLocked(ConsultationPrescription $rx)
+    {
+        return $rx->given_qty > 0 || ($rx->closed_at && ! in_array($rx->closeReasonKey(), ['prescribed_outside', 'not_stocked']));
     }
 
     public function store(Request $request)
@@ -125,31 +245,15 @@ class ConsultationController extends Controller
             $ref_count = $this->commonUtil->setAndGetReferenceCount('consultation', $business_id);
             $ref_no = $this->commonUtil->generateReferenceNumber('consultation', $ref_count, $business_id, 'CONS-');
 
-            $consultation = Consultation::create([
+            $consultation = Consultation::create(array_merge([
                 'business_id' => $business_id,
                 'visit_id' => $visit->id,
                 'contact_id' => $visit->contact_id,
                 'consulted_by' => $request->session()->get('user.id'),
-                'consultation_type' => $request->input('consultation_type'),
-                'specialty' => $request->input('specialty') ?: null,
                 'location_id' => $visit->location_id,
                 'ref_no' => $ref_no,
-                'chief_complaint' => $request->input('chief_complaint') ?: null,
-                'vitals_weight' => $request->filled('vitals_weight') ? $request->input('vitals_weight') : null,
-                'vitals_height' => $request->filled('vitals_height') ? $request->input('vitals_height') : null,
-                'vitals_bp_systolic' => $request->filled('vitals_bp_systolic') ? $request->input('vitals_bp_systolic') : null,
-                'vitals_bp_diastolic' => $request->filled('vitals_bp_diastolic') ? $request->input('vitals_bp_diastolic') : null,
-                'vitals_temperature' => $request->filled('vitals_temperature') ? $request->input('vitals_temperature') : null,
-                'vitals_pulse' => $request->filled('vitals_pulse') ? $request->input('vitals_pulse') : null,
-                'vitals_spo2' => $request->filled('vitals_spo2') ? $request->input('vitals_spo2') : null,
-                'examination_notes' => $request->input('examination_notes') ?: null,
-                'diagnosis' => $request->input('diagnosis') ?: null,
-                'referral_to' => $request->input('referral_to') ?: null,
-                'admission_requested' => $request->boolean('admission_requested') ? 1 : 0,
                 'status' => $is_final ? 'final' : 'draft',
-                'consultation_fee' => $visit->billedAtCheckin() ? 0
-                    : ($request->filled('consultation_fee') ? $this->commonUtil->num_uf($request->input('consultation_fee')) : 0),
-            ]);
+            ], $this->consultationFields($request, $visit)));
 
             $this->savePrescriptions($request, $consultation);
             $this->saveLabRequest($request, $consultation, $visit);
@@ -180,6 +284,89 @@ class ConsultationController extends Controller
                 'msg' => __('messages.something_went_wrong'),
             ]);
         }
+    }
+
+    /**
+     * PosInnova: save a consultation being continued (still a draft): the notes, the prescription
+     * (lines changed, added or removed, except lines already given), more lab / imaging requests,
+     * and finish it when asked.
+     */
+    public function update(Request $request, $id)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('consultation.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $request->validate(['consultation_type' => 'required|in:general,specialist']);
+        $business_id = $request->session()->get('user.business_id');
+        $consultation = Consultation::forBusiness($business_id)->findOrFail($id);
+        if ($consultation->status != 'draft' || ! $this->mayContinue($consultation)) {
+            return redirect()->action([self::class, 'show'], [$consultation->id])
+                ->with('status', ['success' => false, 'msg' => __('clinic.cons_not_editable')]);
+        }
+
+        try {
+            $visit = Visit::forBusiness($business_id)->findOrFail($consultation->visit_id);
+            $is_final = $request->input('action') === 'final' && auth()->user()->can('consultation.finalize');
+
+            DB::beginTransaction();
+            // re-read under lock: two saves at once must not both finish it
+            $consultation = Consultation::where('id', $consultation->id)->lockForUpdate()->first();
+            if ($consultation->status != 'draft') {
+                DB::rollBack();
+
+                return redirect()->action([self::class, 'show'], [$consultation->id])
+                    ->with('status', ['success' => false, 'msg' => __('clinic.cons_not_editable')]);
+            }
+            $consultation->fill($this->consultationFields($request, $visit));
+            if ($is_final) {
+                $consultation->status = 'final';
+            }
+            $consultation->save();
+
+            $this->savePrescriptions($request, $consultation, true);
+            $this->saveLabRequest($request, $consultation, $visit);
+            $this->saveImagingRequests($request, $consultation, $visit);
+
+            if ($is_final) {
+                $this->chargeConsultationFee($consultation, $visit);
+                $this->markSeen($visit);
+            }
+            DB::commit();
+
+            return redirect()->action([self::class, 'show'], [$consultation->id])->with('status', ['success' => true,
+                'msg' => $is_final ? __('lang_v1.consultation_finalized_success') : __('lang_v1.consultation_saved_draft')]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
+
+            return redirect()->back()->withInput()->with('status', ['success' => false, 'msg' => __('messages.something_went_wrong')]);
+        }
+    }
+
+    /** The fields of the consultation form (new or continued). */
+    private function consultationFields(Request $request, $visit)
+    {
+        $num = fn ($f) => $request->filled($f) ? $request->input($f) : null;
+
+        return [
+            'consultation_type' => $request->input('consultation_type'),
+            'specialty' => $request->input('consultation_type') == 'specialist' ? (mb_substr(trim((string) $request->input('specialty')), 0, 191) ?: null) : null,
+            'chief_complaint' => $request->input('chief_complaint') ?: null,
+            'vitals_weight' => $num('vitals_weight'),
+            'vitals_height' => $num('vitals_height'),
+            'vitals_bp_systolic' => $num('vitals_bp_systolic'),
+            'vitals_bp_diastolic' => $num('vitals_bp_diastolic'),
+            'vitals_temperature' => $num('vitals_temperature'),
+            'vitals_pulse' => $num('vitals_pulse'),
+            'vitals_spo2' => $num('vitals_spo2'),
+            'examination_notes' => $request->input('examination_notes') ?: null,
+            'diagnosis' => $request->input('diagnosis') ?: null,
+            'referral_to' => $request->input('referral_to') ?: null,
+            'admission_requested' => $request->boolean('admission_requested') ? 1 : 0,
+            'consultation_fee' => $visit->billedAtCheckin() ? 0
+                : ($request->filled('consultation_fee') ? $this->commonUtil->num_uf($request->input('consultation_fee')) : 0),
+        ];
     }
 
     /**
@@ -235,7 +422,10 @@ class ConsultationController extends Controller
             }
         }
 
-        return view('consultation.show')->with(compact('consultation'));
+        [$lab_requests, $imaging_requests] = $this->requestsOf($consultation);
+        $can_continue = $consultation->status == 'draft' && auth()->user()->can('consultation.create') && $this->mayContinue($consultation);
+
+        return view('consultation.show')->with(compact('consultation', 'lab_requests', 'imaging_requests', 'can_continue'));
     }
 
     public function finalize($id)
@@ -318,33 +508,67 @@ class ConsultationController extends Controller
      * doctor typed (drug_name). A typed medicine is closed as "not_stocked" and a ticked "buys
      * outside" row as "prescribed_outside": both are to buy at another pharmacy and never wait at
      * the dispensary.
+     *
+     * Continuing a draft ($existing = true): a row carrying the id of one of the consultation's lines
+     * updates it, a line no longer in the form is removed, the rest are added. A line already given
+     * (or closed by the dispensary) is left as it is, and is never removed.
      */
-    private function savePrescriptions(Request $request, Consultation $consultation)
+    private function savePrescriptions(Request $request, Consultation $consultation, $existing = false)
     {
         $rows = $request->input('prescriptions', []);
-        if (empty($rows) || ! is_array($rows)) {
+        $rows = is_array($rows) ? $rows : [];
+        $user_id = auth()->user()->id;
+        $current = $existing
+            ? \App\Utils\Dispensing::attach(ConsultationPrescription::where('consultation_id', $consultation->id)->get())->keyBy('id')
+            : collect();
+        if (empty($rows) && $current->isEmpty()) {
             return;
         }
-        $user_id = auth()->user()->id;
 
         $variation_ids = collect($rows)->pluck('variation_id')->filter()->map(fn ($v) => (int) $v)->unique()->all();
         $products = empty($variation_ids) ? collect() : DB::table('variations as v')->join('products as p', 'p.id', '=', 'v.product_id')
             ->where('p.business_id', $consultation->business_id)->whereIn('v.id', $variation_ids)
             ->pluck('p.id', 'v.id');
 
+        $kept = [];
         foreach ($rows as $row) {
             if (! is_array($row)) {
                 continue;
             }
             $line = [
-                'consultation_id' => $consultation->id,
-                'dosage' => isset($row['dosage']) ? mb_substr((string) $row['dosage'], 0, 100) : null,
-                'frequency' => isset($row['frequency']) ? mb_substr((string) $row['frequency'], 0, 100) : null,
-                'duration' => isset($row['duration']) ? mb_substr((string) $row['duration'], 0, 100) : null,
+                'dosage' => isset($row['dosage']) ? (mb_substr(trim((string) $row['dosage']), 0, 100) ?: null) : null,
+                'frequency' => isset($row['frequency']) ? (mb_substr(trim((string) $row['frequency']), 0, 100) ?: null) : null,
+                'duration' => isset($row['duration']) ? (mb_substr(trim((string) $row['duration']), 0, 100) ?: null) : null,
                 'quantity' => ! empty($row['quantity']) ? max(0, $this->commonUtil->num_uf($row['quantity'])) : 1,
-                'notes' => $row['notes'] ?? null,
+                'notes' => isset($row['notes']) ? (trim((string) $row['notes']) ?: null) : null,
             ];
 
+            // a line of this consultation, changed
+            if (! empty($row['id'])) {
+                $rx = $current->get((int) $row['id']);
+                if (! $rx) {
+                    continue; // not a line of this consultation
+                }
+                $kept[] = $rx->id;
+                if ($this->rxLocked($rx)) {
+                    continue;
+                }
+                if ($rx->isFreeText()) {
+                    $name = trim(preg_replace('/\s+/u', ' ', (string) ($row['drug_name'] ?? '')));
+                    if ($name !== '') {
+                        $line['drug_name'] = mb_substr($name, 0, 191);
+                    }
+                } elseif (! empty($row['outside']) && ! $rx->closed_at) {
+                    $line += ['closed_at' => now(), 'closed_by' => $user_id, 'close_reason' => 'prescribed_outside'];
+                } elseif (empty($row['outside']) && $rx->closeReasonKey() == 'prescribed_outside') {
+                    $line += ['closed_at' => null, 'closed_by' => null, 'close_reason' => null];
+                }
+                $rx->fill($line)->save();
+
+                continue;
+            }
+
+            $line['consultation_id'] = $consultation->id;
             if (! empty($row['variation_id'])) {
                 $product_id = $products[(int) $row['variation_id']] ?? null;
                 if (! $product_id) {
@@ -364,6 +588,18 @@ class ConsultationController extends Controller
             }
 
             ConsultationPrescription::create($line);
+        }
+
+        // lines taken off the prescription (never one already given, sold, or recorded on a ward chart)
+        foreach ($current as $rx) {
+            if (in_array($rx->id, $kept) || $this->rxLocked($rx)) {
+                continue;
+            }
+            $linked = DB::table('transaction_sell_lines')->where('consultation_prescription_id', $rx->id)->exists()
+                || DB::table('medication_administrations')->where('consultation_prescription_id', $rx->id)->exists();
+            if (! $linked) {
+                $rx->delete();
+            }
         }
     }
 

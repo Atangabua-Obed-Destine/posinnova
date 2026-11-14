@@ -105,6 +105,7 @@ class ImagingController extends Controller
                 'code' => 'nullable|string|max:50',
                 'modality' => 'nullable|string|max:50',
                 'fee' => 'nullable|numeric|min:0',
+                'report_template' => 'nullable|string|max:20000',
             ]);
 
             $validated['business_id'] = $business_id;
@@ -160,6 +161,7 @@ class ImagingController extends Controller
                 'code' => 'nullable|string|max:50',
                 'modality' => 'nullable|string|max:50',
                 'fee' => 'nullable|numeric|min:0',
+                'report_template' => 'nullable|string|max:20000',
             ]);
 
             $imaging->fill([
@@ -167,6 +169,7 @@ class ImagingController extends Controller
                 'code' => $validated['code'] ?? null,
                 'modality' => $validated['modality'] ?? null,
                 'fee' => $request->filled('fee') ? $request->input('fee') : 0,
+                'report_template' => $validated['report_template'] ?? null,
                 'is_active' => $request->has('is_active') ? 1 : 0,
             ]);
             $imaging->save();

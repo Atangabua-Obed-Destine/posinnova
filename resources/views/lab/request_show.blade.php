@@ -110,6 +110,10 @@
         </div>
     @endcomponent
 
+    @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.att_title')])
+        @include('clinic.partials.attachments', ['type' => 'lab_request', 'owner' => $lr])
+    @endcomponent
+
     {{-- PosInnova: a validated result is locked; corrections are amendments
          that keep the original value, the reason, who and when. --}}
     @if ($lr->status === 'validated')

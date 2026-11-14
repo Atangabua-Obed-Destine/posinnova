@@ -49,6 +49,7 @@
 @endif
 
 @unless($locked)
+@include('patient_portal.partials.attachments', ['files' => $lab_request->attachments])
 <p class="tw-text-xs tw-text-gray-400 tw-mt-3">@lang('lang_v1.validated_by'): {{ optional($lab_request->validatedBy)->user_full_name ?? optional($lab_request->requestedBy)->user_full_name ?? '—' }}</p>
 @endunless
 @endsection

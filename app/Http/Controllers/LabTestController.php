@@ -97,6 +97,7 @@ class LabTestController extends Controller
                 'unit' => 'nullable|string|max:50',
                 'fee' => 'nullable|numeric|min:0',
                 'turnaround_hours' => 'nullable|integer|min:0',
+                'result_options' => 'nullable|string|max:500',
             ]);
 
             $validated['business_id'] = $business_id;
@@ -157,6 +158,7 @@ class LabTestController extends Controller
                 'unit' => 'nullable|string|max:50',
                 'fee' => 'nullable|numeric|min:0',
                 'turnaround_hours' => 'nullable|integer|min:0',
+                'result_options' => 'nullable|string|max:500',
             ]);
 
             $lab_test->fill([
@@ -167,6 +169,7 @@ class LabTestController extends Controller
                 'unit' => $validated['unit'] ?? null,
                 'fee' => $request->filled('fee') ? $request->input('fee') : 0,
                 'turnaround_hours' => $request->filled('turnaround_hours') ? $request->input('turnaround_hours') : null,
+                'result_options' => $validated['result_options'] ?? null,
                 'is_active' => $request->has('is_active') ? 1 : 0,
             ]);
             $lab_test->save();

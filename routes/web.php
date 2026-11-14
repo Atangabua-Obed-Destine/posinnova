@@ -456,6 +456,9 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('consultations/drug-search', [\App\Http\Controllers\ConsultationController::class, 'drugSearch']);
     Route::post('consultations', [\App\Http\Controllers\ConsultationController::class, 'store']);
     Route::get('consultations/{id}', [\App\Http\Controllers\ConsultationController::class, 'show'])->whereNumber('id');
+    Route::get('consultations/{id}/edit', [\App\Http\Controllers\ConsultationController::class, 'edit'])->whereNumber('id');
+    Route::post('consultations/{id}/update', [\App\Http\Controllers\ConsultationController::class, 'update'])->whereNumber('id');
+    Route::get('consultations/{id}/results', [\App\Http\Controllers\ConsultationController::class, 'results'])->whereNumber('id');
     Route::post('consultations/{id}/finalize', [\App\Http\Controllers\ConsultationController::class, 'finalize']);
     Route::get('consultations/{id}/prescription', [\App\Http\Controllers\ConsultationController::class, 'prescription']);
 
@@ -533,6 +536,15 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('clinic/reports/{key}', [\App\Http\Controllers\ClinicReportController::class, 'show'])->where('key', '[a-z_]+');
 
     //Clinic settings (hospital module)
+    Route::post('clinic/attachments/{type}/{id}', [\App\Http\Controllers\ClinicAttachmentController::class, 'store'])->where('type', 'lab_request|imaging_request')->whereNumber('id');
+    Route::get('clinic/attachments/{id}', [\App\Http\Controllers\ClinicAttachmentController::class, 'show'])->whereNumber('id');
+    Route::post('clinic/attachments/{id}/delete', [\App\Http\Controllers\ClinicAttachmentController::class, 'destroy'])->whereNumber('id');
+    Route::post('clinic/options', [\App\Http\Controllers\ClinicOptionController::class, 'quickAdd']);
+    Route::get('clinic/doctor-lists', [\App\Http\Controllers\ClinicOptionController::class, 'index']);
+    Route::post('clinic/doctor-lists', [\App\Http\Controllers\ClinicOptionController::class, 'store']);
+    Route::post('clinic/doctor-lists/{id}', [\App\Http\Controllers\ClinicOptionController::class, 'update'])->whereNumber('id');
+    Route::post('clinic/doctor-lists/{id}/delete', [\App\Http\Controllers\ClinicOptionController::class, 'destroy'])->whereNumber('id');
+    Route::post('clinic/doctor-lists/{id}/move', [\App\Http\Controllers\ClinicOptionController::class, 'move'])->whereNumber('id');
     Route::get('clinic/settings', [\App\Http\Controllers\ClinicSettingsController::class, 'index']);
     Route::post('clinic/settings', [\App\Http\Controllers\ClinicSettingsController::class, 'update']);
     //PosInnova clinic phase 2: consultation packages and the doctor's queue
@@ -796,6 +808,7 @@ Route::middleware(['setData', 'language'])->prefix('portal')->name('portal.')->g
         Route::get('lab-results', [\App\Http\Controllers\PatientPortal\PortalController::class, 'labResults'])->name('lab-results');
         Route::get('lab-results/{id}', [\App\Http\Controllers\PatientPortal\PortalController::class, 'labShow'])->name('lab-show');
         Route::get('imaging', [\App\Http\Controllers\PatientPortal\PortalController::class, 'imaging'])->name('imaging');
+        Route::get('attachments/{id}', [\App\Http\Controllers\ClinicAttachmentController::class, 'portalShow'])->whereNumber('id')->name('attachment');
         Route::get('admissions', [\App\Http\Controllers\PatientPortal\PortalController::class, 'admissions'])->name('admissions');
         Route::get('maternity', [\App\Http\Controllers\PatientPortal\PortalController::class, 'maternity'])->name('maternity');
         Route::get('bills', [\App\Http\Controllers\PatientPortal\PortalController::class, 'bills'])->name('bills');

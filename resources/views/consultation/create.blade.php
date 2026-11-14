@@ -7,6 +7,16 @@
     $age = optional($pd)->date_of_birth ? \Carbon::parse($pd->date_of_birth)->age : null;
     $has_allergies = ! empty(optional($pd)->known_allergies);
     $can_prescribe = auth()->user()->can('consultation.prescribe');
+    // PosInnova: the same form continues a consultation saved as a draft ($consultation set)
+    $c_edit = $consultation ?? null;
+    $fv = function ($field, $default = null) use ($c_edit) {
+        if (old($field) !== null) {
+            return old($field);
+        }
+
+        return $c_edit ? $c_edit->{$field} : $default;
+    };
+    $num = fn ($v) => $v === null ? null : (str_contains((string) $v, '.') ? rtrim(rtrim((string) $v, '0'), '.') : (string) $v);
     // texts for the prescription search (built here: @json takes no multi-line array)
     $rx_js_text = ['_location' => optional($visit->location)->name ?: ''];
     foreach (['rx_avail_in_stock', 'rx_avail_low', 'rx_avail_out', 'rx_avail_expired_only', 'rx_avail_not_tracked', 'rx_avail_not_here',
@@ -15,11 +25,18 @@
         // placeholders stay as :qty / :location... for the script to fill in
         $rx_js_text[$k] = trans('clinic.'.$k);
     }
+    $rx_js_text += ['_label_dosage' => __('lang_v1.dosage'), '_label_frequency' => __('lang_v1.frequency'), '_label_duration' => __('lang_v1.duration'), '_label_notes' => __('lang_v1.notes')];
 @endphp
 
 @section('content')
 <section class="content-header">
-    <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">@lang('lang_v1.new_consultation')</h1>
+    <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">
+        @if ($c_edit)
+            @lang('clinic.cons_continue_title') <small class="tw-text-gray-600">{{ $c_edit->ref_no }} · {{ __('clinic.cons_started_at', ['time' => (new \App\Utils\Util())->format_date($c_edit->created_at, true)]) }}</small>
+        @else
+            @lang('lang_v1.new_consultation')
+        @endif
+    </h1>
 </section>
 
 <section class="content">
@@ -79,40 +96,73 @@
         @endif
     </details>
 
-    {!! Form::open(['url' => action([\App\Http\Controllers\ConsultationController::class, 'store']), 'method' => 'post', 'id' => 'consultation_form']) !!}
+    @if ($c_edit)
+        {!! Form::open(['url' => action([\App\Http\Controllers\ConsultationController::class, 'update'], [$c_edit->id]), 'method' => 'post', 'id' => 'consultation_form']) !!}
+    @else
+        {!! Form::open(['url' => action([\App\Http\Controllers\ConsultationController::class, 'store']), 'method' => 'post', 'id' => 'consultation_form']) !!}
+    @endif
     {!! Form::hidden('visit_id', $visit->id) !!}
 
+    {{-- PosInnova: continuing: what the lab / imaging sent back since the consultation was saved --}}
+    @if ($c_edit && ($lab_requests->isNotEmpty() || $imaging_requests->isNotEmpty()))
+        <div class="box box-solid" id="consult_results_box" style="border-top:3px solid #4f46e5;">
+            <div class="box-header with-border" style="display:flex;align-items:center;gap:8px;">
+                <h3 class="box-title"><i class="fas fa-flask"></i> @lang('clinic.cr_title')</h3>
+                <button type="button" class="btn btn-xs btn-default" id="consult_results_refresh" style="margin-left:auto;"
+                    data-url="{{ action([\App\Http\Controllers\ConsultationController::class, 'results'], [$c_edit->id]) }}">
+                    <i class="fas fa-sync-alt"></i> @lang('clinic.cr_refresh')</button>
+            </div>
+            <div class="box-body" id="consult_results_body">
+                @include('consultation.partials.results')
+            </div>
+        </div>
+    @endif
+
     {{-- Consultation type --}}
+    @php
+        $spec_now = $fv('specialty');
+        $spec_opts = collect($doctor_lists['specialty'] ?? [])->mapWithKeys(fn ($v) => [$v => $v])->all();
+        if ($spec_now && ! isset($spec_opts[$spec_now])) {
+            $spec_opts = [$spec_now => $spec_now] + $spec_opts;
+        }
+    @endphp
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.consultation_details')])
         <div class="row">
             <div class="col-sm-3">
                 <div class="form-group">
                     {!! Form::label('consultation_type', __('lang_v1.consultation_type') . ':*') !!}
-                    {!! Form::select('consultation_type', ['general' => __('lang_v1.consultation_type_general'), 'specialist' => __('lang_v1.consultation_type_specialist')], 'general', ['class' => 'form-control select2', 'id' => 'consultation_type', 'required']) !!}
+                    {!! Form::select('consultation_type', ['general' => __('lang_v1.consultation_type_general'), 'specialist' => __('lang_v1.consultation_type_specialist')], $fv('consultation_type', 'general'), ['class' => 'form-control select2', 'id' => 'consultation_type', 'required']) !!}
                 </div>
             </div>
             <div class="col-sm-3 specialty_field" style="display:none;">
                 <div class="form-group">
                     {!! Form::label('specialty', __('lang_v1.specialty') . ':') !!}
-                    {!! Form::text('specialty', null, ['class' => 'form-control', 'placeholder' => __('lang_v1.specialty_placeholder')]) !!}
+                    <div class="input-group">
+                        {!! Form::select('specialty', $spec_opts, $spec_now, ['class' => 'form-control select2', 'id' => 'specialty', 'placeholder' => __('clinic.dl_choose'), 'style' => 'width:100%;']) !!}
+                        <span class="input-group-btn">
+                            <button type="button" class="btn btn-default dl-add-btn" data-list="specialty" data-target="#specialty" title="{{ __('clinic.dl_add_title', ['list' => __('clinic.dl_specialty')]) }}" aria-label="{{ __('clinic.dl_add_title', ['list' => __('clinic.dl_specialty')]) }}"><i class="fas fa-plus"></i></button>
+                        </span>
+                    </div>
                 </div>
             </div>
             <div class="col-sm-6">
                 <div class="form-group">
                     {!! Form::label('chief_complaint', __('lang_v1.chief_complaint') . ':') !!}
-                    {!! Form::text('chief_complaint', null, ['class' => 'form-control', 'placeholder' => __('lang_v1.chief_complaint_placeholder')]) !!}
+                    {!! Form::text('chief_complaint', $fv('chief_complaint'), ['class' => 'form-control', 'id' => 'chief_complaint', 'placeholder' => __('lang_v1.chief_complaint_placeholder')]) !!}
+                    @include('consultation.partials.picker', ['list' => 'complaint', 'target' => '#chief_complaint', 'sep' => ', '])
                 </div>
             </div>
         </div>
     @endcomponent
 
-    {{-- Vitals (filled in from the front desk when they were taken there) --}}
+    {{-- Vitals (filled in from the front desk when they were taken there; the saved ones when continuing) --}}
     @php
-        $num = fn ($v) => $v === null ? null : (str_contains((string) $v, '.') ? rtrim(rtrim((string) $v, '0'), '.') : (string) $v);
-        $front_vitals = $visit->hasVitals() ? collect(\App\Visit::VITALS)->mapWithKeys(fn ($f) => [$f => $num($visit->{$f})])->all() : [];
+        $front_vitals = $c_edit
+            ? collect(\App\Visit::VITALS)->mapWithKeys(fn ($f) => [$f => $num($c_edit->{$f})])->all()
+            : ($visit->hasVitals() ? collect(\App\Visit::VITALS)->mapWithKeys(fn ($f) => [$f => $num($visit->{$f})])->all() : []);
     @endphp
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.vitals')])
-        @if ($visit->hasVitals())
+        @if ($visit->hasVitals() && ! $c_edit)
             <p class="text-muted" id="front_vitals_note" style="margin-top:0;"><i class="fas fa-heartbeat"></i>
                 {{ __('clinic.vit_from_front_desk', ['time' => $visit->vitals_taken_at->format('H:i'), 'name' => trim(optional($visit->vitalsTakenBy)->user_full_name)]) }}
                 @if ($visit->vitals_note) · <em>{{ $visit->vitals_note }}</em>@endif</p>
@@ -174,13 +224,15 @@
             <div class="col-sm-6">
                 <div class="form-group">
                     {!! Form::label('examination_notes', __('lang_v1.examination_notes') . ':') !!}
-                    {!! Form::textarea('examination_notes', null, ['class' => 'form-control', 'rows' => 4]) !!}
+                    {!! Form::textarea('examination_notes', $fv('examination_notes'), ['class' => 'form-control', 'rows' => 4, 'id' => 'examination_notes']) !!}
+                    @include('consultation.partials.picker', ['list' => 'exam_finding', 'target' => '#examination_notes', 'sep' => ', '])
                 </div>
             </div>
             <div class="col-sm-6">
                 <div class="form-group">
                     {!! Form::label('diagnosis', __('lang_v1.diagnosis') . ':') !!}
-                    {!! Form::textarea('diagnosis', null, ['class' => 'form-control', 'rows' => 4, 'placeholder' => __('lang_v1.diagnosis_placeholder')]) !!}
+                    {!! Form::textarea('diagnosis', $fv('diagnosis'), ['class' => 'form-control', 'rows' => 4, 'id' => 'diagnosis', 'placeholder' => __('lang_v1.diagnosis_placeholder')]) !!}
+                    @include('consultation.partials.picker', ['list' => 'diagnosis', 'target' => '#diagnosis', 'sep' => "\n"])
                 </div>
             </div>
         </div>
@@ -229,6 +281,11 @@
     @endif
 
     {{-- Lab requests --}}
+    @php
+        // continuing: tests / studies already asked for in this consultation are marked
+        $asked_tests = $lab_requests->flatMap->lines->pluck('lab_test_id')->filter()->flip()->all();
+        $asked_studies = $imaging_requests->pluck('imaging_catalogue_id')->filter()->flip()->all();
+    @endphp
     @if(auth()->user()->can('lab_request.create') && $lab_tests->isNotEmpty())
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.request_lab_tests')])
         <div class="row">
@@ -239,6 +296,7 @@
                             <input type="checkbox" name="lab_test_ids[]" value="{{ $test->id }}">
                             {{ $test->name }}
                             @if($test->code) <small class="text-muted">({{ $test->code }})</small> @endif
+                            @if (isset($asked_tests[$test->id])) <span class="label label-info" title="{{ __('clinic.cr_already_asked_help') }}">@lang('clinic.cr_already_asked')</span> @endif
                         </label>
                     </div>
                 </div>
@@ -266,6 +324,7 @@
                             <input type="checkbox" name="imaging_catalogue_ids[]" value="{{ $study->id }}">
                             {{ $study->name }}
                             @if($study->modality) <small class="text-muted">({{ $study->modality }})</small> @endif
+                            @if (isset($asked_studies[$study->id])) <span class="label label-info" title="{{ __('clinic.cr_already_asked_help') }}">@lang('clinic.cr_already_asked')</span> @endif
                         </label>
                     </div>
                 </div>
@@ -280,7 +339,7 @@
             <div class="col-sm-4">
                 <div class="form-group">
                     {!! Form::label('referral_to', __('lang_v1.refer_to_department') . ':') !!}
-                    {!! Form::select('referral_to', $departments, null, ['class' => 'form-control select2']) !!}
+                    {!! Form::select('referral_to', $departments, $fv('referral_to'), ['class' => 'form-control select2']) !!}
                 </div>
             </div>
             <div class="col-sm-4">
@@ -295,7 +354,7 @@
                                 {{ __('clinic.billed_at_checkin', ['package' => optional($visit->package)->name ?: __('lang_v1.consultation_fee')]) }}</p>
                             @endif
                     @else
-                        {!! Form::text('consultation_fee', $default_fee, ['class' => 'form-control input_number']) !!}
+                        {!! Form::text('consultation_fee', $c_edit ? $num($c_edit->consultation_fee) : $default_fee, ['class' => 'form-control input_number']) !!}
                     @endif
                 </div>
             </div>
@@ -305,7 +364,7 @@
                 <div class="form-group">
                     <br>
                     <label class="checkbox-inline">
-                        {!! Form::checkbox('admission_requested', 1, false) !!}
+                        {!! Form::checkbox('admission_requested', 1, (bool) $fv('admission_requested', false)) !!}
                         @lang('lang_v1.request_admission')
                     </label>
                 </div>
@@ -316,8 +375,8 @@
 
     <div class="row">
         <div class="col-md-12 text-center" style="margin-bottom:20px;">
-            <button type="submit" name="action" value="draft" class="tw-dw-btn tw-dw-btn-outline tw-font-bold">
-                <i class="fas fa-save"></i> @lang('lang_v1.save_as_draft')
+            <button type="submit" name="action" value="draft" class="tw-dw-btn tw-dw-btn-outline tw-font-bold" title="{{ __('clinic.cons_save_later_help') }}">
+                <i class="fas fa-save"></i> @lang('clinic.cons_save_later')
             </button>
             @can('consultation.finalize')
                 <button type="submit" name="action" value="final" class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-border-none tw-font-bold">
@@ -325,6 +384,7 @@
                 </button>
             @endcan
             <a href="{{ action([\App\Http\Controllers\VisitController::class, 'show'], [$visit->id]) }}" class="tw-dw-btn tw-dw-btn-outline">@lang('messages.cancel')</a>
+            <p class="help-block" style="margin-top:8px;"><i class="fas fa-info-circle"></i> @lang('clinic.cons_save_later_help')</p>
         </div>
     </div>
 
@@ -333,6 +393,7 @@
 @endsection
 
 @section('javascript')
+@include('consultation.partials.doctor_lists_js')
 <script>
 $(document).ready(function () {
     // Toggle specialty field
@@ -356,6 +417,18 @@ $(document).ready(function () {
         }
     }
     $('.vitals-bmi').on('input', recalcBmi);
+    recalcBmi();
+
+    // continuing: refresh the lab / imaging results without leaving the form (and every minute)
+    function refreshResults() {
+        var $b = $('#consult_results_refresh');
+        if (!$b.length) { return; }
+        $b.find('i').addClass('fa-spin');
+        $.get($b.data('url')).done(function (html) { $('#consult_results_body').html(html); })
+            .always(function () { $b.find('i').removeClass('fa-spin'); });
+    }
+    $('#consult_results_refresh').on('click', refreshResults);
+    if ($('#consult_results_refresh').length) { setInterval(refreshResults, 60000); }
 
     @if($can_prescribe)
     var rxIndex = 0;
@@ -411,33 +484,112 @@ $(document).ready(function () {
             $w.hide().empty();
         }
     }
-    function addPrescriptionRow(item) {
+    /*
+     * Quantity from dosage x times a day x days, e.g. "1 tablet" x "3 times daily" x "5 days" = 15.
+     * Only for counted forms (tablets, capsules, sachets...) and only until the doctor types a quantity.
+     */
+    function rxDose(s) {
+        s = String(s || '').trim().toLowerCase();
+        var m = s.match(/^(½|¼|¾|\d+(?:[.,]\d+)?(?:\s*\/\s*\d+)?)\s*(.*)$/);
+        if (!m || !/(tab|comp|cp\b|cap|g[eé]l|sachet|amp|supp|vial|flacon|pessar|ovule|pill|pi[eè]ce|pc|unit)/.test(m[2])) { return null; }
+        var n = m[1];
+        if (n === '½') { return 0.5; } if (n === '¼') { return 0.25; } if (n === '¾') { return 0.75; }
+        if (n.indexOf('/') > 0) { var f = n.split('/'); return parseFloat(f[0]) / parseFloat(f[1]); }
+        return parseFloat(n.replace(',', '.'));
+    }
+    function rxPerDay(s) {
+        s = String(s || '').toLowerCase();
+        var m;
+        if (/(prn|when needed|si besoin|as needed)/.test(s)) { return null; }
+        if (/(stat|single dose|dose unique|immediately)/.test(s)) { return 'once'; }
+        if ((m = s.match(/(?:every|toutes les)\s*(\d+)\s*(?:h|hours|heures)/))) { return 24 / parseInt(m[1], 10); }
+        if (/(once a week|1 fois par semaine|weekly|hebdo)/.test(s)) { return 1 / 7; }
+        if (/\bqds\b|\bqid\b/.test(s)) { return 4; }
+        if (/\btds\b|\btid\b/.test(s)) { return 3; }
+        if (/\bbd\b|\bbid\b|twice/.test(s)) { return 2; }
+        if ((m = s.match(/(\d+)\s*(?:x|fois|times)/))) { return parseInt(m[1], 10); }
+        if (/\bod\b|once|morning|night|matin|soir|nocte|mane|coucher/.test(s)) { return 1; }
+        return null;
+    }
+    function rxDays(s) {
+        s = String(s || '').toLowerCase();
+        var m;
+        if (/(single dose|dose unique)/.test(s)) { return 'once'; }
+        if ((m = s.match(/(\d+)\s*(?:days?|jours?|j\b|d\b)/))) { return parseInt(m[1], 10); }
+        if ((m = s.match(/(\d+)\s*(?:weeks?|semaines?|sem\b|wk)/))) { return 7 * parseInt(m[1], 10); }
+        if ((m = s.match(/(\d+)\s*(?:months?|mois)/))) { return 30 * parseInt(m[1], 10); }
+        return null;
+    }
+    function rxAutoQty($tr) {
+        var $q = $tr.find('.rx_qty'), $hint = $tr.find('.rx-qty-hint');
+        if ($q.data('manual')) { $hint.text(''); return; }
+        var dose = rxDose($tr.find('input[name$="[dosage]"]').val());
+        var per = rxPerDay($tr.find('input[name$="[frequency]"]').val());
+        var days = rxDays($tr.find('input[name$="[duration]"]').val());
+        var qty = null, how = '';
+        if (dose && (per === 'once' || days === 'once')) {
+            qty = dose; how = rxNum(dose);
+        } else if (dose && per && days) {
+            qty = dose * per * days; how = rxNum(dose) + ' × ' + rxNum(per) + ' × ' + days;
+        }
+        if (qty) {
+            qty = Math.ceil(qty - 1e-9);
+            $q.val(qty);
+            $hint.text('= ' + how);
+            rxCheckRow($tr);
+        } else {
+            $hint.text('');
+        }
+    }
+
+    function addPrescriptionRow(item, existing) {
         var i = rxIndex++;
         var cell, attrs;
+        var idField = item.id ? '<input type="hidden" name="prescriptions[' + i + '][id]" value="' + parseInt(item.id, 10) + '">' : '';
+        if (item.locked) {
+            // already given, or closed by the dispensary: shown as it is, kept on the prescription
+            var $locked = $('<tr class="rx-locked" data-locked="1">' +
+                '<td><strong>' + rxEsc(item.name) + '</strong>' + idField +
+                    '<div class="rx-avail"><span class="label label-default"><i class="fas fa-lock"></i> ' + rxEsc(item.state_label || '') + '</span></div></td>' +
+                '<td>' + rxEsc(item.dosage || '-') + '</td><td>' + rxEsc(item.frequency || '-') + '</td><td>' + rxEsc(item.duration || '-') + '</td>' +
+                '<td>' + rxNum(item.quantity) + '</td><td>' + rxEsc(item.notes || '') + '</td><td></td></tr>');
+            $locked.appendTo('#prescription_rows');
+            return;
+        }
         if (item.free_text) {
             // not in the system: the typed name, always "to buy elsewhere"
             attrs = ' data-free="1"';
-            cell = '<input type="text" name="prescriptions[' + i + '][drug_name]" class="form-control input-sm rx_drug_name" maxlength="191" required value="' + rxEsc(item.name) + '" aria-label="{{ __('lang_v1.medicine') }}">' +
+            cell = '<input type="text" name="prescriptions[' + i + '][drug_name]" class="form-control input-sm rx_drug_name" maxlength="191" required value="' + rxEsc(item.name) + '" aria-label="{{ __('lang_v1.medicine') }}">' + idField +
                 '<div class="rx-avail"><span class="label label-warning"><i class="fas fa-store-slash"></i> ' + rxT('rx_not_in_stock_tag') + '</span></div>';
         } else {
+            var outside = existing ? !!item.outside : !item.can_give;
             attrs = ' data-variation="' + parseInt(item.variation_id, 10) + '" data-status="' + rxEsc(item.status) + '"' + (item.here !== null && item.here !== undefined ? ' data-here="' + parseFloat(item.here) + '"' : '');
-            cell = '<strong>' + rxEsc(item.name) + '</strong>' + rxAvailHtml(item) +
+            cell = '<strong>' + rxEsc(item.name) + '</strong>' + (item.status ? rxAvailHtml(item) : '') + idField +
                 '<input type="hidden" name="prescriptions[' + i + '][variation_id]" value="' + parseInt(item.variation_id, 10) + '">' +
-                '<label class="rx-outside-lbl" title="' + rxEsc(rxT('rx_buys_outside_help')) + '"><input type="checkbox" class="rx_outside" name="prescriptions[' + i + '][outside]" value="1"' + (item.can_give ? '' : ' checked') + '> ' + rxT('rx_buys_outside') + '</label>' +
+                '<label class="rx-outside-lbl" title="' + rxEsc(rxT('rx_buys_outside_help')) + '"><input type="checkbox" class="rx_outside" name="prescriptions[' + i + '][outside]" value="1"' + (outside ? ' checked' : '') + '> ' + rxT('rx_buys_outside') + '</label>' +
                 '<div class="rx-over text-warning" style="display:none;"></div>';
         }
+        var field = function (name, list, ph) {
+            return '<td><input type="text" name="prescriptions[' + i + '][' + name + ']" aria-label="' + rxEsc(RX_T['_label_' + name]) + '" class="form-control input-sm dl-ac" data-list="' + list + '" placeholder="' + rxEsc(ph) + '" value="' + rxEsc(existing ? item[name] : '') + '"></td>';
+        };
         var row = '<tr' + attrs + '>' +
             '<td>' + cell + '</td>' +
-            '<td><input type="text" name="prescriptions[' + i + '][dosage]" aria-label="{{ __('lang_v1.dosage') }}" class="form-control input-sm" placeholder="{{ __('lang_v1.dosage_eg') }}"></td>' +
-            '<td><input type="text" name="prescriptions[' + i + '][frequency]" aria-label="{{ __('lang_v1.frequency') }}" class="form-control input-sm" placeholder="{{ __('lang_v1.frequency_eg') }}"></td>' +
-            '<td><input type="text" name="prescriptions[' + i + '][duration]" aria-label="{{ __('lang_v1.duration') }}" class="form-control input-sm" placeholder="{{ __('lang_v1.duration_eg') }}"></td>' +
-            '<td><input type="number" step="0.01" min="0" name="prescriptions[' + i + '][quantity]" aria-label="{{ __('sale.qty') }}" class="form-control input-sm rx_qty" value="1"></td>' +
-            '<td><input type="text" name="prescriptions[' + i + '][notes]" aria-label="{{ __('lang_v1.notes') }}" class="form-control input-sm"></td>' +
-            '<td class="text-center"><a href="#" class="text-danger remove_rx_row"><i class="fa fa-trash"></i></a></td>' +
+            field('dosage', 'rx_dosage', '{{ __('lang_v1.dosage_eg') }}') +
+            field('frequency', 'rx_frequency', '{{ __('lang_v1.frequency_eg') }}') +
+            field('duration', 'rx_duration', '{{ __('lang_v1.duration_eg') }}') +
+            '<td><input type="number" step="0.01" min="0" name="prescriptions[' + i + '][quantity]" aria-label="{{ __('sale.qty') }}" class="form-control input-sm rx_qty" value="' + (existing ? rxEsc(item.quantity) : '1') + '">' +
+                '<small class="text-muted rx-qty-hint"></small></td>' +
+            field('notes', 'rx_instruction', '') +
+            '<td class="text-center"><a href="#" class="text-danger remove_rx_row" title="{{ __('messages.delete') }}"><i class="fa fa-trash"></i></a></td>' +
         '</tr>';
         var $tr = $(row).appendTo('#prescription_rows');
+        if (existing) {
+            $tr.find('.rx_qty').data('manual', 1); // what the doctor saved stays as it is
+        }
         rxCheckRow($tr);
-        $tr.find(item.free_text ? '.rx_drug_name' : 'input[name$="[dosage]"]').trigger('focus');
+        if (!existing) {
+            $tr.find(item.free_text ? '.rx_drug_name' : 'input[name$="[dosage]"]').trigger('focus');
+        }
     }
 
     $('#search_prescription_product').autocomplete({
@@ -481,6 +633,16 @@ $(document).ready(function () {
     $(document).on('input change', '#prescription_rows .rx_qty, #prescription_rows .rx_outside', function () {
         rxCheckRow($(this).closest('tr'));
     });
+    // a quantity typed by the doctor is theirs; dosage / frequency / duration fill it in until then
+    $(document).on('input', '#prescription_rows .rx_qty', function (e) {
+        if (e.originalEvent) { $(this).data('manual', 1); $(this).closest('tr').find('.rx-qty-hint').text(''); }
+    });
+    $(document).on('input change', '#prescription_rows input[name$="[dosage]"], #prescription_rows input[name$="[frequency]"], #prescription_rows input[name$="[duration]"]', function () {
+        rxAutoQty($(this).closest('tr'));
+    });
+
+    // continuing a consultation: its prescription as saved
+    $.each(@json($rx_rows), function (_, item) { addPrescriptionRow(item, true); });
     $(document).on('click', '.remove_rx_row', function (e) {
         e.preventDefault();
         $(this).closest('tr').remove();

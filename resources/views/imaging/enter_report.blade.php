@@ -28,6 +28,11 @@
     @include('clinic.partials.request_payment', ['pay' => $pay, 'req' => $ir, 'ack' => true])
 
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.radiologist_report')])
+        @php $img_template = optional($ir->catalogue)->report_template; @endphp
+        @if ($img_template)
+            <button type="button" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline" id="insert_normal_report" style="margin-bottom:8px;"
+                data-template="{{ $img_template }}"><i class="fas fa-file-medical"></i> @lang('clinic.img_insert_template')</button>
+        @endif
         <div class="form-group">
             {!! Form::label('report', __('lang_v1.report') . ':*') !!}
             {!! Form::textarea('report', $ir->report, ['class' => 'form-control', 'rows' => 10, 'required', 'placeholder' => __('lang_v1.report_findings_placeholder')]) !!}
@@ -44,12 +49,29 @@
     </div>
 
     {!! Form::close() !!}
+
+    {{-- photos / scans / PDFs: uploaded as soon as they are chosen --}}
+    @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.att_title')])
+        @include('clinic.partials.attachments', ['type' => 'imaging_request', 'owner' => $ir])
+    @endcomponent
 </section>
 
 @php
     $img_js_labels = ['patient' => __('lang_v1.patient'), 'name' => optional($ir->patient)->name, 'study' => __('lang_v1.study'), 'study_name' => $ir->study_name, 'report' => __('lang_v1.report')];
 @endphp
 <script>
+    // PosInnova: the study's normal report in one click (added below what is already written)
+    (function () {
+        var b = document.getElementById('insert_normal_report');
+        if (!b) { return; }
+        b.addEventListener('click', function () {
+            var ta = document.querySelector('#imaging_report_form textarea[name=report]');
+            var t = b.getAttribute('data-template');
+            ta.value = ta.value.trim() ? ta.value.replace(/\s+$/, '') + '\n\n' + t : t;
+            ta.focus();
+        });
+    })();
+
     // PosInnova: the report is checked in the "check before recording" dialog before it is written
     (function () {
         var form = document.getElementById('imaging_report_form');

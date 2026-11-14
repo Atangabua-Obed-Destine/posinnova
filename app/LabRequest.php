@@ -59,6 +59,12 @@ class LabRequest extends Model
         return $this->hasMany(LabRequestLine::class, 'lab_request_id');
     }
 
+    /** PosInnova: photos / scans / PDFs of the result (see App\ClinicAttachment). */
+    public function attachments()
+    {
+        return $this->hasMany(ClinicAttachment::class, 'attachable_id')->where('attachable_type', 'lab_request')->orderBy('id');
+    }
+
     public function scopeForBusiness($query, $business_id)
     {
         return $query->where('lab_requests.business_id', $business_id);

@@ -27,6 +27,7 @@
             @elseif($ir->status == 'done' && $ir->report)
                 <div class="tw-mt-2 tw-rounded-xl tw-bg-gray-50 tw-p-3 tw-text-sm tw-text-gray-700" style="white-space: pre-wrap;">{{ $ir->report }}</div>
                 <p class="tw-text-[11px] tw-text-gray-400 tw-mt-1">@lang('lang_v1.reported_by'): {{ optional($ir->reportedBy)->user_full_name ?? '—' }}</p>
+                @include('patient_portal.partials.attachments', ['files' => $ir->attachments])
             @endif
         </div>
     @empty

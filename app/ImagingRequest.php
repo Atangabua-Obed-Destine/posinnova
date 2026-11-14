@@ -60,6 +60,12 @@ class ImagingRequest extends Model
         return $this->belongsTo(BusinessLocation::class, 'location_id');
     }
 
+    /** PosInnova: photos / scans / PDFs of the result (see App\ClinicAttachment). */
+    public function attachments()
+    {
+        return $this->hasMany(ClinicAttachment::class, 'attachable_id')->where('attachable_type', 'imaging_request')->orderBy('id');
+    }
+
     public function scopeForBusiness($query, $business_id)
     {
         return $query->where('imaging_requests.business_id', $business_id);

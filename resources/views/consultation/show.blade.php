@@ -25,6 +25,11 @@
                 </p>
             </div>
             <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-2 pos-actions">
+                @if(! empty($can_continue))
+                    <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'edit'], [$c->id]) }}" class="tw-dw-btn tw-dw-btn-sm" style="background:#d97706;color:#fff;border:none;" id="continue_consultation">
+                        <i class="fas fa-pen"></i> @lang('clinic.cons_continue')
+                    </a>
+                @endif
                 @if($c->status == 'draft')
                     @can('consultation.finalize')
                         <form method="POST" action="{{ action([\App\Http\Controllers\ConsultationController::class, 'finalize'], [$c->id]) }}" style="display:inline;">
@@ -97,6 +102,12 @@
             @endcomponent
         </div>
     </div>
+
+    @if($lab_requests->isNotEmpty() || $imaging_requests->isNotEmpty())
+        @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.cr_title')])
+            @include('consultation.partials.results')
+        @endcomponent
+    @endif
 
     @if($c->prescriptions->count() > 0)
         @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.prescription')])

@@ -150,7 +150,7 @@ class PortalController extends Controller
         $patient = $this->patient();
         $lab_request = LabRequest::forBusiness($patient->business_id)
             ->where('contact_id', $patient->id) // ownership guard
-            ->with(['lines', 'requestedBy', 'validatedBy'])
+            ->with(['lines', 'requestedBy', 'validatedBy', 'attachments'])
             ->findOrFail($id);
         // PosInnova: not paid yet: the values are not sent at all, only that the result waits for payment
         $pay = \App\Utils\ClinicRequestPayment::of($lab_request);
@@ -173,7 +173,7 @@ class PortalController extends Controller
         abort_unless(\App\Utils\ClinicSettings::sectionOn($this->patient()->business_id, 'imaging'), 404);
         $patient = $this->patient();
         $imaging_requests = ImagingRequest::forBusiness($patient->business_id)->where('contact_id', $patient->id)
-            ->with('reportedBy')->orderBy('requested_at', 'desc')->paginate(15);
+            ->with(['reportedBy', 'attachments'])->orderBy('requested_at', 'desc')->paginate(15);
         // PosInnova: a report is shown once the patient's part is paid
         $pays = $imaging_requests->getCollection()->mapWithKeys(fn ($ir) => [$ir->id => \App\Utils\ClinicRequestPayment::of($ir)]);
 

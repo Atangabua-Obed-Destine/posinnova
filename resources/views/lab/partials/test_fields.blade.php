@@ -41,4 +41,11 @@
             {!! Form::text('fee', $lab_test->fee ?? 0, ['class' => 'form-control input_number']) !!}
         </div>
     </div>
+    <div class="col-sm-12">
+        <div class="form-group">
+            {!! Form::label('result_options', __('clinic.lab_result_options') . ':') !!}
+            {!! Form::text('result_options', $lab_test->result_options ?? null, ['class' => 'form-control', 'maxlength' => 500, 'placeholder' => __('clinic.lab_result_options_ph')]) !!}
+            <p class="help-block">@lang('clinic.lab_result_options_help')</p>
+        </div>
+    </div>
 </div>

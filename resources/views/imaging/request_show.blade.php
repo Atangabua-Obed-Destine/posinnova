@@ -67,6 +67,9 @@
                     <p class="text-muted text-center" style="padding:20px 0;">@lang('lang_v1.report_pending')</p>
                 @endif
             @endcomponent
+            @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.att_title')])
+                @include('clinic.partials.attachments', ['type' => 'imaging_request', 'owner' => $ir])
+            @endcomponent
         </div>
     </div>
 

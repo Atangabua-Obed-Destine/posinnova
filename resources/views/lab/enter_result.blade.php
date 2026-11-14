@@ -5,6 +5,9 @@
     $lr = $lab_request;
     $pd = optional($lr->patient)->patientDetails;
     $flags = ['' => '-', 'normal' => __('lang_v1.lab_flag_normal'), 'high' => __('lang_v1.lab_flag_high'), 'low' => __('lang_v1.lab_flag_low'), 'critical' => __('lang_v1.lab_flag_critical')];
+    // PosInnova: each test's usual answers ("Negative, Positive"), offered as one click
+    $result_options = \App\LabTest::whereIn('id', $lr->lines->pluck('lab_test_id')->filter())->pluck('result_options', 'id')
+        ->map(fn ($o) => collect(preg_split('/\s*[,;\n]\s*/', (string) $o))->map(fn ($x) => trim($x))->filter()->unique()->values()->all());
 @endphp
 
 @section('content')
@@ -41,12 +44,21 @@
                 </thead>
                 <tbody>
                     @foreach($lr->lines as $line)
-                        <tr data-line="{{ $line->id }}" data-test="{{ $line->test_name }}" data-unit="{{ $line->unit }}">
+                        <tr data-line="{{ $line->id }}" data-test="{{ $line->test_name }}" data-unit="{{ $line->unit }}" data-range="{{ $line->normal_range }}">
                             <td><strong>{{ $line->test_name }}</strong></td>
                             <td>{{ $line->normal_range ?: '-' }}</td>
                             <td>{{ $line->unit ?: '-' }}</td>
-                            <td>{!! Form::text("results[{$line->id}][value]", $line->result_value, ['class' => 'form-control input-sm', 'aria-label' => __('lang_v1.result')]) !!}</td>
-                            <td>{!! Form::select("results[{$line->id}][flag]", $flags, $line->result_flag, ['class' => 'form-control input-sm', 'aria-label' => __('lang_v1.flag')]) !!}</td>
+                            <td>{!! Form::text("results[{$line->id}][value]", $line->result_value, ['class' => 'form-control input-sm lab-value', 'aria-label' => __('lang_v1.result')]) !!}
+                                @if (! empty($result_options[$line->lab_test_id]))
+                                    <div class="lab-opts" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+                                        @foreach ($result_options[$line->lab_test_id] as $opt)
+                                            <button type="button" class="btn btn-xs btn-default lab-opt" data-v="{{ $opt }}">{{ $opt }}</button>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </td>
+                            <td>{!! Form::select("results[{$line->id}][flag]", $flags, $line->result_flag, ['class' => 'form-control input-sm lab-flag', 'aria-label' => __('lang_v1.flag')]) !!}
+                                <small class="text-muted lab-flag-auto" style="display:none;">@lang('clinic.lab_flag_suggested')</small></td>
                             <td>{!! Form::text("results[{$line->id}][notes]", $line->result_notes, ['class' => 'form-control input-sm', 'aria-label' => __('lang_v1.notes')]) !!}</td>
                         </tr>
                     @endforeach
@@ -70,6 +82,11 @@
     </div>
 
     {!! Form::close() !!}
+
+    {{-- photos / scans / PDFs (e.g. a printout from an analyser): uploaded as soon as they are chosen --}}
+    @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.att_title')])
+        @include('clinic.partials.attachments', ['type' => 'lab_request', 'owner' => $lr])
+    @endcomponent
 </section>
 
 @php
@@ -82,6 +99,49 @@
     ];
 @endphp
 <script>
+    // PosInnova: one click puts a usual answer in; a number outside the normal range suggests High / Low
+    // (only while the flag was not chosen by hand)
+    (function () {
+        function bounds(range) {
+            var r = String(range || '').replace(/,/g, '.').replace(/\s+/g, ' ').trim(), m;
+            if ((m = r.match(/(-?\d+(?:\.\d+)?)\s*(?:-|–|—|to|à|a)\s*(-?\d+(?:\.\d+)?)/i))) { return [parseFloat(m[1]), parseFloat(m[2])]; }
+            if ((m = r.match(/(?:<=?|≤|up to|jusqu'à|max\.?)\s*(-?\d+(?:\.\d+)?)/i))) { return [null, parseFloat(m[1])]; }
+            if ((m = r.match(/(?:>=?|≥|min\.?)\s*(-?\d+(?:\.\d+)?)/i))) { return [parseFloat(m[1]), null]; }
+            return null;
+        }
+        function suggest(tr) {
+            var flag = tr.querySelector('.lab-flag'), hint = tr.querySelector('.lab-flag-auto');
+            if (!flag || flag.getAttribute('data-manual') === '1') { return; }
+            var b = bounds(tr.getAttribute('data-range'));
+            var v = String(tr.querySelector('.lab-value').value || '').replace(',', '.').match(/^\s*(-?\d+(?:\.\d+)?)\s*$/);
+            if (!b || !v) {
+                if (flag.getAttribute('data-auto') === '1') { flag.value = ''; flag.removeAttribute('data-auto'); hint.style.display = 'none'; }
+                return;
+            }
+            var n = parseFloat(v[1]);
+            flag.value = (b[0] !== null && n < b[0]) ? 'low' : ((b[1] !== null && n > b[1]) ? 'high' : 'normal');
+            flag.setAttribute('data-auto', '1');
+            hint.style.display = '';
+        }
+        document.addEventListener('input', function (e) {
+            if (e.target.classList && e.target.classList.contains('lab-value')) { suggest(e.target.closest('tr')); }
+        });
+        document.addEventListener('change', function (e) {
+            if (e.target.classList && e.target.classList.contains('lab-flag') && e.isTrusted) {
+                e.target.setAttribute('data-manual', '1');
+                e.target.closest('tr').querySelector('.lab-flag-auto').style.display = 'none';
+            }
+        });
+        document.addEventListener('click', function (e) {
+            var b = e.target.closest && e.target.closest('.lab-opt');
+            if (!b) { return; }
+            var tr = b.closest('tr'), input = tr.querySelector('.lab-value');
+            input.value = b.getAttribute('data-v');
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            [].forEach.call(tr.querySelectorAll('.lab-opt'), function (x) { x.classList.toggle('btn-primary', x === b); x.classList.toggle('btn-default', x !== b); });
+        });
+    })();
+
     // PosInnova: nothing is saved without a result, validating needs every test filled in, and the
     // results are checked in the "check before recording" dialog before they are written.
     (function () {
