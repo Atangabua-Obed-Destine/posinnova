@@ -1405,4 +1405,7 @@ return [
     'lab_enter_one' => 'Saisissez au moins un résultat avant d\'enregistrer.',
     'lab_fill_all' => 'Remplissez tous les résultats pour valider (:n manquant(s)).',
     'lab_partial_note' => ':n analyse(s) laissée(s) vide(s) : elles pourront être remplies plus tard.',
+
+    // délivrance d'une ordonnance au point de vente
+    'rx_not_added' => 'Non ajouté à cette vente (pas vendu ici ou plus en stock) : :drugs. Si le patient les achète ailleurs, marquez-les « à acheter ailleurs » à la pharmacie.',
 ];

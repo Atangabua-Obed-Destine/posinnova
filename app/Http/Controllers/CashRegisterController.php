@@ -83,6 +83,11 @@ class CashRegisterController extends Controller
         $user = auth()->user();
         $business_id = request()->session()->get('user.business_id');
         $return_to = request()->session()->pull('register_return_to');
+        // PosInnova: back to the prescription / ward order that sent the user here
+        $return_url = request()->session()->pull('register_return_url');
+        if (! empty($return_url) && str_starts_with($return_url, url('/'))) {
+            return redirect($return_url);
+        }
         if ($return_to == 'accounts' && in_array('hospital', (array) request()->session()->get('business.enabled_modules', [])) && $user->can('patient.view_bill')) {
             return redirect()->action([\App\Http\Controllers\ClinicAccountController::class, 'index']);
         }

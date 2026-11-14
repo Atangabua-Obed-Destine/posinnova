@@ -4981,6 +4981,13 @@ function pos_offer_cart_recovery() {
     if ($('#pos_cart_recovery_banner').length) {
         return;
     }
+    //PosInnova: dispensing a prescription or a ward order fills the cart itself; an old cart
+    //offered on top of it would put the same medicines in twice.
+    if ($('#prescription_consultation_id').val() || $('#ward_dispense_admission_id').val()) {
+        pos_cart_recovery_settled = true;
+
+        return;
+    }
     if ($('table#pos_table tbody tr.product_row').length > 0) {
         pos_cart_recovery_settled = true;
 

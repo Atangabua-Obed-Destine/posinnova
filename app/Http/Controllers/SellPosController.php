@@ -175,6 +175,12 @@ class SellPosController extends Controller
 
         //Check if there is a open register, if no then redirect to Create Register screen.
         if ($this->cashRegisterUtil->countOpenedRegister() == 0) {
+            // PosInnova: dispensing a prescription / ward order comes back to it once the register is open
+            // (it used to land on an empty till: the prescription was lost on the way).
+            if (request()->filled('prescription_id') || request()->filled('admission_id')) {
+                request()->session()->put('register_return_url', request()->fullUrl());
+            }
+
             return redirect()->action([\App\Http\Controllers\CashRegisterController::class, 'create'], ['sub_type' => $sub_type]);
         }
 
@@ -360,7 +366,9 @@ class SellPosController extends Controller
         // Only what is still waiting: a line partly given before loads the rest,
         // closed or fully given lines are left out.
         $lines = \App\Utils\Dispensing::waitingLines($consultation)->filter(fn ($rx) => ! empty($rx->variation_id))
-            ->map(fn ($rx) => ['variation_id' => $rx->variation_id, 'quantity' => (float) $rx->outstanding_qty ?: 1])->values();
+            ->map(fn ($rx) => ['variation_id' => $rx->variation_id, 'quantity' => (float) $rx->outstanding_qty ?: 1,
+                // named in the message when it cannot be added (not stocked / none left at this location)
+                'name' => optional($rx->product)->name])->values();
 
         return [
             'mode' => 'prescription',

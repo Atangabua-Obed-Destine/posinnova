@@ -1404,4 +1404,7 @@ return [
     'lab_enter_one' => 'Enter at least one result before saving.',
     'lab_fill_all' => 'Fill in every result to validate (:n missing).',
     'lab_partial_note' => ':n test(s) left empty: they can be filled in later.',
+
+    // dispensing a prescription in the POS
+    'rx_not_added' => 'Not added to this sale (not sold at this location, or none in stock): :drugs. If the patient will get them elsewhere, mark them "buy elsewhere" at the dispensary.',
 ];

@@ -366,24 +366,49 @@
                     return; // no auto lines — the nurse adds items manually
                 }
 
-                // Add each prescribed line to the cart with its quantity.
-                // pos_product_row(variation_id, purchase_line_id, weighing_barcode, quantity)
+                // PosInnova: add the prescribed lines ONE AFTER ANOTHER (each waits for the one before),
+                // from this till's own location, with their quantities. It used to fire a line every
+                // half second through the scan path: on a slow server lines overlapped, and with
+                // multi-location selling every drug opened its own "choose a location" dialog.
+                // A line that cannot be added (not sold here, none in stock) is named afterwards.
                 if (rx.lines && rx.lines.length) {
-                    var i = 0;
-                    function addNext() {
-                        if (i >= rx.lines.length) return;
-                        var line = rx.lines[i++];
-                        if (typeof pos_product_row === 'function') {
-                            pos_product_row(line.variation_id, null, null, line.quantity || 1);
-                        }
-                        // Stagger to let each AJAX row finish before the next.
-                        setTimeout(addNext, 500);
-                    }
-                    addNext();
-
+                    var skipped = [], added = 0;
+                    var loc = $('input#location_id').val();
+                    var price_group = $('#price_group').length ? $('#price_group').val() : '';
+                    $('#pos_table').attr('data-rx-loading', '1');
                     if (typeof toastr !== 'undefined') {
                         toastr.info(@json(__('lang_v1.dispensing_prescription_for')) + ' ' + rx.patient_name);
                     }
+                    var addLine = function (i) {
+                        if (i >= rx.lines.length) {
+                            $('#pos_table').removeAttr('data-rx-loading');
+                            if (skipped.length && typeof toastr !== 'undefined') {
+                                toastr.warning(@json(__('clinic.rx_not_added')).replace(':drugs', skipped.join(', ')), '', { timeOut: 0, extendedTimeOut: 0, closeButton: true });
+                            }
+                            if (typeof pos_total_row === 'function') { pos_total_row(); }
+                            return;
+                        }
+                        var line = rx.lines[i];
+                        $.ajax({
+                            method: 'GET',
+                            url: '/sells/pos/get_product_row/' + line.variation_id + '/' + loc,
+                            data: { product_row: $('input#product_row_count').val(), customer_id: $('select#customer_id').val(),
+                                quantity: line.quantity || 1, price_group: price_group, is_direct_sell: false, line_location_id: loc },
+                            dataType: 'json'
+                        }).done(function (result) {
+                            if (result && result.success && result.html_content) {
+                                pos_insert_product_row(result);
+                                added++;
+                            } else {
+                                skipped.push(line.name || ('#' + line.variation_id));
+                            }
+                        }).fail(function () {
+                            skipped.push(line.name || ('#' + line.variation_id));
+                        }).always(function () {
+                            addLine(i + 1);
+                        });
+                    };
+                    addLine(0);
                 } else if (typeof toastr !== 'undefined') {
                     toastr.warning(@json(__('clinic.rx_nothing_waiting')));
                 }

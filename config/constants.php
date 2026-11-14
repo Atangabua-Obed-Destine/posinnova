@@ -19,7 +19,7 @@ return [
     'document_size_limit' => '5000000', //in Bytes,
     'image_size_limit' => '5000000', //in Bytes
 
-    'asset_version' => 771,
+    'asset_version' => 772,
     // public/js/vendor.js + public/css/vendor.css: bump ONLY when those two files change (they are cached a year)
     'vendor_asset_version' => 2,
 
