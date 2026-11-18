@@ -1687,4 +1687,12 @@ return [
     'ex_img_eye_left' => 'Œil gauche',
     'ex_img_fundus_right' => 'Fond d\'œil droit',
     'ex_img_fundus_left' => 'Fond d\'œil gauche',
+    'ex_guide_btn' => 'Mode d\'emploi',
+    'ex_guide_title' => 'Fiches d\'examen : le guide',
+    'ex_guide_lead' => 'Comment les configurer, et comment les médecins les utilisent',
+    'ex_guide_toc_setup' => 'Configurer les fiches',
+    'ex_guide_toc_doctor' => 'Utiliser une fiche (médecins)',
+    'ex_guide_toc_print' => 'Le compte rendu imprimé',
+    'ex_guide_toc_faq' => 'Questions fréquentes',
+    'ex_guide_open_forms' => 'Ouvrir les fiches d\'examen',
 ];

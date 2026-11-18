@@ -29,6 +29,7 @@
                 </ul>
             </div>
             <span class="text-muted" style="font-size:12.5px;"><i class="fas fa-info-circle"></i> @lang('clinic.ex_index_help')</span>
+            <a href="{{ action([\App\Http\Controllers\ClinicExamTemplateController::class, 'guide']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline" style="margin-left:auto;" id="ex_guide_link"><i class="fas fa-book-open"></i> @lang('clinic.ex_guide_btn')</a>
         </div>
 
         <div class="table-responsive">

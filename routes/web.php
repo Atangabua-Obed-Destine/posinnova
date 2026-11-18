@@ -541,6 +541,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     //Clinic settings (hospital module)
     Route::post('clinic/attachments/{type}/{id}', [\App\Http\Controllers\ClinicAttachmentController::class, 'store'])->where('type', 'lab_request|imaging_request|consultation')->whereNumber('id');
     Route::get('clinic/exam-templates', [\App\Http\Controllers\ClinicExamTemplateController::class, 'index']);
+    Route::get('clinic/exam-templates/guide', [\App\Http\Controllers\ClinicExamTemplateController::class, 'guide']);
     Route::get('clinic/exam-templates/create', [\App\Http\Controllers\ClinicExamTemplateController::class, 'create']);
     Route::post('clinic/exam-templates', [\App\Http\Controllers\ClinicExamTemplateController::class, 'store']);
     Route::post('clinic/exam-templates/ready-made', [\App\Http\Controllers\ClinicExamTemplateController::class, 'readyMade']);

@@ -256,6 +256,7 @@
                         <option value="{{ $exam->template_id }}" selected>{{ $exam->template_name }}</option>
                     @endif
                 </select>
+                <a href="{{ action([\App\Http\Controllers\ClinicExamTemplateController::class, 'guide']) }}#gd_doctor" target="_blank" class="btn btn-default btn-sm" title="{{ __('clinic.ex_guide_btn') }}" aria-label="{{ __('clinic.ex_guide_btn') }}" id="exam_guide_link"><i class="fas fa-question-circle"></i></a>
                 @can('clinic_settings.manage')
                     <a href="{{ action([\App\Http\Controllers\ClinicExamTemplateController::class, 'index']) }}" target="_blank" class="btn btn-default btn-sm" title="{{ __('clinic.ex_manage') }}" aria-label="{{ __('clinic.ex_manage') }}"><i class="fas fa-cog"></i></a>
                 @endcan

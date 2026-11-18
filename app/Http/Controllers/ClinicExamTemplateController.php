@@ -41,6 +41,19 @@ class ClinicExamTemplateController extends Controller
         return view('clinic.exam_templates.index', compact('templates'));
     }
 
+    /** The guide (how to set up and use the forms): for the clinic's managers and for doctors. */
+    public function guide()
+    {
+        $enabled_modules = request()->session()->get('business.enabled_modules', []);
+        if (! is_array($enabled_modules) || ! in_array('hospital', $enabled_modules)) {
+            abort(404);
+        }
+        $u = auth()->user();
+        abort_unless($u->can('clinic_settings.manage') || $u->can('consultation.create') || $u->can('consultation.view_own') || $u->can('consultation.view_all'), 403, 'Unauthorized action.');
+
+        return view('clinic.exam_templates.guide');
+    }
+
     public function create()
     {
         $business_id = $this->authorizeManage();

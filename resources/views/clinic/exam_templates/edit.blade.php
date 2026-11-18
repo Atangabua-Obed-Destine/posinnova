@@ -65,6 +65,11 @@
         .tb-card-actions button:hover { background:#f1f5f9; color:#1e293b; }
         .tb-card-actions .tb-del:hover { color:#dc2626; }
         .tb-card-body { padding:7px 9px; font-size:12px; color:#475569; }
+        /* narrow cards (a quarter, a third): the whole title, on its own line */
+        .tb-cols-3 .tb-card-head, .tb-cols-4 .tb-card-head { flex-wrap:wrap; }
+        .tb-cols-3 .tb-card-head strong, .tb-cols-4 .tb-card-head strong { white-space:normal; order:3; flex-basis:100%; }
+        .tb-cols-3 .tb-wbadge, .tb-cols-4 .tb-wbadge { display:none; }
+        .tb-cols-3 .tb-card-actions, .tb-cols-4 .tb-card-actions { margin-left:auto; }
         .tb-card-body img { max-width:100%; max-height:110px; display:block; margin:0 auto; }
         .tb-card-body .tb-blank { height:60px; border:1px dashed #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#94a3b8; }
         .tb-chip { display:inline-block; border:1px solid #e2e8f0; border-radius:999px; padding:0 7px; margin:1px; font-size:11px; }
@@ -134,6 +139,7 @@
                     <h3 class="box-title"><i class="fas fa-clipboard-list"></i> @lang('clinic.ex_the_form')</h3>
                     <span class="text-muted" style="font-size:12px;">@lang('clinic.ex_builder_hint')</span>
                     <div style="margin-left:auto;display:flex;gap:6px;">
+                        <a href="{{ action([\App\Http\Controllers\ClinicExamTemplateController::class, 'guide']) }}#gd_setup" target="_blank" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-book-open"></i> @lang('clinic.ex_guide_btn')</a>
                         <a href="{{ action([\App\Http\Controllers\ClinicExamTemplateController::class, 'index']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-arrow-left"></i> @lang('clinic.ex_back')</a>
                         <button type="button" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline" id="tb_preview"><i class="fas fa-eye"></i> @lang('clinic.ex_preview')</button>
                         <button type="button" class="tw-dw-btn tw-dw-btn-sm tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-text-white tw-border-none" id="tb_save"><i class="fas fa-save"></i> @lang('messages.save')</button>
@@ -259,7 +265,7 @@ $(function () {
         var cols = b.type === 'heading' ? 12 : (C.cols[b.width] || 12);
         var badges = '';
         if (b.sides) { badges += ' <span class="tb-badge">' + esc(C.t.sides) + '</span>'; }
-        if (b.type !== 'heading') { badges += ' <span class="tb-badge" style="background:#f1f5f9;color:#475569;">' + esc(C.widths[b.width] || '') + '</span>'; }
+        if (b.type !== 'heading') { badges += ' <span class="tb-badge tb-wbadge" style="background:#f1f5f9;color:#475569;">' + esc(C.widths[b.width] || '') + '</span>'; }
         var body = '';
         if (b.type === 'drawing') {
             var u = b.image ? imgUrl(b.image) : null;
@@ -351,7 +357,7 @@ $(function () {
 
     /* ---- one block's settings ---- */
     function libHtml(sel) {
-        var h = '<div class="tb-lib-item' + (!sel ? ' tb-on' : '') + '" data-path="" tabindex="0" role="button"><div class="tb-blank"><i class="far fa-square"></i></div>' + esc(C.t.blank) + '</div>';
+        var h = '<div class="tb-lib-item' + (!sel ? ' tb-on' : '') + '" data-path="" tabindex="0" role="button"><div class="tb-blank"><i class="fas fa-file"></i></div>' + esc(C.t.blank) + '</div>';
         C.library.forEach(function (it) {
             h += '<div class="tb-lib-item' + (sel === it.path ? ' tb-on' : '') + '" data-path="' + esc(it.path) + '" tabindex="0" role="button" title="' + esc(it.label) + '">' +
                 '<img src="' + esc(it.url) + '" alt="">' + esc(it.label) + '</div>';

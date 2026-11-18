@@ -1686,4 +1686,12 @@ return [
     'ex_img_eye_left' => 'Left eye',
     'ex_img_fundus_right' => 'Right fundus',
     'ex_img_fundus_left' => 'Left fundus',
+    'ex_guide_btn' => 'How to use',
+    'ex_guide_title' => 'Examination forms: the guide',
+    'ex_guide_lead' => 'How to set them up, and how doctors use them',
+    'ex_guide_toc_setup' => 'Setting up the forms',
+    'ex_guide_toc_doctor' => 'Using a form (doctors)',
+    'ex_guide_toc_print' => 'The printed report',
+    'ex_guide_toc_faq' => 'Common questions',
+    'ex_guide_open_forms' => 'Open the examination forms',
 ];
