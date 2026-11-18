@@ -7,7 +7,7 @@ use App\Utils\ClinicRequestPayment;
 use Illuminate\Http\Request;
 
 /**
- * PosInnova clinic: photos, scans, PDFs and videos on lab and imaging requests, and on consultations
+ * PosInnova clinic: photos, scans and PDFs on lab and imaging requests, and on consultations
  * (endoscope / camera pictures) - see App\ClinicAttachment. A consultation not saved yet takes files
  * under a draft token (id 0); they are given to the consultation when it is saved.
  */
@@ -101,27 +101,20 @@ class ClinicAttachmentController extends Controller
 
         $request->validate([
             'files' => 'required|array|max:10',
-            'files.*' => 'file|max:'.ClinicAttachment::maxVideoKb().'|mimes:'.implode(',', ClinicAttachment::EXTENSIONS),
+            'files.*' => 'file|max:'.ClinicAttachment::MAX_KB.'|mimes:'.implode(',', ClinicAttachment::EXTENSIONS),
             'caption' => 'nullable|string|max:191',
         ], [
             'files.*.mimes' => __('clinic.att_bad_type'),
-            'files.*.max' => __('clinic.att_too_big', ['mb' => round(ClinicAttachment::maxVideoKb() / 1024)]),
+            'files.*.max' => __('clinic.att_too_big', ['mb' => ClinicAttachment::MAX_KB / 1024]),
         ]);
 
         if (! is_dir(ClinicAttachment::dir())) {
             mkdir(ClinicAttachment::dir(), 0775, true);
         }
         $saved = [];
-        $too_big = 0;
         foreach ($request->file('files') as $file) {
             $ext = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension());
             if (! in_array($ext, ClinicAttachment::EXTENSIONS)) {
-                continue;
-            }
-            // photos and PDFs stay small; only videos may be big
-            if (! ClinicAttachment::isVideoExtension($ext) && $file->getSize() > ClinicAttachment::MAX_KB * 1024) {
-                $too_big++;
-
                 continue;
             }
             $name = $type.'_'.($owner ? $owner->id : 'd').'_'.bin2hex(random_bytes(12)).'.'.$ext;
@@ -144,9 +137,6 @@ class ClinicAttachmentController extends Controller
         }
 
         $msg = trans_choice('clinic.att_uploaded', count($saved), ['n' => count($saved)]);
-        if ($too_big) {
-            $msg .= ' '.__('clinic.att_too_big', ['mb' => ClinicAttachment::MAX_KB / 1024]);
-        }
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => count($saved) > 0, 'msg' => $msg,
                 'html' => $this->listHtml($type, $owner, $token, $visit ? $visit->id : null)]);

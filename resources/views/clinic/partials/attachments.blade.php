@@ -1,5 +1,5 @@
 {{--
-    Photos / scans / PDFs / videos of a lab request, an imaging request or a consultation (App\ClinicAttachment).
+    Photos / scans / PDFs of a lab request, an imaging request or a consultation (App\ClinicAttachment).
     $type: lab_request | imaging_request | consultation; $owner: the request / consultation (attachments loaded or
     loadable), or null for a consultation not saved yet: then $draft_token and $visit_id.
     $readonly: no upload / delete / camera buttons; $inner: only the list (AJAX refresh)
@@ -28,8 +28,7 @@
             .clinic-attachments .att-grid { display:flex; flex-wrap:wrap; gap:10px; margin:6px 0; }
             .clinic-attachments .att-item { width:132px; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; background:#fff; position:relative; }
             .clinic-attachments .att-thumb { display:flex; align-items:center; justify-content:center; height:96px; background:#f8fafc; color:#64748b; font-size:30px; position:relative; }
-            .clinic-attachments .att-thumb img, .clinic-attachments .att-thumb video { width:100%; height:96px; object-fit:cover; background:#0f172a; }
-            .clinic-attachments .att-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:26px; text-shadow:0 1px 4px rgba(0,0,0,.6); pointer-events:none; }
+            .clinic-attachments .att-thumb img { width:100%; height:96px; object-fit:cover; }
             .clinic-attachments .att-name { font-size:11px; padding:4px 6px; line-height:1.3; word-break:break-all; }
             .clinic-attachments .att-del { position:absolute; top:4px; right:4px; background:rgba(255,255,255,.9); border:0; border-radius:6px; color:#dc2626; padding:2px 6px; z-index:2; }
             .clinic-attachments .att-empty { color:#94a3b8; font-size:12.5px; }
@@ -37,8 +36,6 @@
             #att_cam_modal video { width:100%; max-height:60vh; background:#000; border-radius:8px; }
             #att_cam_modal .att-cam-shots { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
             #att_cam_modal .att-cam-shots img { height:54px; border-radius:6px; border:1px solid #e5e7eb; }
-            #att_cam_modal .att-cam-rec { color:#dc2626; font-weight:700; display:none; }
-            #att_cam_modal.att-recording .att-cam-rec { display:inline; }
         </style>
     @endonce
     <div class="att-list">
@@ -52,9 +49,6 @@
                         <a href="{{ $a->url() }}" target="_blank" rel="noopener" class="att-thumb" title="{{ $a->original_name }}">
                             @if ($a->isImage())
                                 <img src="{{ $a->url() }}" alt="{{ $a->original_name }}" loading="lazy">
-                            @elseif ($a->isVideo())
-                                <video src="{{ $a->url() }}#t=0.5" preload="metadata" muted playsinline></video>
-                                <span class="att-play"><i class="fas fa-play-circle"></i></span>
                             @else
                                 <i class="fas {{ $a->isPdf() ? 'fa-file-pdf' : 'fa-file' }}"></i>
                             @endif
@@ -74,12 +68,12 @@
         <div class="att-actions">
             <label class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline att-upload-btn" style="margin:0;">
                 <i class="fas fa-upload"></i> @lang('clinic.att_add')
-                <input type="file" class="att-input" multiple accept="image/*,application/pdf,video/*" style="display:none;">
+                <input type="file" class="att-input" multiple accept="image/*,application/pdf" style="display:none;">
             </label>
             <button type="button" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline att-camera-btn" style="display:none;" title="{{ __('clinic.att_camera_help') }}">
-                <i class="fas fa-video"></i> @lang('clinic.att_camera')
+                <i class="fas fa-camera"></i> @lang('clinic.att_camera')
             </button>
-            <span class="text-muted att-hint" style="font-size:12px;">{{ __('clinic.att_hint_video', ['mb' => \App\ClinicAttachment::MAX_KB / 1024, 'vmb' => round(\App\ClinicAttachment::maxVideoKb() / 1024)]) }}</span>
+            <span class="text-muted att-hint" style="font-size:12px;">@lang('clinic.att_hint', ['mb' => \App\ClinicAttachment::MAX_KB / 1024])</span>
         </div>
     @endif
 </div>
@@ -87,12 +81,9 @@
     @php
         $att_cam_t = [
             'title' => __('clinic.att_cam_title'), 'device' => __('clinic.att_cam_device'), 'photo' => __('clinic.att_cam_photo'),
-            'record' => __('clinic.att_cam_record'), 'stop' => __('clinic.att_cam_stop'), 'recording' => __('clinic.att_cam_recording'),
             'close' => __('messages.close'), 'denied' => __('clinic.att_cam_denied'), 'none' => __('clinic.att_cam_none'),
             'help' => __('clinic.att_cam_modal_help'),
-            'too_big' => __('clinic.att_too_big', ['mb' => round(\App\ClinicAttachment::maxVideoKb() / 1024)]),
-            'max_bytes' => \App\ClinicAttachment::maxVideoKb() * 1024,
-            'limit_reached' => __('clinic.att_cam_limit', ['mb' => round(\App\ClinicAttachment::maxVideoKb() / 1024)]),
+            'too_big' => __('clinic.att_too_big', ['mb' => \App\ClinicAttachment::MAX_KB / 1024]),
         ];
     @endphp
     <script>
@@ -161,14 +152,14 @@
             };
             if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', onReady); } else { onReady(); }
 
-            var cam = { box: null, stream: null, rec: null, chunks: [] };
+            var cam = { box: null, stream: null };
             function modal() {
                 var $m = $('#att_cam_modal');
                 if ($m.length) { return $m; }
                 $m = $('<div class="modal fade" id="att_cam_modal" tabindex="-1" role="dialog" aria-labelledby="att_cam_title">' +
                     '<div class="modal-dialog modal-lg" role="document"><div class="modal-content">' +
                     '<div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-label="' + esc(T.close) + '"><span aria-hidden="true">&times;</span></button>' +
-                    '<h4 class="modal-title" id="att_cam_title"><i class="fas fa-video"></i> ' + esc(T.title) + '</h4></div>' +
+                    '<h4 class="modal-title" id="att_cam_title"><i class="fas fa-camera"></i> ' + esc(T.title) + '</h4></div>' +
                     '<div class="modal-body">' +
                     '<div class="form-group" style="display:flex;gap:8px;align-items:center;"><label for="att_cam_device" style="margin:0;white-space:nowrap;">' + esc(T.device) + '</label>' +
                     '<select id="att_cam_device" class="form-control input-sm"></select></div>' +
@@ -177,22 +168,18 @@
                     '<div class="att-cam-shots"></div>' +
                     '</div>' +
                     '<div class="modal-footer">' +
-                    '<span class="att-cam-rec pull-left"><i class="fas fa-circle"></i> ' + esc(T.recording) + ' <span class="att-cam-time">0:00</span></span>' +
                     '<button type="button" class="btn btn-primary" id="att_cam_photo"><i class="fas fa-camera"></i> ' + esc(T.photo) + '</button> ' +
-                    '<button type="button" class="btn btn-danger" id="att_cam_record"><i class="fas fa-circle"></i> <span>' + esc(T.record) + '</span></button> ' +
                     '<button type="button" class="btn btn-default" data-dismiss="modal">' + esc(T.close) + '</button>' +
                     '</div></div></div></div>').appendTo('body');
                 $m.on('hidden.bs.modal', stopAll);
                 $m.on('change', '#att_cam_device', function () { start(this.value); });
                 $m.on('click', '#att_cam_photo', photo);
-                $m.on('click', '#att_cam_record', record);
                 return $m;
             }
             function stopStream() {
                 if (cam.stream) { cam.stream.getTracks().forEach(function (t) { t.stop(); }); cam.stream = null; }
             }
             function stopAll() {
-                if (cam.rec && cam.rec.state !== 'inactive') { cam.rec.stop(); }
                 stopStream();
                 $('#att_cam_modal .att-cam-shots').empty();
             }
@@ -224,35 +211,6 @@
                     $('#att_cam_modal .att-cam-shots').append($('<img alt="">').attr('src', URL.createObjectURL(blob)));
                     upload(cam.box, [new File([blob], 'photo_' + stamp() + '.jpg', { type: 'image/jpeg' })]);
                 }, 'image/jpeg', 0.92);
-            }
-            var timer = null;
-            function record() {
-                var $m = $('#att_cam_modal');
-                if (cam.rec && cam.rec.state === 'recording') { cam.rec.stop(); return; }
-                if (!cam.stream || !window.MediaRecorder) { return; }
-                var type = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].filter(function (t) { return MediaRecorder.isTypeSupported(t); })[0] || '';
-                cam.chunks = [];
-                cam.rec = new MediaRecorder(cam.stream, type ? { mimeType: type, videoBitsPerSecond: 2500000 } : {});
-                cam.rec.ondataavailable = function (e) {
-                    if (e.data && e.data.size) { cam.chunks.push(e.data); }
-                    // stop (and save) just before the size the server takes
-                    var size = cam.chunks.reduce(function (a, b) { return a + b.size; }, 0);
-                    if (size > T.max_bytes * 0.92 && cam.rec.state === 'recording') { toastr.info(T.limit_reached); cam.rec.stop(); }
-                };
-                cam.rec.onstop = function () {
-                    clearInterval(timer);
-                    $m.removeClass('att-recording');
-                    $('#att_cam_record span').text(T.record);
-                    if (!cam.chunks.length) { return; }
-                    var mime = (cam.rec.mimeType || 'video/webm').split(';')[0];
-                    var blob = new Blob(cam.chunks, { type: mime });
-                    upload(cam.box, [new File([blob], 'video_' + stamp() + (mime.indexOf('mp4') >= 0 ? '.mp4' : '.webm'), { type: mime })]);
-                };
-                cam.rec.start(1000);
-                var t0 = Date.now();
-                $m.addClass('att-recording');
-                $('#att_cam_record span').text(T.stop);
-                timer = setInterval(function () { var s = Math.floor((Date.now() - t0) / 1000); $m.find('.att-cam-time').text(Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + (s % 60)); }, 500);
             }
             document.addEventListener('click', function (e) {
                 var btn = e.target.closest && e.target.closest('.att-camera-btn');
