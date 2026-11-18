@@ -609,6 +609,8 @@ class AdminSidebarMenu
                                     ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'settings']);
                                 $sub->url(action([\App\Http\Controllers\ClinicOptionController::class, 'index']), __('clinic.dl_menu'),
                                     ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'doctor-lists']);
+                                $sub->url(action([\App\Http\Controllers\ClinicExamTemplateController::class, 'index']), __('clinic.ex_menu'),
+                                    ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'exam-templates']);
                                 $sub->url(action([\App\Http\Controllers\ClinicWhatsAppController::class, 'index']), __('clinic.wa_menu'),
                                     ['icon' => '', 'active' => request()->segment(1) == 'clinic' && request()->segment(2) == 'whatsapp' && request()->segment(3) != 'inbox']);
                             }

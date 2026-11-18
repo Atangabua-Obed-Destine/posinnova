@@ -59,6 +59,10 @@
                         <i class="fas fa-x-ray"></i> @lang('lang_v1.request_imaging')
                     </a>
                 @endcan
+                <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'report'], [$c->id]) }}" target="_blank"
+                    class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline" id="print_consultation_report">
+                    <i class="fas fa-file-medical"></i> @lang('clinic.cons_print_report')
+                </a>
                 @if($c->prescriptions->count() > 0)
                     <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'prescription'], [$c->id]) }}" target="_blank"
                         class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline">
@@ -82,6 +86,7 @@
                     <tr><th>@lang('lang_v1.blood_pressure')</th><td>{{ ($c->vitals_bp_systolic && $c->vitals_bp_diastolic) ? $c->vitals_bp_systolic . '/' . $c->vitals_bp_diastolic . ' mmHg' : '-' }}</td></tr>
                     <tr><th>@lang('lang_v1.temperature_c')</th><td>{{ $c->vitals_temperature ? $c->vitals_temperature . ' °C' : '-' }}</td></tr>
                     <tr><th>@lang('lang_v1.pulse_bpm')</th><td>{{ $c->vitals_pulse ?? '-' }}</td></tr>
+                    <tr><th>@lang('clinic.cons_resp_rate')</th><td>{{ $c->vitals_resp_rate ?? '-' }}</td></tr>
                     <tr><th>@lang('lang_v1.spo2')</th><td>{{ $c->vitals_spo2 ? $c->vitals_spo2 . '%' : '-' }}</td></tr>
                 </table>
             @endcomponent
@@ -89,8 +94,21 @@
         <div class="col-md-6">
             @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.examination_and_diagnosis')])
                 <p><strong>@lang('lang_v1.chief_complaint'):</strong><br>{{ $c->chief_complaint ?: '-' }}</p>
+                @if ($c->history_of_complaint)
+                    <p style="white-space:pre-line;"><strong>@lang('clinic.cons_history_of_complaint'):</strong><br>{{ $c->history_of_complaint }}</p>
+                @endif
                 <p><strong>@lang('lang_v1.examination_notes'):</strong><br>{{ $c->examination_notes ?: '-' }}</p>
-                <p><strong>@lang('lang_v1.diagnosis'):</strong><br>{{ $c->diagnosis ?: '-' }}</p>
+                <p style="white-space:pre-line;"><strong>@lang('clinic.cons_provisional_diagnosis'):</strong><br>{{ $c->diagnosis ?: '-' }}</p>
+                @if ($c->differential_diagnosis)
+                    <p style="white-space:pre-line;"><strong>@lang('clinic.cons_differential_diagnosis'):</strong><br>{{ $c->differential_diagnosis }}</p>
+                @endif
+                @if ($c->management_plan)
+                    <p style="white-space:pre-line;"><strong>@lang('clinic.cons_management_plan'):</strong><br>{{ $c->management_plan }}</p>
+                @endif
+                @if ($c->review_date)
+                    <p id="consult_review"><strong>@lang('clinic.cons_review_date'):</strong> <span class="label label-info" style="font-size:12px;"><i class="fas fa-calendar-check"></i> {{ @format_date($c->review_date) }}</span>
+                        @if ($c->review_notes) · {{ $c->review_notes }}@endif</p>
+                @endif
                 @if($c->referralDepartment)
                     <p><strong>@lang('lang_v1.referred_to'):</strong> {{ $c->referralDepartment->name }}</p>
                 @endif
@@ -102,6 +120,18 @@
             @endcomponent
         </div>
     </div>
+
+    {{-- PosInnova: the examination form (drawings and findings), and the photos / videos --}}
+    @if ($c->exam && $c->exam->hasContent())
+        @component('components.widget', ['class' => 'box-solid', 'title' => $c->exam->template_name])
+            <div id="consult_exam_view">@include('consultation.exam.view', ['exam' => $c->exam])</div>
+        @endcomponent
+    @endif
+    @if ($c->attachments->isNotEmpty() || \App\Http\Controllers\ClinicAttachmentController::canUpload('consultation'))
+        @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.ex_photos_title')])
+            @include('clinic.partials.attachments', ['type' => 'consultation', 'owner' => $c])
+        @endcomponent
+    @endif
 
     @if($lab_requests->isNotEmpty() || $imaging_requests->isNotEmpty())
         @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.cr_title')])
@@ -116,6 +146,8 @@
                     <thead>
                         <tr>
                             <th>@lang('lang_v1.medicine')</th>
+                            <th>@lang('clinic.rx_strength')</th>
+                            <th>@lang('clinic.rx_route')</th>
                             <th>@lang('lang_v1.dosage')</th>
                             <th>@lang('lang_v1.frequency')</th>
                             <th>@lang('lang_v1.duration')</th>
@@ -128,6 +160,8 @@
                         @foreach($c->prescriptions as $rx)
                             <tr>
                                 <td>{{ $rx->displayName() }}@if ($rx->isFreeText()) <br><small class="text-muted"><i class="fas fa-store-slash"></i> @lang('clinic.rx_not_in_stock_tag')</small>@endif</td>
+                                <td>{{ $rx->strength ?: '-' }}</td>
+                                <td>{{ $rx->route ?: '-' }}</td>
                                 <td>{{ $rx->dosage ?: '-' }}</td>
                                 <td>{{ $rx->frequency ?: '-' }}</td>
                                 <td>{{ $rx->duration ?: '-' }}</td>
@@ -143,4 +177,8 @@
     @endif
 
 </section>
+@endsection
+
+@section('javascript')
+@include('consultation.exam.assets')
 @endsection

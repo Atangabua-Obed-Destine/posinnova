@@ -17,6 +17,7 @@ class Consultation extends Model
     protected $casts = [
         'admission_requested' => 'boolean',
         'consultation_fee' => 'decimal:4',
+        'review_date' => 'date',
     ];
 
     public function business()
@@ -47,6 +48,18 @@ class Consultation extends Model
     public function prescriptions()
     {
         return $this->hasMany(ConsultationPrescription::class, 'consultation_id');
+    }
+
+    /** PosInnova: the examination form (ENT, eye...) filled in during this consultation. */
+    public function exam()
+    {
+        return $this->hasOne(ConsultationExam::class, 'consultation_id');
+    }
+
+    /** PosInnova: photos / videos taken during the consultation (endoscope, camera). */
+    public function attachments()
+    {
+        return $this->hasMany(ClinicAttachment::class, 'attachable_id')->where('attachable_type', 'consultation')->orderBy('id');
     }
 
     public function scopeForBusiness($query, $business_id)

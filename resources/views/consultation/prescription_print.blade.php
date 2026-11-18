@@ -97,7 +97,7 @@
                     @foreach($sec['lines']->values() as $i => $rx)
                         <tr>
                             <td>{{ $i + 1 }}</td>
-                            <td><strong>{{ $rx->displayName() }}</strong>
+                            <td><strong>{{ $rx->displayName() }}</strong>@if ($rx->strength || $rx->route) <small>{{ collect([$rx->strength, $rx->route])->filter()->implode(' · ') }}</small>@endif
                                 @if ($sec['key'] == 'not_given' && $rx->close_reason)<br><small>{{ \App\Utils\Dispensing::reasonLabel($rx->close_reason) }}</small>@endif
                                 @if ($rx->notes)<br><small>{{ $rx->notes }}</small>@endif
                             </td>

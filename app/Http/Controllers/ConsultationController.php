@@ -128,7 +128,7 @@ class ConsultationController extends Controller
         //PosInnova: the patient's history beside the form - last consultations and lab results.
         $history = Consultation::forBusiness($business_id)->where('contact_id', $visit->contact_id)
             ->where('visit_id', '!=', $visit->id)->where('status', 'final')
-            ->with(['consultedBy', 'prescriptions.product', 'prescriptions.variation'])
+            ->with(['consultedBy', 'prescriptions.product', 'prescriptions.variation', 'exam'])
             ->orderByDesc('created_at')->limit(5)->get();
         $history_labs = \App\LabRequest::forBusiness($business_id)->where('contact_id', $visit->contact_id)
             ->whereIn('status', ['resulted', 'validated'])->with('lines')
@@ -141,9 +141,15 @@ class ConsultationController extends Controller
         $rx_rows = $consultation ? $this->rxRowsForForm($consultation, $visit) : [];
         [$lab_requests, $imaging_requests] = $consultation ? $this->requestsOf($consultation) : [collect(), collect()];
 
+        // PosInnova: the examination forms (ENT, eye...) - opened by the specialty or picked - and the one filled in so far
+        $exam_templates = \App\Utils\ClinicExamTemplates::forConsultation($business_id);
+        $exam = $consultation ? \App\ConsultationExam::where('consultation_id', $consultation->id)->first() : null;
+        // photos / videos taken before the consultation is first saved wait under this token
+        $attach_token = $consultation ? null : (preg_match('/^[A-Za-z0-9]{32}$/', (string) old('attach_token')) ? old('attach_token') : \Illuminate\Support\Str::random(32));
+
         return view('consultation.create')
             ->with(compact('visit', 'departments', 'default_fee', 'lab_tests', 'imaging_catalogue', 'fee_billed', 'history', 'history_labs',
-                'consultation', 'doctor_lists', 'rx_rows', 'lab_requests', 'imaging_requests'));
+                'consultation', 'doctor_lists', 'rx_rows', 'lab_requests', 'imaging_requests', 'exam_templates', 'exam', 'attach_token'));
     }
 
     /** Lab and imaging requests made from a consultation, with results and files. */
@@ -193,6 +199,7 @@ class ConsultationController extends Controller
                 'variation_id' => $rx->variation_id,
                 'free_text' => $rx->isFreeText(),
                 'name' => $rx->displayName(),
+                'strength' => $rx->strength, 'route' => $rx->route,
                 'dosage' => $rx->dosage, 'frequency' => $rx->frequency, 'duration' => $rx->duration,
                 'quantity' => (float) $rx->quantity, 'notes' => $rx->notes,
                 'outside' => $rx->closeReasonKey() == 'prescribed_outside',
@@ -258,6 +265,9 @@ class ConsultationController extends Controller
             $this->savePrescriptions($request, $consultation);
             $this->saveLabRequest($request, $consultation, $visit);
             $this->saveImagingRequests($request, $consultation, $visit);
+            // PosInnova: the examination form (ENT, eye...) and the photos / videos taken meanwhile
+            ConsultationExamController::save($consultation, $request->input('exam'), auth()->id());
+            ClinicAttachmentController::claimDraft($request->input('attach_token'), $consultation);
 
             //Bill the consultation fee to the patient (only once it is final).
             if ($is_final) {
@@ -327,6 +337,7 @@ class ConsultationController extends Controller
             $this->savePrescriptions($request, $consultation, true);
             $this->saveLabRequest($request, $consultation, $visit);
             $this->saveImagingRequests($request, $consultation, $visit);
+            ConsultationExamController::save($consultation, $request->input('exam'), auth()->id());
 
             if ($is_final) {
                 $this->chargeConsultationFee($consultation, $visit);
@@ -348,20 +359,36 @@ class ConsultationController extends Controller
     private function consultationFields(Request $request, $visit)
     {
         $num = fn ($f) => $request->filled($f) ? $request->input($f) : null;
+        // the review date: a real date (from the date picker), today or later
+        $review_date = null;
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $request->input('review_date'))) {
+            try {
+                $d = \Carbon::createFromFormat('Y-m-d', $request->input('review_date'))->startOfDay();
+                $review_date = $d->format('Y-m-d');
+            } catch (\Exception $e) {
+                $review_date = null;
+            }
+        }
 
         return [
             'consultation_type' => $request->input('consultation_type'),
             'specialty' => $request->input('consultation_type') == 'specialist' ? (mb_substr(trim((string) $request->input('specialty')), 0, 191) ?: null) : null,
             'chief_complaint' => $request->input('chief_complaint') ?: null,
+            'history_of_complaint' => $request->input('history_of_complaint') ?: null,
             'vitals_weight' => $num('vitals_weight'),
             'vitals_height' => $num('vitals_height'),
             'vitals_bp_systolic' => $num('vitals_bp_systolic'),
             'vitals_bp_diastolic' => $num('vitals_bp_diastolic'),
             'vitals_temperature' => $num('vitals_temperature'),
             'vitals_pulse' => $num('vitals_pulse'),
+            'vitals_resp_rate' => $num('vitals_resp_rate'),
             'vitals_spo2' => $num('vitals_spo2'),
             'examination_notes' => $request->input('examination_notes') ?: null,
             'diagnosis' => $request->input('diagnosis') ?: null,
+            'differential_diagnosis' => $request->input('differential_diagnosis') ?: null,
+            'management_plan' => $request->input('management_plan') ?: null,
+            'review_date' => $review_date,
+            'review_notes' => mb_substr(trim((string) $request->input('review_notes')), 0, 191) ?: null,
             'referral_to' => $request->input('referral_to') ?: null,
             'admission_requested' => $request->boolean('admission_requested') ? 1 : 0,
             'consultation_fee' => $visit->billedAtCheckin() ? 0
@@ -411,7 +438,7 @@ class ConsultationController extends Controller
         $business_id = request()->session()->get('user.business_id');
 
         $consultation = Consultation::forBusiness($business_id)
-            ->with(['visit', 'patient.patientDetails', 'consultedBy', 'referralDepartment', 'prescriptions.variation', 'prescriptions.product'])
+            ->with(['visit', 'patient.patientDetails', 'consultedBy', 'referralDepartment', 'prescriptions.variation', 'prescriptions.product', 'exam', 'attachments.uploadedBy'])
             ->findOrFail($id);
         \App\Utils\Dispensing::attach($consultation->prescriptions);
 
@@ -482,6 +509,30 @@ class ConsultationController extends Controller
     }
 
     /**
+     * PosInnova: the consultation as a printed clinical record - the clinic's name and logo, the patient,
+     * complaint, history, vitals, the examination form with its drawings, diagnoses, tests, treatment and
+     * the review date.
+     */
+    public function report($id)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('consultation.view_own') && ! auth()->user()->can('consultation.view_all')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $business_id = request()->session()->get('user.business_id');
+        $consultation = Consultation::forBusiness($business_id)
+            ->with(['visit.location', 'patient.patientDetails', 'consultedBy', 'referralDepartment', 'prescriptions.variation', 'prescriptions.product', 'exam', 'attachments'])
+            ->findOrFail($id);
+        if (! auth()->user()->can('consultation.view_all') && $consultation->consulted_by != auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+        [$lab_requests, $imaging_requests] = $this->requestsOf($consultation);
+        $business = \App\Business::find($business_id);
+
+        return view('consultation.report_print')->with(compact('consultation', 'business', 'lab_requests', 'imaging_requests'));
+    }
+
+    /**
      * PosInnova: the doctor's medicine search, with what the clinic can give at the visit's location
      * (stock, expired stock, nearest expiry, other locations). See App\Utils\DrugAvailability.
      */
@@ -536,6 +587,8 @@ class ConsultationController extends Controller
                 continue;
             }
             $line = [
+                'strength' => isset($row['strength']) ? (mb_substr(trim((string) $row['strength']), 0, 60) ?: null) : null,
+                'route' => isset($row['route']) ? (mb_substr(trim((string) $row['route']), 0, 60) ?: null) : null,
                 'dosage' => isset($row['dosage']) ? (mb_substr(trim((string) $row['dosage']), 0, 100) ?: null) : null,
                 'frequency' => isset($row['frequency']) ? (mb_substr(trim((string) $row['frequency']), 0, 100) ?: null) : null,
                 'duration' => isset($row['duration']) ? (mb_substr(trim((string) $row['duration']), 0, 100) ?: null) : null,

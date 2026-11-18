@@ -12,6 +12,9 @@ class PatientDetail extends Model
 {
     protected $guarded = ['id'];
 
+    /** PosInnova: marital status choices (labels: clinic.ms_*). */
+    const MARITAL_STATUSES = ['single', 'married', 'partner', 'divorced', 'separated', 'widowed'];
+
     //PosInnova: the portal PIN hash never leaves the server in JSON
     protected $hidden = ['portal_pin'];
 

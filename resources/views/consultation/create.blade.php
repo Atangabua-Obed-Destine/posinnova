@@ -25,7 +25,12 @@
         // placeholders stay as :qty / :location... for the script to fill in
         $rx_js_text[$k] = trans('clinic.'.$k);
     }
-    $rx_js_text += ['_label_dosage' => __('lang_v1.dosage'), '_label_frequency' => __('lang_v1.frequency'), '_label_duration' => __('lang_v1.duration'), '_label_notes' => __('lang_v1.notes')];
+    $rx_js_text += ['_label_dosage' => __('lang_v1.dosage'), '_label_frequency' => __('lang_v1.frequency'), '_label_duration' => __('lang_v1.duration'), '_label_notes' => __('lang_v1.notes'),
+        '_label_strength' => __('clinic.rx_strength'), '_label_route' => __('clinic.rx_route'), '_ph_strength' => __('clinic.rx_strength_ph'), '_ph_route' => __('clinic.rx_route_ph')];
+    // PosInnova: examination forms (ENT, eye...) - picked by the specialty, or by hand
+    $exam_now = old('exam.template_id', optional($exam ?? null)->template_id);
+    $exam_js = ['templates' => $exam_templates, 'form_url' => action([\App\Http\Controllers\ConsultationExamController::class, 'form']),
+        'switch_confirm' => __('clinic.ex_switch_confirm'), 'error' => __('messages.something_went_wrong')];
 @endphp
 
 @section('content')
@@ -74,6 +79,10 @@
                 </div>
                 @if ($h->chief_complaint)<div><span class="text-muted">@lang('lang_v1.chief_complaint'):</span> {{ $h->chief_complaint }}</div>@endif
                 <div><span class="text-muted">@lang('lang_v1.diagnosis'):</span> <strong>{{ $h->diagnosis ?: '-' }}</strong></div>
+                @if ($h->exam && $h->exam->hasContent())
+                    <div style="margin-top:4px;"><span class="text-muted"><i class="fas fa-clipboard-list"></i> {{ $h->exam->template_name }}</span>
+                        @include('consultation.exam.view', ['exam' => $h->exam, 'mini' => true])</div>
+                @endif
                 @if ($h->prescriptions->isNotEmpty())
                     <div><span class="text-muted">@lang('lang_v1.prescriptions'):</span>
                         {{ $h->prescriptions->map(fn ($rx) => trim($rx->displayName() . ' ' . collect([$rx->dosage, $rx->frequency, $rx->duration])->filter()->implode(' '))) ->implode('; ') }}</div>
@@ -102,6 +111,9 @@
         {!! Form::open(['url' => action([\App\Http\Controllers\ConsultationController::class, 'store']), 'method' => 'post', 'id' => 'consultation_form']) !!}
     @endif
     {!! Form::hidden('visit_id', $visit->id) !!}
+    @if (! empty($attach_token))
+        {!! Form::hidden('attach_token', $attach_token) !!}
+    @endif
 
     {{-- PosInnova: continuing: what the lab / imaging sent back since the consultation was saved --}}
     @if ($c_edit && ($lab_requests->isNotEmpty() || $imaging_requests->isNotEmpty()))
@@ -150,6 +162,12 @@
                     {!! Form::label('chief_complaint', __('lang_v1.chief_complaint') . ':') !!}
                     {!! Form::text('chief_complaint', $fv('chief_complaint'), ['class' => 'form-control', 'id' => 'chief_complaint', 'placeholder' => __('lang_v1.chief_complaint_placeholder')]) !!}
                     @include('consultation.partials.picker', ['list' => 'complaint', 'target' => '#chief_complaint', 'sep' => ', '])
+                </div>
+            </div>
+            <div class="col-sm-12">
+                <div class="form-group" style="margin-bottom:0;">
+                    {!! Form::label('history_of_complaint', __('clinic.cons_history_of_complaint') . ':') !!}
+                    {!! Form::textarea('history_of_complaint', $fv('history_of_complaint'), ['class' => 'form-control', 'rows' => 3, 'id' => 'history_of_complaint', 'placeholder' => __('clinic.cons_history_of_complaint_ph')]) !!}
                 </div>
             </div>
         </div>
@@ -211,12 +229,58 @@
             </div>
             <div class="col-sm-2 col-xs-6">
                 <div class="form-group">
+                    {!! Form::label('vitals_resp_rate', __('clinic.cons_resp_rate') . ':') !!}
+                    {!! Form::number('vitals_resp_rate', $c_edit ? $c_edit->vitals_resp_rate : old('vitals_resp_rate'), ['class' => 'form-control', 'min' => 0, 'max' => 200, 'id' => 'vitals_resp_rate']) !!}
+                </div>
+            </div>
+            <div class="col-sm-2 col-xs-6">
+                <div class="form-group">
                     {!! Form::label('vitals_spo2', __('lang_v1.spo2') . ':') !!}
                     {!! Form::number('vitals_spo2', $front_vitals['vitals_spo2'] ?? null, ['class' => 'form-control', 'min' => 0, 'max' => 100]) !!}
                 </div>
             </div>
         </div>
     @endcomponent
+
+    {{-- PosInnova: the specialty's examination form (drawings, one-click findings) --}}
+    <div class="box box-solid" id="exam_box" style="border-top:3px solid #6366f1;">
+        <div class="box-header with-border" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+            <h3 class="box-title" style="flex:0 0 auto;white-space:nowrap;overflow:visible;"><i class="fas fa-clipboard-list"></i> @lang('clinic.ex_box_title')</h3>
+            <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+                <select name="exam[template_id]" id="exam_template" class="form-control input-sm" style="min-width:220px;" aria-label="{{ __('clinic.ex_box_title') }}">
+                    <option value="">{{ __('clinic.ex_none') }}</option>
+                    @foreach ($exam_templates as $et)
+                        <option value="{{ $et['id'] }}" {{ (string) $exam_now === (string) $et['id'] ? 'selected' : '' }}>{{ $et['name'] }}</option>
+                    @endforeach
+                    @if ($exam && ! collect($exam_templates)->contains('id', $exam->template_id))
+                        <option value="{{ $exam->template_id }}" selected>{{ $exam->template_name }}</option>
+                    @endif
+                </select>
+                @can('clinic_settings.manage')
+                    <a href="{{ action([\App\Http\Controllers\ClinicExamTemplateController::class, 'index']) }}" target="_blank" class="btn btn-default btn-sm" title="{{ __('clinic.ex_manage') }}" aria-label="{{ __('clinic.ex_manage') }}"><i class="fas fa-cog"></i></a>
+                @endcan
+            </div>
+        </div>
+        <div class="box-body">
+            <input type="hidden" name="exam[present]" value="1">
+            <p class="text-muted ex-box-empty" style="margin:0 0 6px;{{ $exam_now ? 'display:none;' : '' }}"><i class="fas fa-info-circle"></i> @lang('clinic.ex_box_help')</p>
+            <div id="exam_form_body">
+                @if ($exam_now && $exam && (string) $exam->template_id === (string) $exam_now)
+                    @include('consultation.exam.form', ['blocks' => $exam->blocks ?: [], 'values' => $exam->answers(), 'exam' => $exam])
+                @elseif ($exam_now && ($tpl_now = \App\ClinicExamTemplate::where('business_id', $visit->business_id)->find($exam_now)))
+                    @include('consultation.exam.form', ['blocks' => $tpl_now->blocks ?: [], 'values' => [], 'exam' => null])
+                @endif
+            </div>
+            <div style="border-top:1px solid #eef2f7;margin-top:6px;padding-top:10px;">
+                <div class="ex-label"><i class="fas fa-camera"></i> @lang('clinic.ex_photos_title') <span class="text-muted" style="font-weight:normal;font-size:12px;">@lang('clinic.ex_photos_help')</span></div>
+                @if ($c_edit)
+                    @include('clinic.partials.attachments', ['type' => 'consultation', 'owner' => $c_edit])
+                @else
+                    @include('clinic.partials.attachments', ['type' => 'consultation', 'owner' => null, 'draft_token' => $attach_token, 'visit_id' => $visit->id])
+                @endif
+            </div>
+        </div>
+    </div>
 
     {{-- Examination + diagnosis --}}
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.examination_and_diagnosis')])
@@ -230,9 +294,16 @@
             </div>
             <div class="col-sm-6">
                 <div class="form-group">
-                    {!! Form::label('diagnosis', __('lang_v1.diagnosis') . ':') !!}
+                    {!! Form::label('diagnosis', __('clinic.cons_provisional_diagnosis') . ':') !!}
                     {!! Form::textarea('diagnosis', $fv('diagnosis'), ['class' => 'form-control', 'rows' => 4, 'id' => 'diagnosis', 'placeholder' => __('lang_v1.diagnosis_placeholder')]) !!}
                     @include('consultation.partials.picker', ['list' => 'diagnosis', 'target' => '#diagnosis', 'sep' => "\n"])
+                </div>
+            </div>
+            <div class="col-sm-6 col-sm-offset-6">
+                <div class="form-group" style="margin-bottom:0;">
+                    {!! Form::label('differential_diagnosis', __('clinic.cons_differential_diagnosis') . ':') !!}
+                    {!! Form::textarea('differential_diagnosis', $fv('differential_diagnosis'), ['class' => 'form-control', 'rows' => 2, 'id' => 'differential_diagnosis', 'placeholder' => __('clinic.cons_differential_diagnosis_ph')]) !!}
+                    @include('consultation.partials.picker', ['list' => 'diagnosis', 'target' => '#differential_diagnosis', 'sep' => "\n"])
                 </div>
             </div>
         </div>
@@ -265,12 +336,14 @@
             <table class="table table-bordered table-condensed" id="prescription_table">
                 <thead>
                     <tr>
-                        <th style="width:30%;">@lang('lang_v1.medicine')</th>
-                        <th style="width:14%;">@lang('lang_v1.dosage')</th>
-                        <th style="width:16%;">@lang('lang_v1.frequency')</th>
-                        <th style="width:14%;">@lang('lang_v1.duration')</th>
-                        <th style="width:12%;">@lang('sale.qty')</th>
-                        <th style="width:10%;">@lang('lang_v1.notes')</th>
+                        <th style="width:24%;">@lang('lang_v1.medicine')</th>
+                        <th style="width:8%;">@lang('clinic.rx_strength')</th>
+                        <th style="width:9%;">@lang('clinic.rx_route')</th>
+                        <th style="width:11%;">@lang('lang_v1.dosage')</th>
+                        <th style="width:13%;">@lang('lang_v1.frequency')</th>
+                        <th style="width:11%;">@lang('lang_v1.duration')</th>
+                        <th style="width:9%;">@lang('sale.qty')</th>
+                        <th style="width:11%;">@lang('lang_v1.notes')</th>
                         <th style="width:4%;"><i class="fa fa-trash"></i></th>
                     </tr>
                 </thead>
@@ -333,6 +406,34 @@
     @endcomponent
     @endif
 
+    {{-- PosInnova: management plan and the review (when to come back) --}}
+    @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.cons_plan_and_review')])
+        <div class="row">
+            <div class="col-sm-7">
+                <div class="form-group" style="margin-bottom:0;">
+                    {!! Form::label('management_plan', __('clinic.cons_management_plan') . ':') !!}
+                    {!! Form::textarea('management_plan', $fv('management_plan'), ['class' => 'form-control', 'rows' => 3, 'id' => 'management_plan', 'placeholder' => __('clinic.cons_management_plan_ph')]) !!}
+                </div>
+            </div>
+            <div class="col-sm-5">
+                <div class="form-group">
+                    {!! Form::label('review_date', __('clinic.cons_review_date') . ':') !!}
+                    <input type="date" name="review_date" id="review_date" class="form-control" min="{{ date('Y-m-d') }}"
+                        value="{{ old('review_date', $c_edit && $c_edit->review_date ? $c_edit->review_date->format('Y-m-d') : '') }}">
+                    <div class="review-quick" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;" id="review_quick">
+                        @foreach ([3 => __('clinic.cons_review_in_days', ['n' => 3]), 7 => __('clinic.cons_review_in_week'), 14 => __('clinic.cons_review_in_weeks', ['n' => 2]), 30 => __('clinic.cons_review_in_month'), 90 => __('clinic.cons_review_in_months', ['n' => 3])] as $days => $lbl)
+                            <button type="button" class="dl-chip review-in" data-days="{{ $days }}">{{ $lbl }}</button>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    {!! Form::label('review_notes', __('clinic.cons_review_notes') . ':') !!}
+                    {!! Form::text('review_notes', $fv('review_notes'), ['class' => 'form-control', 'maxlength' => 191, 'id' => 'review_notes', 'placeholder' => __('clinic.cons_review_notes_ph')]) !!}
+                </div>
+            </div>
+        </div>
+    @endcomponent
+
     {{-- Actions --}}
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.referral_and_actions')])
         <div class="row">
@@ -394,8 +495,55 @@
 
 @section('javascript')
 @include('consultation.partials.doctor_lists_js')
+@include('consultation.exam.assets')
 <script>
 $(document).ready(function () {
+    /* ---- the examination form: opens by itself for the specialty, or picked in the list ---- */
+    var EX = @json($exam_js);
+    var $exSel = $('#exam_template'), $exBody = $('#exam_form_body');
+    var exPicked = !!$exSel.val(); // a form already there (continuing) or picked by hand stays
+    function exLoad(id) {
+        $('.ex-box-empty').toggle(!id);
+        if (!id) { $exBody.empty(); return; }
+        $exBody.html('<p class="text-muted"><i class="fas fa-spinner fa-spin"></i></p>');
+        $.get(EX.form_url, { template_id: id }).done(function (html) {
+            $exBody.html(html);
+            window.ExamForm.init($exBody[0]);
+        }).fail(function () { $exBody.empty(); toastr.error(EX.error); });
+    }
+    function exSwitch(id, byHand) {
+        var cur = $exSel.data('cur') || '';
+        if (String(id) === String(cur)) { return; }
+        if (cur && window.ExamForm.touched($exBody[0]) && !window.confirm(EX.switch_confirm)) {
+            $exSel.val(cur);
+            return;
+        }
+        $exSel.val(id).data('cur', id);
+        if (byHand) { exPicked = true; }
+        exLoad(id);
+    }
+    $exSel.data('cur', $exSel.val() || '');
+    $exSel.on('change', function () { exSwitch($(this).val() || '', true); });
+    function exForSpecialty() {
+        if (exPicked) { return; }
+        var sp = $('#consultation_type').val() === 'specialist' ? $.trim(($('#specialty').val() || '')).toLowerCase() : '';
+        var t = sp ? (EX.templates || []).filter(function (x) { return x.specialties.indexOf(sp) >= 0; })[0] : null;
+        var want = t ? String(t.id) : '';
+        if (want !== String($exSel.val() || '')) {
+            if (!want && window.ExamForm.touched($exBody[0])) { return; } // never drop a form being filled in
+            exSwitch(want, false);
+        }
+    }
+    $('#specialty, #consultation_type').on('change', exForSpecialty);
+
+    // review: "in 1 week" fills the date
+    $(document).on('click', '.review-in', function () {
+        var d = new Date(); d.setDate(d.getDate() + parseInt($(this).data('days'), 10));
+        var p = function (n) { return (n < 10 ? '0' : '') + n; };
+        $('#review_date').val(d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())).trigger('change');
+        $('.review-in').removeClass('dl-on'); $(this).addClass('dl-on');
+    });
+
     // Toggle specialty field
     $('#consultation_type').on('change', function () {
         if ($(this).val() === 'specialist') {
@@ -551,6 +699,7 @@ $(document).ready(function () {
             var $locked = $('<tr class="rx-locked" data-locked="1">' +
                 '<td><strong>' + rxEsc(item.name) + '</strong>' + idField +
                     '<div class="rx-avail"><span class="label label-default"><i class="fas fa-lock"></i> ' + rxEsc(item.state_label || '') + '</span></div></td>' +
+                '<td>' + rxEsc(item.strength || '-') + '</td><td>' + rxEsc(item.route || '-') + '</td>' +
                 '<td>' + rxEsc(item.dosage || '-') + '</td><td>' + rxEsc(item.frequency || '-') + '</td><td>' + rxEsc(item.duration || '-') + '</td>' +
                 '<td>' + rxNum(item.quantity) + '</td><td>' + rxEsc(item.notes || '') + '</td><td></td></tr>');
             $locked.appendTo('#prescription_rows');
@@ -574,6 +723,8 @@ $(document).ready(function () {
         };
         var row = '<tr' + attrs + '>' +
             '<td>' + cell + '</td>' +
+            '<td><input type="text" name="prescriptions[' + i + '][strength]" aria-label="' + rxEsc(RX_T._label_strength) + '" class="form-control input-sm" maxlength="60" placeholder="' + rxEsc(RX_T._ph_strength) + '" value="' + rxEsc(existing ? item.strength : '') + '"></td>' +
+            field('route', 'rx_route', RX_T._ph_route) +
             field('dosage', 'rx_dosage', '{{ __('lang_v1.dosage_eg') }}') +
             field('frequency', 'rx_frequency', '{{ __('lang_v1.frequency_eg') }}') +
             field('duration', 'rx_duration', '{{ __('lang_v1.duration_eg') }}') +
@@ -588,7 +739,7 @@ $(document).ready(function () {
         }
         rxCheckRow($tr);
         if (!existing) {
-            $tr.find(item.free_text ? '.rx_drug_name' : 'input[name$="[dosage]"]').trigger('focus');
+            $tr.find(item.free_text ? '.rx_drug_name' : 'input[name$="[strength]"]').trigger('focus');
         }
     }
 

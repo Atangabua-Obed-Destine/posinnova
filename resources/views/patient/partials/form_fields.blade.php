@@ -92,6 +92,19 @@
                 {!! Form::text('known_allergies', optional($pd)->known_allergies, ['class' => 'form-control', 'placeholder' => __('lang_v1.known_allergies_placeholder')]) !!}
             </div>
         </div>
+        <div class="clearfix"></div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('occupation', __('clinic.pf_occupation') . ':') !!}
+                {!! Form::text('occupation', old('occupation', optional($pd)->occupation), ['class' => 'form-control', 'maxlength' => 120, 'placeholder' => __('clinic.pf_occupation_ph')]) !!}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('marital_status', __('clinic.pf_marital_status') . ':') !!}
+                {!! Form::select('marital_status', ['' => __('messages.please_select')] + collect(\App\PatientDetail::MARITAL_STATUSES)->mapWithKeys(fn ($m) => [$m => __('clinic.ms_' . $m)])->all(), old('marital_status', optional($pd)->marital_status), ['class' => 'form-control select2']) !!}
+            </div>
+        </div>
     </div>
 @endcomponent
 

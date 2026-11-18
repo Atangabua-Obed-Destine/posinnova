@@ -461,6 +461,9 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('consultations/{id}/results', [\App\Http\Controllers\ConsultationController::class, 'results'])->whereNumber('id');
     Route::post('consultations/{id}/finalize', [\App\Http\Controllers\ConsultationController::class, 'finalize']);
     Route::get('consultations/{id}/prescription', [\App\Http\Controllers\ConsultationController::class, 'prescription']);
+    Route::get('consultations/{id}/report', [\App\Http\Controllers\ConsultationController::class, 'report'])->whereNumber('id');
+    Route::get('consultations/exam-form', [\App\Http\Controllers\ConsultationExamController::class, 'form']);
+    Route::get('consultations/exam/{id}/drawing/{block}', [\App\Http\Controllers\ConsultationExamController::class, 'drawing'])->whereNumber('id')->where('block', '[a-z0-9_]+');
 
     //Laboratory
     Route::resource('lab-tests', \App\Http\Controllers\LabTestController::class)->except(['show']);
@@ -536,7 +539,18 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('clinic/reports/{key}', [\App\Http\Controllers\ClinicReportController::class, 'show'])->where('key', '[a-z_]+');
 
     //Clinic settings (hospital module)
-    Route::post('clinic/attachments/{type}/{id}', [\App\Http\Controllers\ClinicAttachmentController::class, 'store'])->where('type', 'lab_request|imaging_request')->whereNumber('id');
+    Route::post('clinic/attachments/{type}/{id}', [\App\Http\Controllers\ClinicAttachmentController::class, 'store'])->where('type', 'lab_request|imaging_request|consultation')->whereNumber('id');
+    Route::get('clinic/exam-templates', [\App\Http\Controllers\ClinicExamTemplateController::class, 'index']);
+    Route::get('clinic/exam-templates/create', [\App\Http\Controllers\ClinicExamTemplateController::class, 'create']);
+    Route::post('clinic/exam-templates', [\App\Http\Controllers\ClinicExamTemplateController::class, 'store']);
+    Route::post('clinic/exam-templates/ready-made', [\App\Http\Controllers\ClinicExamTemplateController::class, 'readyMade']);
+    Route::post('clinic/exam-templates/images', [\App\Http\Controllers\ClinicExamTemplateController::class, 'uploadImage']);
+    Route::post('clinic/exam-templates/preview', [\App\Http\Controllers\ClinicExamTemplateController::class, 'preview']);
+    Route::get('clinic/exam-templates/{id}/edit', [\App\Http\Controllers\ClinicExamTemplateController::class, 'edit'])->whereNumber('id');
+    Route::post('clinic/exam-templates/{id}', [\App\Http\Controllers\ClinicExamTemplateController::class, 'update'])->whereNumber('id');
+    Route::post('clinic/exam-templates/{id}/delete', [\App\Http\Controllers\ClinicExamTemplateController::class, 'destroy'])->whereNumber('id');
+    Route::post('clinic/exam-templates/{id}/duplicate', [\App\Http\Controllers\ClinicExamTemplateController::class, 'duplicate'])->whereNumber('id');
+    Route::post('clinic/exam-templates/{id}/toggle', [\App\Http\Controllers\ClinicExamTemplateController::class, 'toggle'])->whereNumber('id');
     Route::get('clinic/attachments/{id}', [\App\Http\Controllers\ClinicAttachmentController::class, 'show'])->whereNumber('id');
     Route::post('clinic/attachments/{id}/delete', [\App\Http\Controllers\ClinicAttachmentController::class, 'destroy'])->whereNumber('id');
     Route::post('clinic/options', [\App\Http\Controllers\ClinicOptionController::class, 'quickAdd']);
