@@ -33,7 +33,7 @@
 @endphp
 <!-- Main Header -->
 
-<div
+<div id="pi-header"
     class="  tw-transition-all tw-duration-5000 tw-border-b tw-bg-gradient-to-r tw-from-@if(!empty(session('business.theme_color'))){{session('business.theme_color')}}@else{{'primary'}}@endif-800 tw-to-@if(!empty(session('business.theme_color'))){{session('business.theme_color')}}@else{{'primary'}}@endif-900 tw-shrink-0 lg:tw-h-15 tw-border-primary-500/30 no-print">
     <div class="tw-px-5 tw-py-3 pos-hdr-pad">
         <div class="tw-flex tw-items-start tw-justify-between tw-gap-6 lg:tw-items-center pos-hdr-row">
@@ -67,6 +67,15 @@
                         <path d="M10 10l-2 2l2 2" />
                     </svg>
                 </button>
+
+                {{-- PosInnova desktop workspace: the toolbar (wide screens only; public/js/desktop.js). --}}
+                <div class="pi-tb pi-desk-only" role="toolbar" aria-label="{{ __('desktop.toolbar') }}">
+                    <button type="button" data-pi="back" title="{{ __('desktop.back') }} (Alt+←)" aria-label="{{ __('desktop.back') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+                    <button type="button" data-pi="forward" title="{{ __('desktop.forward') }} (Alt+→)" aria-label="{{ __('desktop.forward') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></button>
+                    <button type="button" data-pi="reload" title="{{ __('desktop.refresh') }} (F5)" aria-label="{{ __('desktop.refresh') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.6m14.8 2A8 8 0 004.6 9M4.6 9H9m11 11v-5h-.6m0 0a8 8 0 01-15.4-2m15.4 2H15"/></svg></button>
+                    <button type="button" data-pi="print" title="{{ __('desktop.print') }} (Ctrl+P)" aria-label="{{ __('desktop.print') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg></button>
+                    <button type="button" data-pi="palette" class="pi-tb-wide" title="{{ __('desktop.go_to_title') }} (Ctrl+K)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg><span>{{ __('desktop.go_to') }}</span></button>
+                </div>
 
                 @if (!empty($hdr_shift_enabled) && !empty($hdr_current_shift))
                     {{-- PosInnova hospital shifts: current shift badge + live countdown (left-aligned, mobile-friendly) --}}

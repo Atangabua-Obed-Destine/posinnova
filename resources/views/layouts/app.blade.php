@@ -14,6 +14,10 @@
 
 @php
     $whitelist = ['127.0.0.1', '::1'];
+    // PosInnova desktop workspace (layouts/partials/desktop.blade.php): every
+    // signed-in screen of this layout, except the POS screen and the customer
+    // display, which keep the whole window as before.
+    $pi_desk = !$pos_layout && $request->segment(1) != 'customer-display' && auth()->check();
 @endphp
 
 <!DOCTYPE html>
@@ -36,9 +40,16 @@
 
     @yield('css')
 
+    @if ($pi_desk)
+        @include('layouts.partials.desktop', ['part' => 'head'])
+    @endif
+
 </head>
 <body
     class="tw-font-sans tw-antialiased tw-text-gray-900 tw-bg-gray-100 @if ($pos_layout) hold-transition lockscreen @else hold-transition skin-@if (!empty(session('business.theme_color'))){{ session('business.theme_color') }}@else{{ 'blue-light' }} @endif sidebar-mini @endif" >
+    @if ($pi_desk)
+        @include('layouts.partials.desktop', ['part' => 'titlebar'])
+    @endif
     <div class="tw-flex thetop">
         <script type="text/javascript">
             if (localStorage.getItem("upos_sidebar_collapse") == 'true') {
@@ -76,6 +87,9 @@
         <main class="tw-flex tw-flex-col tw-flex-1 tw-h-full tw-min-w-0 tw-bg-gray-100">
             @if($request->segment(1) != 'customer-display' && !$pos_layout)
                 @include('layouts.partials.header')
+                @if ($pi_desk)
+                    @include('layouts.partials.desktop', ['part' => 'tabs'])
+                @endif
             @elseif($request->segment(1) != 'customer-display')
                 @include('layouts.partials.header-pos')
             @endif
@@ -150,6 +164,9 @@
             <div class="overlay tw-hidden"></div>
         </div>
         @include('layouts.partials.support_ticker')
+        @if ($pi_desk)
+            @include('layouts.partials.desktop', ['part' => 'status'])
+        @endif
 </body>
 <style>
     @media print {

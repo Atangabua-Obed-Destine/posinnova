@@ -661,6 +661,7 @@ return [
     'products_could_not_be_deleted' => 'Certains produits ne peuvent pas être supprimés car des transactions y sont associées.',
     'price' => 'Prix',
     'auto_backup_instruction' => 'Pour activer la sauvegarde automatique et le nettoyage de la sauvegarde, vous devez configurer une tâche cron avec cette commande',
+    'profit' => 'Bénéfice',
     'gross_profit' => 'Bénéfice brut',
     'single' => 'Unique',
     'variable' => 'Variable',

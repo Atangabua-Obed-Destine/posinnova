@@ -961,6 +961,7 @@ return [
     'products_could_not_be_deleted' => "Some products couldn't be deleted because it has transactions related to it.",
     'price' => 'Price',
     'auto_backup_instruction' => 'To enable auto backup and backup clean you must setup a cron job with this command',
+    'profit' => 'Profit',
     'gross_profit' => 'Gross Profit',
     'single' => 'Single',
     'variable' => 'Variable',
