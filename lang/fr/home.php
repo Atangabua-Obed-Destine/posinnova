@@ -21,4 +21,16 @@
      'todays_profit' => "Le profit d'aujourd'hui",
      // ---- PosInnova: French for keys that only existed in English
     'dashboard' => 'Tableau de bord',
+    'ih_good_morning' => 'Bonjour, :name',
+    'ih_good_afternoon' => 'Bon après-midi, :name',
+    'ih_good_evening' => 'Bonsoir, :name',
+    'ih_today' => 'Aujourd\'hui',
+    'ih_sales' => 'Ventes',
+    'ih_money_out' => 'Achats et dépenses',
+    'ih_quick' => 'Actions rapides',
+    'ih_attention' => 'À surveiller',
+    'ih_low_stock' => 'Stock bas',
+    'ih_expiring' => 'Expirent dans :days jours',
+    'ih_to_collect' => 'Factures à encaisser',
+    'ih_to_pay' => 'Fournisseurs à payer',
 ];
