@@ -38,11 +38,9 @@
     };
     // Quick actions: only what this person may do.
     $ih_actions = [];
-    if ($ih_user->can('sell.create') && in_array('pos_sale', $ih_mods)) {
-        $ih_actions[] = [action([\App\Http\Controllers\SellPosController::class, 'create']), __('sale.pos_sale'), 'pos', true];
-    }
+    // (POS is not here: the header has it on every screen.)
     if ($ih_user->can('direct_sell.access') && in_array('add_sale', $ih_mods)) {
-        $ih_actions[] = [action([\App\Http\Controllers\SellController::class, 'create']), __('sale.add_sale'), 'invoice', false];
+        $ih_actions[] = [action([\App\Http\Controllers\SellController::class, 'create']), __('sale.add_sale'), 'invoice', true];
     }
     if ($ih_user->can('purchase.create') && in_array('purchases', $ih_mods)) {
         $ih_actions[] = [action([\App\Http\Controllers\PurchaseController::class, 'create']), __('purchase.add_purchase'), 'truck', false];

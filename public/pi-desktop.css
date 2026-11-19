@@ -195,6 +195,8 @@
 #pi-palette li.on small { color: #cbd5e1; }
 #pi-palette li.pi-pal-empty { color: #6b7280; cursor: default; }
 #pi-palette .pi-pal-hint { padding: 6px 16px; border-top: 1px solid #f1f5f9; background: #f8fafc; font-size: 12px; color: #6b7280; }
+/* Keys mean nothing on a touch screen. */
+@media (hover: none) { #pi-palette .pi-pal-hint { display: none; } #pi-palette li { padding-top: 11px; padding-bottom: 11px; } }
 
 @keyframes pi-spin { to { transform: rotate(360deg); } }
 @keyframes pi-slide { from { left: -35%; } to { left: 100%; } }

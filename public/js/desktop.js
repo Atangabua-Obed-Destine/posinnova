@@ -83,6 +83,117 @@
         return e.cancelable && !e.hashChange && !e.downloadRequest && !(e.destination && e.destination.sameDocument);
     };
 
+    // ── The sidebar's screens: for the menus and the "Go to…" box ─────────
+    var readSidebar = function (side) {
+        var items = []; // { heading } | { link } | { label, links }
+        Array.prototype.forEach.call(side.children, function (el) {
+            if (el.classList.contains('side-bar-area-heading')) { items.push({ heading: textOf(el) }); return; }
+            if (el.tagName === 'A' && el.getAttribute('href') && el.getAttribute('href') !== '#') { items.push({ link: el }); return; }
+            var drop = el.querySelector(':scope > a.drop_down');
+            if (drop) {
+                var links = Array.prototype.filter.call(el.querySelectorAll('.chiled a[href]'), function (a) { return a.getAttribute('href') && a.getAttribute('href') !== '#'; });
+                if (links.length) items.push({ label: textOf(drop), links: links });
+            }
+        });
+        // Every screen of the sidebar, with the area or group it is in.
+        var screens = [];
+        var seen = {};
+        var group = '';
+        items.forEach(function (it) {
+            if (it.heading) { group = it.heading; return; }
+            var add = function (a, g) {
+                if (seen[a.href]) return;
+                seen[a.href] = true;
+                var name = textOf(a);
+                if (name) screens.push({ name: name, detail: g, href: a.href, hay: (name + ' ' + g).toLowerCase() });
+            };
+            if (it.link) add(it.link, group);
+            else it.links.forEach(function (a) { add(a, it.label); });
+        });
+        return { items: items, screens: screens };
+    };
+
+    // ── "Go to…" (Ctrl+K): a box to find any screen of the menu by typing ──
+    var score = function (item, words) {
+        var name = item.name.toLowerCase();
+        var total = 0;
+        for (var i = 0; i < words.length; i++) {
+            var w = words[i];
+            var at = name.indexOf(w);
+            if (at >= 0) { total += (at === 0 || name.charAt(at - 1) === ' ') ? 4 : 3; continue; }
+            if (item.hay.indexOf(w) < 0) return -1;
+            total += 1;
+        }
+        return total;
+    };
+    // go(href) opens the chosen screen; closed() runs when the box is closed without a choice.
+    var makePalette = function (screens, go, closed) {
+        var palette = null;
+        return function () {
+            if (palette) { palette.input.focus(); return; }
+            var back = make('div');
+            back.id = 'pi-palette';
+            back.setAttribute('role', 'dialog');
+            back.setAttribute('aria-modal', 'true');
+            back.setAttribute('aria-label', tx('palette_placeholder', 'Go to'));
+            var box = make('div', 'pi-pal-box');
+            var input = make('input');
+            input.type = 'text';
+            input.autocomplete = 'off';
+            input.spellcheck = false;
+            input.enterKeyHint = 'go';
+            input.placeholder = tx('palette_placeholder', '');
+            input.setAttribute('role', 'combobox');
+            input.setAttribute('aria-expanded', 'true');
+            input.setAttribute('aria-controls', 'pi-pal-list');
+            var list = make('ul');
+            list.id = 'pi-pal-list';
+            list.setAttribute('role', 'listbox');
+            var hint = make('div', 'pi-pal-hint', tx('palette_hint', ''));
+            box.appendChild(input); box.appendChild(list); box.appendChild(hint);
+            back.appendChild(box);
+            document.body.appendChild(back);
+            var items = [];
+            var at = 0;
+            var close = function () { back.remove(); palette = null; if (closed) closed(); };
+            var pick = function (item) { if (!item) return; back.remove(); palette = null; go(item.href); };
+            var draw = function () {
+                var words = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+                items = words.length
+                    ? screens.map(function (s) { return [s, score(s, words)]; }).filter(function (x) { return x[1] >= 0; })
+                        .sort(function (a, b) { return b[1] - a[1]; }).map(function (x) { return x[0]; }).slice(0, 10)
+                    : screens.slice(0, 10);
+                if (at >= items.length) at = 0;
+                list.replaceChildren();
+                items.forEach(function (s, n) {
+                    var li = make('li', n === at ? 'on' : '');
+                    li.id = 'pi-pal-' + n;
+                    li.setAttribute('role', 'option');
+                    li.setAttribute('aria-selected', String(n === at));
+                    li.appendChild(make('span', null, s.name));
+                    li.appendChild(make('small', null, s.detail || ''));
+                    li.addEventListener('mousedown', function (ev) { ev.preventDefault(); pick(s); });
+                    list.appendChild(li);
+                });
+                if (!items.length) list.appendChild(make('li', 'pi-pal-empty', tx('palette_empty', '')));
+                input.setAttribute('aria-activedescendant', items.length ? 'pi-pal-' + at : '');
+                var on = list.querySelector('.on');
+                if (on) on.scrollIntoView({ block: 'nearest' });
+            };
+            input.addEventListener('input', function () { at = 0; draw(); });
+            input.addEventListener('keydown', function (ev) {
+                if (ev.key === 'ArrowDown') { ev.preventDefault(); at = Math.min(items.length - 1, at + 1); draw(); }
+                else if (ev.key === 'ArrowUp') { ev.preventDefault(); at = Math.max(0, at - 1); draw(); }
+                else if (ev.key === 'Enter') { ev.preventDefault(); pick(items[at]); }
+                else if (ev.key === 'Escape') { ev.preventDefault(); close(); }
+            });
+            back.addEventListener('mousedown', function (ev) { if (ev.target === back) close(); });
+            palette = { input: input };
+            draw();
+            input.focus();
+        };
+    };
+
     // ── A screen shown inside a workspace tab ──────────────────────────────
     var desk = null;
     try { if (window.parent !== window && window.parent.PI_DESK) desk = window.parent.PI_DESK; } catch (e) { /* not ours */ }
@@ -139,7 +250,21 @@
     var statusBar = document.getElementById('pi-status');
     var main = document.querySelector('.thetop > main');
     var container = document.getElementById('scrollable-container');
-    if (!html.classList.contains('pi-desk') || !side || !header || !strip || !bar || !main || !container || !cfg.home) return;
+    if (!html.classList.contains('pi-desk')) {
+        // A phone or a narrow window: no workspace, but the same "Go to…" box,
+        // from the search button beside the menu button (or Ctrl+K). The
+        // chosen screen opens as any link does.
+        if (!side) return;
+        var openGoTo = makePalette(readSidebar(side).screens, function (href) { location.href = href; });
+        document.addEventListener('click', function (e) {
+            if (e.target.closest && e.target.closest('[data-pi="go"]')) { e.preventDefault(); openGoTo(); }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (!e.defaultPrevented && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key || '').toLowerCase() === 'k') { e.preventDefault(); openGoTo(); }
+        });
+        return;
+    }
+    if (!side || !header || !strip || !bar || !main || !container || !cfg.home) return;
     var wide = window.matchMedia('(min-width: 1024px)');
     // The whole window going somewhere on purpose (sign in, the POS screen):
     // the address guard below lets it through.
@@ -156,34 +281,10 @@
     var isActive = function (a) { return a.classList.contains('tw-text-primary-700'); };
     var homeU = toURL(cfg.home);
     var isHomeLink = function (a) { var u = toURL(a.href); return !!u && !!homeU && u.pathname.replace(/\/+$/, '') === homeU.pathname.replace(/\/+$/, ''); };
-    var rawItems = []; // { heading } | { link } | { label, links }
-    Array.prototype.forEach.call(side.children, function (el) {
-        if (el.classList.contains('side-bar-area-heading')) { rawItems.push({ heading: textOf(el) }); return; }
-        if (el.tagName === 'A' && el.getAttribute('href') && el.getAttribute('href') !== '#') { rawItems.push({ link: el }); return; }
-        var drop = el.querySelector(':scope > a.drop_down');
-        if (drop) {
-            var links = Array.prototype.filter.call(el.querySelectorAll('.chiled a[href]'), function (a) { return a.getAttribute('href') && a.getAttribute('href') !== '#'; });
-            if (links.length) rawItems.push({ label: textOf(drop), links: links });
-        }
-    });
-
+    var sidebar = readSidebar(side);
+    var rawItems = sidebar.items;
     // Every screen of the sidebar, for the "Go to…" box and the tab names.
-    var screens = [];
-    (function () {
-        var seen = {};
-        var group = '';
-        rawItems.forEach(function (it) {
-            if (it.heading) { group = it.heading; return; }
-            var add = function (a, g) {
-                if (seen[a.href]) return;
-                seen[a.href] = true;
-                var name = textOf(a);
-                if (name) screens.push({ name: name, detail: g, href: a.href, hay: (name + ' ' + g).toLowerCase() });
-            };
-            if (it.link) add(it.link, group);
-            else it.links.forEach(function (a) { add(a, it.label); });
-        });
-    })();
+    var screens = sidebar.screens;
 
     // A screen's identity: its path, and the query words the menu itself
     // uses to tell screens apart (Suppliers and Customers share /contacts).
@@ -798,86 +899,12 @@
     }
 
     // ── "Go to…" (Ctrl+K) ──
-    var palette = null;
-    var score = function (item, words) {
-        var name = item.name.toLowerCase();
-        var total = 0;
-        for (var i = 0; i < words.length; i++) {
-            var w = words[i];
-            var at = name.indexOf(w);
-            if (at >= 0) { total += (at === 0 || name.charAt(at - 1) === ' ') ? 4 : 3; continue; }
-            if (item.hay.indexOf(w) < 0) return -1;
-            total += 1;
-        }
-        return total;
-    };
     var openScreen = function (href) {
         var u = toURL(href);
         if (u && isScreen(u)) openUrl(u.href); else goWindow(href);
     };
-    var openPalette = function () {
-        if (palette) { palette.input.focus(); return; }
-        closeMenus();
-        var back = make('div');
-        back.id = 'pi-palette';
-        back.setAttribute('role', 'dialog');
-        back.setAttribute('aria-modal', 'true');
-        back.setAttribute('aria-label', tx('palette_placeholder', 'Go to'));
-        var box = make('div', 'pi-pal-box');
-        var input = make('input');
-        input.type = 'text';
-        input.autocomplete = 'off';
-        input.spellcheck = false;
-        input.placeholder = tx('palette_placeholder', '');
-        input.setAttribute('role', 'combobox');
-        input.setAttribute('aria-expanded', 'true');
-        input.setAttribute('aria-controls', 'pi-pal-list');
-        var list = make('ul');
-        list.id = 'pi-pal-list';
-        list.setAttribute('role', 'listbox');
-        var hint = make('div', 'pi-pal-hint', tx('palette_hint', ''));
-        box.appendChild(input); box.appendChild(list); box.appendChild(hint);
-        back.appendChild(box);
-        document.body.appendChild(back);
-        var items = [];
-        var at = 0;
-        var close = function () { back.remove(); palette = null; focusTab(active); };
-        var go = function (item) { if (!item) return; back.remove(); palette = null; openScreen(item.href); };
-        var draw = function () {
-            var words = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
-            items = words.length
-                ? screens.map(function (s) { return [s, score(s, words)]; }).filter(function (x) { return x[1] >= 0; })
-                    .sort(function (a, b) { return b[1] - a[1]; }).map(function (x) { return x[0]; }).slice(0, 10)
-                : screens.slice(0, 10);
-            if (at >= items.length) at = 0;
-            list.replaceChildren();
-            items.forEach(function (s, n) {
-                var li = make('li', n === at ? 'on' : '');
-                li.id = 'pi-pal-' + n;
-                li.setAttribute('role', 'option');
-                li.setAttribute('aria-selected', String(n === at));
-                li.appendChild(make('span', null, s.name));
-                li.appendChild(make('small', null, s.detail || ''));
-                li.addEventListener('mousedown', function (ev) { ev.preventDefault(); go(s); });
-                list.appendChild(li);
-            });
-            if (!items.length) list.appendChild(make('li', 'pi-pal-empty', tx('palette_empty', '')));
-            input.setAttribute('aria-activedescendant', items.length ? 'pi-pal-' + at : '');
-            var on = list.querySelector('.on');
-            if (on) on.scrollIntoView({ block: 'nearest' });
-        };
-        input.addEventListener('input', function () { at = 0; draw(); });
-        input.addEventListener('keydown', function (ev) {
-            if (ev.key === 'ArrowDown') { ev.preventDefault(); at = Math.min(items.length - 1, at + 1); draw(); }
-            else if (ev.key === 'ArrowUp') { ev.preventDefault(); at = Math.max(0, at - 1); draw(); }
-            else if (ev.key === 'Enter') { ev.preventDefault(); go(items[at]); }
-            else if (ev.key === 'Escape') { ev.preventDefault(); close(); }
-        });
-        back.addEventListener('mousedown', function (ev) { if (ev.target === back) close(); });
-        palette = { input: input };
-        draw();
-        input.focus();
-    };
+    var paletteBox = makePalette(screens, function (href) { openScreen(href); }, function () { focusTab(active); });
+    var openPalette = function () { closeMenus(); paletteBox(); };
 
     // ── Toolbar, status bar buttons and keys ──
     document.addEventListener('click', function (e) {
