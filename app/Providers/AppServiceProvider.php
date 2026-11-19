@@ -32,6 +32,11 @@ class AppServiceProvider extends ServiceProvider
         ini_set('memory_limit', '-1');
         set_time_limit(0);
 
+        // PosInnova: product and price changes go to the activity log, whatever screen makes them.
+        foreach ([\App\Product::class, \App\Variation::class, \App\VariationGroupPrice::class, \App\VariationUnitPrice::class] as $audited) {
+            $audited::observe(\App\Observers\ProductChangeObserver::class);
+        }
+
         if (config('app.debug')) {
             error_reporting(E_ALL & ~E_USER_DEPRECATED);
         } else {

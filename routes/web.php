@@ -292,6 +292,11 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('/reports/service-staff-line-orders', [ReportController::class, 'serviceStaffLineOrders']);
     Route::get('/reports/table-report', [ReportController::class, 'getTableReport']);
     Route::get('/reports/profit-loss', [ReportController::class, 'getProfitLoss']);
+    // PosInnova: the periodic reviews (financial summary, quarterly stock control)
+    Route::get('/reports/financial-summary', [\App\Http\Controllers\BusinessReviewController::class, 'financial']);
+    Route::post('/reports/financial-summary/pdf', [\App\Http\Controllers\BusinessReviewController::class, 'financialPdf']);
+    Route::get('/reports/stock-control', [\App\Http\Controllers\BusinessReviewController::class, 'stockControl']);
+    Route::post('/reports/stock-control/pdf', [\App\Http\Controllers\BusinessReviewController::class, 'stockControlPdf']);
     Route::get('/reports/get-opening-stock', [ReportController::class, 'getOpeningStock']);
     Route::get('/reports/purchase-sell', [ReportController::class, 'getPurchaseSell']);
     Route::get('/reports/customer-supplier', [ReportController::class, 'getCustomerSuppliers']);

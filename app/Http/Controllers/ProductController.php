@@ -2043,9 +2043,10 @@ class ProductController extends Controller
 
                 DB::beginTransaction();
 
+                // one by one, so the activity log records each product deactivated
                 $products = Product::where('business_id', $business_id)
                                     ->whereIn('id', $selected_products)
-                                    ->update(['is_inactive' => 1]);
+                                    ->get()->each(function ($p) { $p->update(['is_inactive' => 1]); })->count();
 
                 DB::commit();
             }
@@ -2080,9 +2081,10 @@ class ProductController extends Controller
         if (request()->ajax()) {
             try {
                 $business_id = request()->session()->get('user.business_id');
+                // through the model, so the activity log records it
                 $product = Product::where('id', $id)
                                 ->where('business_id', $business_id)
-                                ->update(['is_inactive' => 0]);
+                                ->get()->each(function ($p) { $p->update(['is_inactive' => 0]); })->count();
 
                 $output = ['success' => true,
                     'msg' => __('lang_v1.updated_success'),

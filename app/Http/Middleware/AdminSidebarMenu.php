@@ -744,6 +744,21 @@ class AdminSidebarMenu
                                 ['icon' => '', 'active' => request()->segment(2) == 'hospital']
                             );
                         }
+                        // PosInnova: the periodic reviews delivered to the client (BusinessReviewController)
+                        if (auth()->user()->can('profit_loss_report.view')) {
+                            $sub->url(
+                                action([\App\Http\Controllers\BusinessReviewController::class, 'financial']),
+                                __('review.fin_menu'),
+                                ['icon' => '', 'active' => request()->segment(2) == 'financial-summary']
+                            );
+                        }
+                        if (auth()->user()->can('inventory_count.view') || auth()->user()->can('inventory_count.create') || auth()->user()->can('stock_report.view')) {
+                            $sub->url(
+                                action([\App\Http\Controllers\BusinessReviewController::class, 'stockControl']),
+                                __('review.sc_menu'),
+                                ['icon' => '', 'active' => request()->segment(2) == 'stock-control']
+                            );
+                        }
                         if (auth()->user()->can('profit_loss_report.view')) {
                             $sub->url(
                                 action([\App\Http\Controllers\ReportController::class, 'getProfitLoss']),

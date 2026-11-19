@@ -220,6 +220,7 @@
         {{-- Needs attention: counted from the lists below once they load (no extra queries). --}}
         <div class="ih-attn" id="ih_attn" style="display:none;">
             <span class="ih-attn-title">{{ __('home.ih_attention') }}</span>
+            @include('business_review.partials.count_reminder', ['style' => 'chip'])
             <a href="#stock_alert_table" class="ih-chip" data-ih-count="#stock_alert_table"><span class="ih-fig-ico ih-tone-amber">{!! $ih_icon('package') !!}</span><span class="ih-chip-n">…</span> {{ __('home.ih_low_stock') }}</a>
             <a href="#stock_expiry_alert_table" class="ih-chip" data-ih-count="#stock_expiry_alert_table"><span class="ih-fig-ico ih-tone-red">{!! $ih_icon('clock') !!}</span><span class="ih-chip-n">…</span> {{ __('home.ih_expiring', ['days' => session('business.stock_expiry_alert_days', 30)]) }}</a>
             <a href="#sales_payment_dues_table" class="ih-chip" data-ih-count="#sales_payment_dues_table"><span class="ih-fig-ico ih-tone-blue">{!! $ih_icon('users') !!}</span><span class="ih-chip-n">…</span> {{ __('home.ih_to_collect') }}</a>
@@ -913,6 +914,7 @@
                 $('.ih-period').text(t);
             });
             var $attn = $('#ih_attn');
+            if ($attn.find('#ih_count_due').length) $attn.show();
             $attn.find('[data-ih-count]').each(function () {
                 var $chip = $(this), $t = $($chip.data('ih-count'));
                 if (!$t.length) { $chip.remove(); return; }

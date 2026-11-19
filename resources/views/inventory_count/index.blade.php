@@ -13,6 +13,7 @@
 </section>
 
 <section class="content">
+    @include('business_review.partials.count_reminder', ['style' => 'banner'])
     <div class="alert alert-info">
         <strong>@lang('inventory_count.use_this_for')</strong>
         @lang('inventory_count.use_this_for_text')

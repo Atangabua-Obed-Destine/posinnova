@@ -3830,6 +3830,7 @@ class ReportController extends Controller
             'sell_transfer' => __('lang_v1.stock_transfer'),
             'stock_adjustment' => __('stock_adjustment.stock_adjustment'),
             'expense' => __('lang_v1.expense'),
+            'product' => __('sale.product'),
         ];
 
         if (request()->ajax()) {
@@ -3858,6 +3859,8 @@ class ReportController extends Controller
                     $activities->where('subject_type', \App\Contact::class);
                 } elseif ($subject_type == 'user') {
                     $activities->where('subject_type', \App\User::class);
+                } elseif ($subject_type == 'product') {
+                    $activities->where('subject_type', \App\Product::class);
                 } elseif (in_array($subject_type, ['sell', 'purchase',
                     'sales_order', 'purchase_order', 'sell_return', 'purchase_return', 'sell_transfer', 'expense', 'purchase_order', ])) {
                     $activities->where('subject_type', \App\Transaction::class);
@@ -3886,11 +3889,17 @@ class ReportController extends Controller
                                     $subject_type = isset($transaction_types[$row->subject->type]) ? $transaction_types[$row->subject->type] : '';
                                 } elseif (($row->subject_type == \App\TransactionPayment::class)) {
                                     $subject_type = __('lang_v1.payment');
+                                } elseif ($row->subject_type == \App\Product::class) {
+                                    $subject_type = __('sale.product');
                                 }
 
                                 return $subject_type;
                             })
                             ->addColumn('note', function ($row) use ($statuses, $shipping_statuses) {
+                                // PosInnova: product and price changes, "field: before -> after"
+                                if ($row->subject_type == \App\Product::class) {
+                                    return view('report.partials.product_activity_note', ['activity' => $row])->render();
+                                }
                                 $html = '';
                                 if (! empty($row->subject->ref_no)) {
                                     $html .= __('purchase.ref_no').': '.$row->subject->ref_no.'<br>';

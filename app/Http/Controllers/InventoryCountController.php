@@ -3086,7 +3086,7 @@ class InventoryCountController extends Controller
                 // blank = delete override
                 VariationUnitPrice::where('variation_id', $variation_id)
                     ->where('unit_id', $unit_id)
-                    ->delete();
+                    ->get()->each->delete(); // one by one: the activity log records it
                 return response()->json([
                     'success' => 1,
                     'msg' => __('lang_v1.updated_succesfully'),

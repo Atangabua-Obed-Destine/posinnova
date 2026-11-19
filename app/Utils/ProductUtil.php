@@ -104,7 +104,7 @@ class ProductUtil extends Util
             if ($exc === null && $inc === null) {
                 \App\VariationUnitPrice::where('variation_id', $variation_id)
                     ->where('unit_id', $unit_id)
-                    ->delete();
+                    ->get()->each->delete(); // one by one: the activity log records it
                 continue;
             }
 
@@ -1469,7 +1469,7 @@ class ProductUtil extends Util
                             // If both are empty/null, clear the override (revert to auto calculation)
                             \App\VariationUnitPrice::where('variation_id', $purchase_line->variation_id)
                                 ->where('unit_id', (int) $u_id)
-                                ->delete();
+                                ->get()->each->delete(); // one by one: the activity log records it
                         }
                     }
                 }
