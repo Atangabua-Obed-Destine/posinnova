@@ -178,8 +178,8 @@ class BusinessReview
             JOIN transaction_sell_lines_purchase_lines AS tspl2 ON tsl2.id = tspl2.sell_line_id JOIN purchase_lines AS pl2 ON tspl2.purchase_line_id = pl2.id
             WHERE tsl2.parent_sell_line_id = tsl.id)';
         $row = $q->selectRaw('SUM(IF(TSPL.id IS NULL AND P.type = "combo", ' . $combo_cost . ', IF(P.enable_stock = 0, 0, (TSPL.quantity - TSPL.qty_returned) * PL.purchase_price_inc_tax))) cogs,
-            SUM(IF(TSPL.id IS NULL AND P.type != "combo" AND P.enable_stock = 1, (tsl.quantity - tsl.quantity_returned) * tsl.unit_price_inc_tax, 0)) uncosted_value,
-            COUNT(DISTINCT IF(TSPL.id IS NULL AND P.type != "combo" AND P.enable_stock = 1 AND tsl.quantity > tsl.quantity_returned, tsl.id, NULL)) uncosted_lines,
+            SUM(IF((TSPL.id IS NULL OR PL.id IS NULL) AND P.type != "combo" AND P.enable_stock = 1, IF(TSPL.id IS NULL, tsl.quantity - tsl.quantity_returned, TSPL.quantity - TSPL.qty_returned) * tsl.unit_price_inc_tax, 0)) uncosted_value,
+            COUNT(DISTINCT IF((TSPL.id IS NULL OR PL.id IS NULL) AND P.type != "combo" AND P.enable_stock = 1 AND tsl.quantity > tsl.quantity_returned, tsl.id, NULL)) uncosted_lines,
             SUM(IF(TSPL.id IS NOT NULL AND P.enable_stock = 1 AND PL.purchase_price_inc_tax <= 0, (TSPL.quantity - TSPL.qty_returned) * tsl.unit_price_inc_tax, 0)) zero_cost_value,
             COUNT(DISTINCT IF(TSPL.id IS NOT NULL AND P.enable_stock = 1 AND PL.purchase_price_inc_tax <= 0 AND TSPL.quantity > TSPL.qty_returned, tsl.id, NULL)) zero_cost_lines,
             COUNT(DISTINCT IF(TSPL.id IS NOT NULL AND PL.purchase_price_inc_tax > 0 AND tsl.unit_price_inc_tax < PL.purchase_price_inc_tax AND TSPL.quantity > TSPL.qty_returned, tsl.id, NULL)) below_cost_lines,
