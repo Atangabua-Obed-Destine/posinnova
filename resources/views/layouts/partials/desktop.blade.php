@@ -8,7 +8,8 @@
     $part: head | titlebar | tabs | status
 --}}
 @if ($part === 'head')
-    <link rel="stylesheet" href="{{ asset('pi-desktop.css?v=' . $asset_v) }}">
+    {{-- ?v= carries each file's change time: the server lets browsers keep a versioned file a year. --}}
+    <link rel="stylesheet" href="{{ asset('pi-desktop.css?v=' . $asset_v . '.' . @filemtime(public_path('pi-desktop.css'))) }}">
     {{-- Before the page draws: a screen shown inside a workspace tab draws
          without the window's parts (pi-framed); a wide window gets the
          workspace (pi-desk). --}}
@@ -53,5 +54,5 @@
     <script>
         window.PI_DESK_CFG = {!! json_encode($__pi_desk, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!};
     </script>
-    <script src="{{ asset('js/desktop.js?v=' . $asset_v) }}"></script>
+    <script src="{{ asset('js/desktop.js?v=' . $asset_v . '.' . @filemtime(public_path('js/desktop.js'))) }}"></script>
 @endif
