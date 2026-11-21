@@ -1,5 +1,5 @@
 @extends('layouts.auth2')
-@section('title', config('app.name', 'ultimatePOS'))
+@section('title', config('app.name', 'I-NNOVA POS'))
 @section('right-max-width', 'auth-form--sm')
 @inject('request', 'Illuminate\Http\Request')
 @section('content')
@@ -7,7 +7,7 @@
         <div class="ia-head-ic" style="background:#fff;border:1px solid var(--ia-rule);">
             <img src="{{ asset('img/logo-small.png') }}" alt="" style="width:46px;height:46px;object-fit:contain;">
         </div>
-        <h1>{{ config('app.name', 'UltimatePOS') }}</h1>
+        <h1>{{ config('app.name', 'I-NNOVA POS') }}</h1>
         @if (env('APP_TITLE'))
             <p>{{ env('APP_TITLE') }}</p>
         @endif

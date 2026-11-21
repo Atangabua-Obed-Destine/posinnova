@@ -5,19 +5,15 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Installation Web Routes
+| Installation
 |--------------------------------------------------------------------------
 |
-| Routes related to installation of the software
+| I-NNOVA POS is installed and updated from a terminal:
+|     php artisan innova:install     php artisan innova:update
+| (INSTALL.md). These pages only say so. The last step of an installation,
+| creating the business, is /setup/{token} (routes/web.php).
 |
 */
 
 Route::get('/install-start', [Install\InstallController::class, 'index'])->name('install.index');
-Route::get('/install/check-server', [Install\InstallController::class, 'checkServer'])->name('install.checkServer');
-Route::get('/install/details', [Install\InstallController::class, 'details'])->name('install.details');
-Route::post('/install/post-details', [Install\InstallController::class, 'postDetails'])->name('install.postDetails');
-Route::post('/install/install-alternate', [Install\InstallController::class, 'installAlternate'])->name('install.installAlternate');
-Route::get('/install/success', [Install\InstallController::class, 'success'])->name('install.success');
-
-Route::get('/install/update', [Install\InstallController::class, 'updateConfirmation'])->name('install.updateConfirmation');
-Route::post('/install/update', [Install\InstallController::class, 'update'])->name('install.update');
+Route::get('/install/update', [Install\InstallController::class, 'update'])->name('install.updateConfirmation');

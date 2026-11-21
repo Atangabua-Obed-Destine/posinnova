@@ -14,7 +14,8 @@ return [
          * The name of this application. You can use this name to monitor
          * the backups.
          */
-        'name' => 'UltimatePOS',
+        // The backup folder. Existing installations keep their old folder (UltimatePOS) so their backups stay listed
+        'name' => env('BACKUP_NAME', 'UltimatePOS'),
 
         'source' => [
 

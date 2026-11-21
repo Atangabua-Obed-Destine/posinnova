@@ -89,6 +89,10 @@ Route::middleware(['setData'])->group(function () {
     Route::post('/business/register/check-username', [BusinessController::class, 'postCheckUsername'])->name('business.postCheckUsername');
     Route::post('/business/register/check-email', [BusinessController::class, 'postCheckEmail'])->name('business.postCheckEmail');
 
+    // I-NNOVA POS installation, last step: the one-time link printed by php artisan innova:install
+    Route::get('/setup/{token}', [\App\Http\Controllers\InnovaSetupController::class, 'show'])->name('innova.setup');
+    Route::post('/setup/{token}', [\App\Http\Controllers\InnovaSetupController::class, 'store'])->middleware('throttle:10,1')->name('innova.setup.store');
+
     Route::get('/invoice/{token}', [SellPosController::class, 'showInvoice'])
         ->name('show_invoice');
     Route::get('/quote/{token}', [SellPosController::class, 'showInvoice'])

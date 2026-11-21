@@ -11,7 +11,7 @@
                     <div class="tw-flex tw-flex-col tw-gap-2 tw-text-center">
                         <h2 class="tw-font-bold tw-text-3xl tw-text-white">@lang('superadmin::lang.pricing')</h2>
                         <h3 class="tw-text-sm tw-font-medium tw-text-white">
-                            Choose your prefered {{ config('app.name', 'ultimatePOS') }} pricing plan
+                            Choose your preferred {{ config('app.name', 'I-NNOVA POS') }} pricing plan
                         </h3>
                     </div>
                     <!-- Montly/annual-->

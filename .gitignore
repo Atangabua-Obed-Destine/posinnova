@@ -2,7 +2,11 @@
 /public/hot
 /public/storage
 /storage/*.key
-/storage/
+# storage: only its empty folder layout is in git (each folder has its own .gitignore)
+/storage/*
+!/storage/app/
+!/storage/framework/
+!/storage/logs/
 /vendor
 /.idea
 /.vagrant
@@ -16,18 +20,10 @@ npm-debug.log
 /public/uploads/media
 /public/uploads/invoice_logos
 /public/uploads/UltimatePOS
+/public/uploads/I-NNOVA-POS
 /public/uploads/temp
-/public/css/*
-!/public/css/tailwind/
-/public/css/tailwind/*
-# PosInnova: utilities the shipped tailwind bundle lacks (staff screens + patient portal)
-!/public/css/tailwind/app-extra.css
-!/public/css/tailwind/portal.css
-/public/fonts/
-/public/images/
 /public/modules/
-/public/mix-manifest.json
 .scribe
 /public/docs
-/public/js/skins/
-/public/js/icons/
+# The compiled screen files (public/css, fonts, images, js/icons, js/skins, mix-manifest.json)
+# ARE in git: there is no source to build them from, and a fresh clone must work as it is.
