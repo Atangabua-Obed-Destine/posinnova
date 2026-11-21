@@ -665,6 +665,7 @@
             a.setAttribute('aria-selected', String(t === active));
             if (t.pinned) a.appendChild(make('i', 'fas fa-home'));
             a.appendChild(make('span', null, t.title || tx('opening', '…')));
+            if (t.badge > 0 && t !== active) a.appendChild(make('b', 'pi-tab-badge', t.badge > 99 ? '99+' : String(t.badge)));
             if (!t.pinned) {
                 var x = make('button', 'pi-tab-x', '×');
                 x.type = 'button';
@@ -681,6 +682,7 @@
         if (!t) return;
         closeMenus();
         active = t;
+        t.badge = 0;
         t.used = Date.now();
         // A tab not loaded yet (after a refresh, or this page's own once let go) loads now.
         if (!t.frame && (!t.isNative || t.freed)) {
@@ -989,7 +991,10 @@
             openUrl(href);
             return true;
         },
-        leave: function (href) { save(); goWindow(href); }
+        leave: function (href) { save(); goWindow(href); },
+        // a screen counting something new while it is not on screen (live sales lists)
+        badge: function (win, n) { var t = tabOf(win) || (native.frame && native.frame.contentWindow === win ? native : null); if (t && t.badge !== n) { t.badge = n; drawTabs(); } },
+        isActive: function (win) { var t = tabOf(win); return !!t && t === active; }
     };
 
     drawTabs();

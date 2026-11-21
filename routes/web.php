@@ -231,6 +231,8 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('/sells/quotations', [SellController::class, 'getQuotations']);
     Route::get('/sells/draft-dt', [SellController::class, 'getDraftDatables']);
     Route::get('/sells-by-shift', [SellController::class, 'salesByShift'])->name('sells.by_shift');
+    // PosInnova: the sales lists update by themselves (public/js/live_sales.js)
+    Route::get('/sells/live-check', [SellController::class, 'liveCheck']);
     Route::resource('sells', SellController::class)->except(['show']);
 
     Route::get('/import-sales', [ImportSalesController::class, 'index']);

@@ -130,6 +130,8 @@ class SellController extends Controller
                 'zatca_status' => request()->input('zatca_status'),
                 'rewards_only' => request()->input('rewards_only'),
                 'commission_agent' => request()->input('commission_agent'),
+                // PosInnova live lists: the latest sale they know of, so a new sale is counted at once
+                'live_v' => request()->input('live_v'),
             ];
             $cache_key = 'sell_list_count_' . md5(json_encode($cache_key_params));
 
@@ -624,6 +626,97 @@ class SellController extends Controller
 
         return view('sell.index')
         ->with(compact('business_locations', 'customers', 'is_woocommerce', 'sales_representative', 'is_cmsn_agent_enabled', 'commission_agents', 'service_staffs', 'is_tables_enabled', 'is_service_staff_enabled', 'is_types_service_enabled', 'shipping_statuses', 'sources', 'payment_types'));
+    }
+
+    /**
+     * PosInnova: the sales lists (All sales, Sales by shift) ask this every few seconds whether a
+     * sale was made since they last asked, so they refresh by themselves and say so.
+     * Same rules as the list: the person's locations, and only their own sales if that is all they may see.
+     *
+     * ?since=<server time of the previous answer> (empty = just tell me the time)  &sig=<last change mark>
+     * => { now, sig, changed, count, sales: [{ id, invoice_no, total, customer, by, location, time, pos }] }
+     * A sale is "new" when it became final after `since` (transactions.finalized_at): a sale made
+     * final at once, or a draft / quotation finalized later. Payments on old sales are not "new".
+     */
+    public function liveCheck()
+    {
+        $is_admin = $this->businessUtil->is_admin(auth()->user());
+        if (! $is_admin && ! auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'direct_sell.view', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping', 'so.view_all', 'so.view_own'])) {
+            abort(403, 'Unauthorized action.');
+        }
+        $business_id = request()->session()->get('user.business_id');
+        $user_id = request()->session()->get('user.id');
+
+        $base = function () use ($business_id, $user_id) {
+            $q = Transaction::where('transactions.business_id', $business_id)->where('transactions.type', 'sell');
+            $permitted = auth()->user()->permitted_locations();
+            if ($permitted != 'all') {
+                $q->whereIn('transactions.location_id', $permitted);
+            }
+            if (! auth()->user()->can('direct_sell.view')) {
+                $q->where(function ($w) use ($user_id) {
+                    if (auth()->user()->hasAnyPermission(['view_own_sell_only', 'access_own_shipping'])) {
+                        $w->where('transactions.created_by', $user_id);
+                    }
+                    if (auth()->user()->hasAnyPermission(['view_commission_agent_sell', 'access_commission_agent_shipping'])) {
+                        $w->orWhere('transactions.commission_agent', $user_id);
+                    }
+                });
+            }
+
+            return $q;
+        };
+
+        $now = now()->format('Y-m-d H:i:s');
+        // any sale added or changed (a payment, a return, an edit): the list refreshes quietly
+        $sig = (string) $base()->max('transactions.updated_at');
+        $since = (string) request()->input('since', '');
+        if ($since !== '' && ! preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $since)) {
+            $since = '';
+        }
+
+        $sales = [];
+        $count = 0;
+        if ($since !== '') {
+            // one second of overlap: the page drops what it has already announced
+            $from = \Carbon::parse($since)->subSecond()->format('Y-m-d H:i:s');
+            $new = fn () => $base()->where('transactions.status', 'final')->where('transactions.finalized_at', '>=', $from);
+            $count = (int) $new()->count();
+            if ($count > 0) {
+                $rows = $new()
+                    ->leftJoin('contacts as c', 'c.id', '=', 'transactions.contact_id')
+                    ->leftJoin('users as u', 'u.id', '=', 'transactions.created_by')
+                    ->leftJoin('business_locations as bl', 'bl.id', '=', 'transactions.location_id')
+                    ->orderByDesc('transactions.finalized_at')->orderByDesc('transactions.id')->limit(10)
+                    ->get(['transactions.id', 'transactions.invoice_no', 'transactions.final_total', 'transactions.finalized_at', 'transactions.is_direct_sale',
+                        'transactions.walk_in_customer_name', 'c.name as customer', 'c.supplier_business_name', 'c.is_default',
+                        'u.first_name', 'u.last_name', 'bl.name as location']);
+                foreach ($rows as $r) {
+                    $customer = trim((string) ($r->supplier_business_name ?: $r->customer));
+                    if (! empty($r->walk_in_customer_name) && $r->is_default) {
+                        $customer = $r->walk_in_customer_name;
+                    }
+                    $sales[] = [
+                        'id' => $r->id,
+                        'invoice_no' => $r->invoice_no,
+                        'total' => $this->transactionUtil->num_f($r->final_total, true),
+                        'customer' => $customer,
+                        'by' => trim($r->first_name . ' ' . $r->last_name),
+                        'location' => $r->location,
+                        'time' => \Carbon::parse($r->finalized_at)->format('H:i'),
+                        'pos' => ! $r->is_direct_sale,
+                    ];
+                }
+            }
+        }
+
+        return response()->json([
+            'now' => $now,
+            'sig' => $sig,
+            'changed' => request()->has('sig') && request()->input('sig') !== $sig,
+            'sales' => $sales,
+            'count' => $count,
+        ]);
     }
 
     /**

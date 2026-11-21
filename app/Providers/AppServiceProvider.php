@@ -37,6 +37,20 @@ class AppServiceProvider extends ServiceProvider
             $audited::observe(\App\Observers\ProductChangeObserver::class);
         }
 
+        // PosInnova live sales lists: the moment a sale becomes final (new, or a draft finalized later)
+        \App\Transaction::saving(function ($t) {
+            static $has_column = null;
+            if ($t->type !== 'sell' || $t->status !== 'final' || ! empty($t->finalized_at) || ($t->exists && ! $t->isDirty('status'))) {
+                return;
+            }
+            if ($has_column === null) { // once per request, and only when a sale becomes final
+                $has_column = \Illuminate\Support\Facades\Schema::hasColumn('transactions', 'finalized_at');
+            }
+            if ($has_column) {
+                $t->finalized_at = now();
+            }
+        });
+
         if (config('app.debug')) {
             error_reporting(E_ALL & ~E_USER_DEPRECATED);
         } else {

@@ -230,6 +230,8 @@
                         d.created_by = $('#created_by').val();
                         d.sales_cmsn_agnt = $('#sales_cmsn_agnt').val();
                         d.service_staffs = $('#service_staffs').val();
+                        // PosInnova live list: the latest sale known, so a new one is counted at once
+                        d.live_v = window.PI_LIVE_V || '';
 
                         if ($('#shipping_status').length) {
                             d.shipping_status = $('#shipping_status').val();
@@ -453,4 +455,46 @@
         });
     </script>
     <script src="{{ asset('js/payment.js?v=' . $asset_v) }}"></script>
+    {{-- PosInnova: the list updates by itself when a sale is made (public/js/live_sales.js) --}}
+    <style>
+        .ls-mark { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding: 3px 4px 3px 10px; border-radius: 999px; background: #ecfdf3; color: #067647;
+            font-size: 12.5px; font-weight: 600; vertical-align: middle; letter-spacing: 0; white-space: nowrap; }
+        .ls-mark[data-state="off"] { background: #fffaeb; color: #b54708; }
+        .ls-dot { width: 8px; height: 8px; border-radius: 50%; background: #12b76a; box-shadow: 0 0 0 0 rgba(18,183,106,.6); animation: ls-pulse 2s infinite; }
+        .ls-mark[data-state="off"] .ls-dot { background: #f79009; animation: none; }
+        .ls-count { background: #d92d20; color: #fff; border-radius: 999px; padding: 1px 8px; font-size: 11.5px; cursor: pointer; }
+        .ls-bell { border: 0; background: transparent; color: inherit; width: 26px; height: 26px; border-radius: 50%; padding: 0; line-height: 26px; }
+        .ls-bell:hover { background: rgba(0,0,0,.06); }
+        @keyframes ls-pulse { 0% { box-shadow: 0 0 0 0 rgba(18,183,106,.55); } 70% { box-shadow: 0 0 0 7px rgba(18,183,106,0); } 100% { box-shadow: 0 0 0 0 rgba(18,183,106,0); } }
+        .ls-stack { position: fixed; right: 18px; bottom: 70px; z-index: 1060; display: flex; flex-direction: column; gap: 10px; width: 340px; max-width: calc(100vw - 24px); }
+        .ls-card { position: relative; display: flex; gap: 12px; padding: 12px 34px 12px 12px; border-radius: 12px; background: #fff; border: 1px solid #d1fadf;
+            box-shadow: 0 12px 28px rgba(16,24,40,.18); cursor: pointer; animation: ls-in .25s ease-out; border-left: 4px solid #12b76a; }
+        .ls-card:hover { background: #f6fef9; }
+        .ls-card.ls-out { opacity: 0; transform: translateX(20px); transition: all .25s; }
+        .ls-card-ico { flex: none; width: 36px; height: 36px; border-radius: 10px; background: #ecfdf3; color: #067647; display: flex; align-items: center; justify-content: center; }
+        .ls-card-title { font-size: 12px; font-weight: 700; color: #067647; text-transform: uppercase; letter-spacing: .03em; }
+        .ls-card-main { font-size: 15px; color: #101828; margin-top: 1px; }
+        .ls-card-main strong { font-size: 17px; }
+        .ls-card-meta { font-size: 12.5px; color: #475467; margin-top: 2px; }
+        .ls-card-x { position: absolute; top: 6px; right: 6px; border: 0; background: transparent; font-size: 18px; line-height: 1; color: #98a2b3; width: 26px; height: 26px; border-radius: 6px; }
+        .ls-card-x:hover { background: #f2f4f7; color: #101828; }
+        @keyframes ls-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+        #sell_table tbody tr.ls-new > td { animation: ls-row 9s ease-out; }
+        @keyframes ls-row { 0%, 40% { background-color: #d1fadf; } 100% { background-color: transparent; } }
+        @media (max-width: 600px) { .ls-stack { right: 12px; left: 12px; width: auto; bottom: 60px; } .ls-mark { margin: 6px 0 0; } }
+        @media print { .ls-mark, .ls-stack { display: none !important; } }
+    </style>
+    <script>
+        window.LIVE_SALES = {!! json_encode([
+            'url' => action([\App\Http\Controllers\SellController::class, 'liveCheck']),
+            'view_url' => action([\App\Http\Controllers\SellController::class, 'show'], ['__ID__']),
+            'text' => [
+                'live' => __('lang_v1.ls_live'), 'live_title' => __('lang_v1.ls_live_title'), 'paused' => __('lang_v1.ls_paused'),
+                'paused_short' => __('lang_v1.ls_paused_short'), 'stopped' => __('lang_v1.ls_stopped'), 'new_sale' => __('lang_v1.ls_new_sale'),
+                'pos' => __('lang_v1.ls_pos'), 'by' => __('lang_v1.ls_by'), 'and_more' => __('lang_v1.ls_and_more'),
+                'one_new' => __('lang_v1.ls_one_new'), 'n_new' => __('lang_v1.ls_n_new'), 'sound_on' => __('lang_v1.ls_sound_on'), 'sound_off' => __('lang_v1.ls_sound_off'),
+            ],
+        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!};
+    </script>
+    <script src="{{ asset('js/live_sales.js?v=' . $asset_v . '.' . @filemtime(public_path('js/live_sales.js'))) }}"></script>
 @endsection

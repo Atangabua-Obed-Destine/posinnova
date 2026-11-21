@@ -99,6 +99,7 @@
     .pi-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pi-tab i { font-size: 11px; color: #64748b; }
     .pi-tab.pinned { padding-inline-end: 12px; }
+    .pi-tab-badge { flex: none; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #d92d20; color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
     .pi-tab-x { width: 18px; height: 18px; flex: none; padding: 0; border: 0; border-radius: 4px; background: none; color: #94a3b8; font-size: 15px; line-height: 16px; text-align: center; }
     .pi-tab-x:hover { background: #cbd5e1; color: #0f172a; }
     .pi-tab.loading span::before {
