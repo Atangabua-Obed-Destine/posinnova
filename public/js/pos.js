@@ -2294,6 +2294,9 @@ function pos_insert_product_row(result) {
     //a reserved index instead of trusting it.
     pos_set_product_row_index(this_row, pos_reserve_product_row_index());
     pos_each_row(this_row);
+    //PosInnova: a combo (recipe) added with a quantity above 1 must take every ingredient
+    //for that quantity, not for one (the quantity "change" event is not fired on insert).
+    adjustComboQty(this_row);
 
     //For initial discount if present
     var line_total = __read_number(this_row.find('input.pos_line_total'));

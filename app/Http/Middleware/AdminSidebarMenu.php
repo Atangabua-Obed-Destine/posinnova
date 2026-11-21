@@ -649,6 +649,21 @@ class AdminSidebarMenu
                 )->order($ord(45, 5.47));
             }
 
+            // PosInnova bulk items: bags / packs / bottles opened and used a little at a time
+            if (\App\Http\Controllers\BulkItemController::canView()) {
+                $menu->url(
+                    action([\App\Http\Controllers\BulkItemController::class, 'index']),
+                    __('bulk.menu'),
+                    ['icon' => '<svg aria-hidden="true" class="tw-size-5 tw-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M6 4h12l-1 4l1 12h-12l1 -12z"></path>
+                    <path d="M7 8h10"></path>
+                    <path d="M10 12h4"></path>
+                  </svg>',
+                    'active' => request()->segment(1) == 'bulk-items']
+                )->order($ord(45.5, 5.475));
+            }
+
             //Expense dropdown
             if (in_array('expenses', $enabled_modules) && (auth()->user()->can('all_expense.access') || auth()->user()->can('view_own_expense'))) {
                 $menu->dropdown(

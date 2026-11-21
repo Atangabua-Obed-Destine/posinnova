@@ -389,6 +389,17 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::resource('stock-adjustments', StockAdjustmentController::class);
 
     // Inventory Count (physical recount – separate from Stock Adjustment)
+    // PosInnova bulk items: bags / packs / bottles opened and used a little at a time
+    Route::get('/bulk-items', [\App\Http\Controllers\BulkItemController::class, 'index']);
+    Route::get('/bulk-items/pos-panel', [\App\Http\Controllers\BulkItemController::class, 'posPanel']);
+    Route::get('/bulk-items/products', [\App\Http\Controllers\BulkItemController::class, 'products']);
+    Route::get('/bulk-items/cycles/{id}', [\App\Http\Controllers\BulkItemController::class, 'cycle'])->whereNumber('id');
+    Route::post('/bulk-items/cycles/{id}/undo', [\App\Http\Controllers\BulkItemController::class, 'undo'])->whereNumber('id');
+    Route::post('/bulk-items', [\App\Http\Controllers\BulkItemController::class, 'store']);
+    Route::post('/bulk-items/{id}/start', [\App\Http\Controllers\BulkItemController::class, 'start'])->whereNumber('id');
+    Route::post('/bulk-items/{id}/finish', [\App\Http\Controllers\BulkItemController::class, 'finish'])->whereNumber('id');
+    Route::post('/bulk-items/{id}/toggle', [\App\Http\Controllers\BulkItemController::class, 'toggle'])->whereNumber('id');
+    Route::post('/bulk-items/{id}', [\App\Http\Controllers\BulkItemController::class, 'update'])->whereNumber('id');
     Route::get('/inventory-count', [\App\Http\Controllers\InventoryCountController::class, 'index']);
     Route::get('/inventory-count/blank-pdf', [\App\Http\Controllers\InventoryCountController::class, 'blankPdf']);
     Route::get('/inventory-count/recount-queue', [\App\Http\Controllers\InventoryCountController::class, 'recountQueue']);

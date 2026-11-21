@@ -164,6 +164,18 @@
                 <i class="fas fa-undo tw-text-[#EF4B53]"></i>
             </button>
 
+            {{-- PosInnova bulk items: "bag finished" from the till --}}
+            @php
+                $bk_has = \App\Http\Controllers\BulkItemController::canView()
+                    && \Illuminate\Support\Facades\Schema::hasTable('bulk_items')
+                    && \App\BulkItem::where('business_id', session('user.business_id'))->where('is_active', 1)->exists();
+            @endphp
+            @if ($bk_has)
+                <button type="button" id="bk_pos_btn" class="{{ $pi_icon_btn }}" title="{{ __('bulk.pos_btn') }}" aria-label="{{ __('bulk.pos_btn') }}">
+                    <i class="fas fa-shopping-bag tw-text-[#16a34a]"></i>
+                </button>
+            @endif
+
             <button type="button" id="view_suspended_sales" title="{{ __('lang_v1.view_suspended_sales') }}"
                 class="{{ $pi_icon_btn }} btn-modal"
                 data-container=".view_modal" data-href="{{ $view_suspended_sell_url }}">
@@ -284,3 +296,24 @@
 <div class="modal fade" id="service_staff_modal" tabindex="-1" role="dialog"
     aria-labelledby="gridSystemModalLabel">
 </div>
+
+{{-- PosInnova bulk items: the "Bags" window of the POS --}}
+@if (! empty($bk_has))
+    <div class="modal fade" id="bk_pos_modal" tabindex="-1" role="dialog" aria-labelledby="bk_pos_title">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('messages.close') }}"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="bk_pos_title"><i class="fas fa-shopping-bag"></i> {{ __('bulk.pos_btn') }}</h4>
+                </div>
+                <div class="modal-body"></div>
+                <div class="modal-footer">
+                    <a href="{{ action([\App\Http\Controllers\BulkItemController::class, 'index']) }}" target="_blank" class="pull-left" style="line-height:34px;">{{ __('bulk.open_page') }}</a>
+                    <button type="button" class="tw-dw-btn tw-dw-btn-neutral tw-text-white" data-dismiss="modal">{{ __('messages.close') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @include('bulk_items.partials.styles')
+    @include('bulk_items.partials.script')
+@endif
