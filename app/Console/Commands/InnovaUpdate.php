@@ -46,7 +46,7 @@ class InnovaUpdate extends Command
                 return self::FAILURE;
             }
             $this->output->write('  Getting the new code ... ');
-            $git = $this->run(['git', 'pull', '--ff-only']);
+            $git = $this->proc(['git', 'pull', '--ff-only']);
             if (! $git->isSuccessful()) {
                 $this->line('<fg=red>FAILED</>');
                 $this->line('  '.trim($git->getErrorOutput() ?: $git->getOutput()));
@@ -66,7 +66,7 @@ class InnovaUpdate extends Command
 
                 return self::FAILURE;
             }
-            $c = $this->run([$composer, 'install', '--no-dev', '--no-interaction', '--optimize-autoloader'], 1800);
+            $c = $this->proc([$composer, 'install', '--no-dev', '--no-interaction', '--optimize-autoloader'], 1800);
             $this->line($c->isSuccessful() ? '<fg=green>done</>' : '<fg=red>FAILED</>');
             if (! $c->isSuccessful()) {
                 $this->line('  '.trim($c->getErrorOutput()));
@@ -77,7 +77,7 @@ class InnovaUpdate extends Command
 
         // New code: the steps below run in a fresh PHP, so they see it
         $this->output->write('  Updating the tables ... ');
-        $m = $this->run([PHP_BINARY, '-d', 'memory_limit=1024M', 'artisan', 'migrate', '--force'], 1800);
+        $m = $this->proc([PHP_BINARY, '-d', 'memory_limit=1024M', 'artisan', 'migrate', '--force'], 1800);
         $this->line($m->isSuccessful() ? '<fg=green>done</>' : '<fg=red>FAILED</>');
         if (! $m->isSuccessful()) {
             $this->line('  '.trim($m->getErrorOutput() ?: $m->getOutput()));
@@ -86,16 +86,16 @@ class InnovaUpdate extends Command
         }
 
         if (InnovaSetup::passwordHash() !== null || $this->option('no-pull')) {
-            $s = $this->run([PHP_BINARY, 'artisan', 'innova:superadmin']);
+            $s = $this->proc([PHP_BINARY, 'artisan', 'innova:superadmin']);
             $this->line('  '.trim($s->getOutput()));
         }
 
         $cached = file_exists(base_path('bootstrap/cache/config.php'));
         foreach (['view:clear', 'route:clear', 'cache:clear', 'config:clear'] as $c) {
-            $this->run([PHP_BINARY, 'artisan', $c]);
+            $this->proc([PHP_BINARY, 'artisan', $c]);
         }
         if ($cached) {
-            $this->run([PHP_BINARY, 'artisan', 'config:cache']);
+            $this->proc([PHP_BINARY, 'artisan', 'config:cache']);
         }
 
         $this->newLine();
@@ -105,7 +105,7 @@ class InnovaUpdate extends Command
         return self::SUCCESS;
     }
 
-    private function run(array $command, int $timeout = 600): Process
+    private function proc(array $command, int $timeout = 600): Process
     {
         $p = new Process($command, base_path(), null, null, $timeout);
         $p->run();

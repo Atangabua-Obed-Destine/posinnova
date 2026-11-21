@@ -271,7 +271,8 @@ class InnovaInstall extends Command
         ];
 
         // A key already set must stay: it opens everything encrypted with it.
-        if (! preg_match('/^APP_KEY=.+$/m', File::get($path))) {
+        // \S, not .: on Windows the file may have CRLF line ends, and "." would take the \r for a key
+        if (! preg_match('/^APP_KEY=\S+/m', File::get($path))) {
             $values['APP_KEY'] = 'base64:'.base64_encode(Encrypter::generateKey(config('app.cipher')));
             config(['app.key' => $values['APP_KEY']]);
         }

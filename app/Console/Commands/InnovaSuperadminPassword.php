@@ -25,13 +25,13 @@ class InnovaSuperadminPassword extends Command
         $this->line('  At least 12 characters, with letters and numbers. It is stored only as a one-way hash.');
         $this->newLine();
 
-        $password = (string) $this->secret('New superadmin password');
+        $password = $this->askHidden('New superadmin password');
         if (strlen($password) < 12 || ! preg_match('/[A-Za-z]/', $password) || ! preg_match('/\d/', $password)) {
             $this->error('  Too weak: at least 12 characters, with letters and numbers. Nothing was changed.');
 
             return self::FAILURE;
         }
-        if ($password !== (string) $this->secret('The same password again')) {
+        if ($password !== $this->askHidden('The same password again')) {
             $this->error('  The two passwords are different. Nothing was changed.');
 
             return self::FAILURE;
@@ -41,13 +41,23 @@ class InnovaSuperadminPassword extends Command
 
         $path = config_path('innova.php');
         $content = File::get($path);
-        $new = preg_replace("/'password_hash' => '[^']*'/", "'password_hash' => '".$hash."'", $content, 1, $count);
+        // A callback, not a replacement string: a bcrypt hash holds "$2y$12$", which preg_replace would read as back-references
+        $new = preg_replace_callback("/'password_hash' => '[^']*'/", fn () => "'password_hash' => '".$hash."'", $content, 1, $count);
         if ($count !== 1) {
             $this->error("  Could not find 'password_hash' in config/innova.php. Nothing was changed.");
 
             return self::FAILURE;
         }
         File::put($path, $new);
+
+        // Read it back the way an installation will
+        $saved = (require $path)['superadmin']['password_hash'] ?? '';
+        if (! password_verify($password, $saved)) {
+            File::put($path, $content);
+            $this->error('  The saved hash did not check out, so config/innova.php was left as it was.');
+
+            return self::FAILURE;
+        }
 
         $this->info('  Saved in config/innova.php.');
         $this->newLine();
@@ -58,5 +68,15 @@ class InnovaSuperadminPassword extends Command
         $this->newLine();
 
         return self::SUCCESS;
+    }
+
+    /** Hidden typing in a terminal; piped input (a script) is read line by line */
+    private function askHidden(string $question): string
+    {
+        if (function_exists('stream_isatty') && ! @stream_isatty(STDIN)) {
+            return rtrim((string) fgets(STDIN), "\r\n");
+        }
+
+        return (string) $this->secret($question);
     }
 }

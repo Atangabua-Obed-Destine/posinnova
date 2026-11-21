@@ -1,15 +1,26 @@
-## About Ultimate POS
+# I-NNOVA POS
 
-Ultimate POS is a POS application by [Ultimate Fosters](http://ultimatefosters.com), a brand of [The Web Fosters](http://thewebfosters.com).
+Point of sale, stock, pharmacy and clinic management, by I-NNOVA. English and French.
 
-## Installation & Documentation
-You will find installation guide and documentation in the downloaded zip file.
-Also, For complete updated documentation of the ultimate pos please visit online [documentation guide](http://ultimatefosters.com/ultimate-pos/).
+## Installing
 
-## Security Vulnerabilities
+See **[INSTALL.md](INSTALL.md)**. In short, on a computer with PHP 8.1+, MySQL, Composer and Git:
 
-If you discover a security vulnerability within ultimate POS, please send an e-mail to support at thewebfosters@gmail.com. All security vulnerabilities will be promptly addressed.
+```
+git clone --branch clinic-phases-1-5 https://github.com/Atangabua-Obed-Destine/posinnova.git posinnova
+cd posinnova
+composer install --no-dev
+php artisan innova:install
+```
 
-## License
+then open the link it prints to create the client's business.
 
-The Ultimate POS software is licensed under the [Codecanyon license](https://codecanyon.net/licenses/standard).
+## Updating
+
+```
+php artisan innova:update
+```
+
+## Third-party software
+
+Built on the UltimatePOS code base (Codecanyon licence) and the Laravel framework (MIT licence).
