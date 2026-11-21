@@ -664,6 +664,45 @@ class AdminSidebarMenu
                 )->order($ord(45.5, 5.475));
             }
 
+            // PosInnova hotel module: its own group, right under Home
+            if (in_array('hotel', $enabled_modules)) {
+                $hu = auth()->user();
+                $hcan = fn (...$p) => collect($p)->contains(fn ($x) => $hu->can($x));
+                if ($hcan('hotel.view', 'hotel.front_desk', 'hotel.reservations', 'hotel.housekeeping', 'hotel.night_audit', 'hotel.reports', 'hotel.setup')) {
+                    $menu->dropdown(
+                        __('hotel.module'),
+                        function ($sub) use ($hcan) {
+                            $s1 = request()->segment(1) == 'hotel';
+                            $s2 = request()->segment(2);
+                            $H = \App\Http\Controllers\HotelController::class;
+                            $R = \App\Http\Controllers\HotelReservationController::class;
+                            if ($hcan('hotel.view')) {
+                                $sub->url(action([$H, 'home']), __('hotel.menu_home'), ['icon' => '', 'active' => $s1 && $s2 == null]);
+                                $sub->url(action([$H, 'board']), __('hotel.menu_board'), ['icon' => '', 'active' => $s1 && $s2 == 'board']);
+                                $sub->url(action([$H, 'calendar']), __('hotel.menu_calendar'), ['icon' => '', 'active' => $s1 && $s2 == 'calendar']);
+                                $sub->url(action([$R, 'index']), __('hotel.menu_reservations'), ['icon' => '', 'active' => $s1 && $s2 == 'reservations' && request()->segment(3) != 'create']);
+                            }
+                            if ($hcan('hotel.reservations', 'hotel.front_desk')) {
+                                $sub->url(action([$R, 'create']), __('hotel.menu_new'), ['icon' => '', 'active' => $s1 && $s2 == 'reservations' && request()->segment(3) == 'create']);
+                            }
+                            if ($hcan('hotel.housekeeping', 'hotel.front_desk')) {
+                                $sub->url(action([$H, 'housekeeping']), __('hotel.menu_housekeeping'), ['icon' => '', 'active' => $s1 && $s2 == 'housekeeping']);
+                            }
+                            if ($hcan('hotel.night_audit', 'hotel.reports')) {
+                                $sub->url(action([\App\Http\Controllers\HotelAuditController::class, 'index']), __('hotel.menu_audit'), ['icon' => '', 'active' => $s1 && $s2 == 'night-audit']);
+                            }
+                            if ($hcan('hotel.reports')) {
+                                $sub->url(action([\App\Http\Controllers\HotelReportController::class, 'index']), __('hotel.menu_reports'), ['icon' => '', 'active' => $s1 && $s2 == 'reports']);
+                            }
+                            if ($hcan('hotel.setup')) {
+                                $sub->url(action([\App\Http\Controllers\HotelSetupController::class, 'index']), __('hotel.menu_setup'), ['icon' => '', 'active' => $s1 && $s2 == 'setup']);
+                            }
+                        },
+                        ['icon' => \App\Utils\ClinicIcons::svg('bed')]
+                    )->order(5.05);
+                }
+            }
+
             //Expense dropdown
             if (in_array('expenses', $enabled_modules) && (auth()->user()->can('all_expense.access') || auth()->user()->can('view_own_expense'))) {
                 $menu->dropdown(

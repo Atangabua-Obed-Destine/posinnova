@@ -392,6 +392,50 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('/stock-adjustments/get_product_row', [StockAdjustmentController::class, 'getProductRow']);
     Route::resource('stock-adjustments', StockAdjustmentController::class);
 
+    // PosInnova hotel module (Settings › Modules › Hotel)
+    Route::prefix('hotel')->group(function () {
+        $H = \App\Http\Controllers\HotelController::class;
+        $R = \App\Http\Controllers\HotelReservationController::class;
+        $A = \App\Http\Controllers\HotelAuditController::class;
+        $S = \App\Http\Controllers\HotelSetupController::class;
+        Route::get('/', [$H, 'home']);
+        Route::get('/board', [$H, 'board']);
+        Route::get('/calendar', [$H, 'calendar']);
+        Route::get('/housekeeping', [$H, 'housekeeping']);
+        Route::post('/rooms/{id}/housekeeping', [$H, 'markRoom'])->whereNumber('id');
+        Route::get('/guests/search', [$H, 'guestSearch']);
+        Route::get('/availability', [$H, 'availability']);
+        Route::get('/reservations', [$R, 'index']);
+        Route::get('/reservations/create', [$R, 'create']);
+        Route::post('/reservations', [$R, 'store']);
+        Route::get('/reservations/{id}', [$R, 'show'])->whereNumber('id');
+        Route::post('/reservations/{id}/update', [$R, 'update'])->whereNumber('id');
+        Route::post('/reservations/{id}/confirm', [$R, 'confirm'])->whereNumber('id');
+        Route::post('/reservations/{id}/cancel', [$R, 'cancel'])->whereNumber('id');
+        Route::get('/reservations/{id}/check-in', [$R, 'checkInForm'])->whereNumber('id');
+        Route::post('/reservations/{id}/check-in', [$R, 'checkIn'])->whereNumber('id');
+        Route::get('/reservations/{id}/last-card', [$R, 'lastCard'])->whereNumber('id');
+        Route::post('/reservations/{id}/payment', [$R, 'payment'])->whereNumber('id');
+        Route::post('/reservations/{id}/charge', [$R, 'charge'])->whereNumber('id');
+        Route::post('/reservations/{id}/discount', [$R, 'discount'])->whereNumber('id');
+        Route::post('/reservations/{id}/void', [$R, 'void'])->whereNumber('id');
+        Route::post('/reservations/{id}/move', [$R, 'move'])->whereNumber('id');
+        Route::get('/reservations/{id}/check-out', [$R, 'checkOutForm'])->whereNumber('id');
+        Route::post('/reservations/{id}/check-out', [$R, 'checkOut'])->whereNumber('id');
+        Route::get('/reservations/{id}/print', [$R, 'printFolio'])->whereNumber('id');
+        Route::get('/night-audit', [$A, 'index']);
+        Route::post('/night-audit', [$A, 'run']);
+        Route::get('/night-audit/{id}', [$A, 'show'])->whereNumber('id');
+        Route::get('/reports', [\App\Http\Controllers\HotelReportController::class, 'index']);
+        Route::get('/setup', [$S, 'index']);
+        Route::post('/setup/types', [$S, 'storeType']);
+        Route::post('/setup/types/{id}', [$S, 'updateType'])->whereNumber('id');
+        Route::post('/setup/rooms', [$S, 'storeRooms']);
+        Route::post('/setup/rooms/{id}', [$S, 'updateRoom'])->whereNumber('id');
+        Route::post('/setup/rooms/{id}/out-of-order', [$S, 'outOfOrder'])->whereNumber('id');
+        Route::post('/setup/settings', [$S, 'saveSettings']);
+    });
+
     // Inventory Count (physical recount – separate from Stock Adjustment)
     // PosInnova bulk items: bags / packs / bottles opened and used a little at a time
     Route::get('/bulk-items', [\App\Http\Controllers\BulkItemController::class, 'index']);

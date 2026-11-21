@@ -40,6 +40,9 @@ class Kernel extends ConsoleKernel
             //PosInnova clinic: tomorrow's appointment reminders on WhatsApp, from each clinic's reminder time
             $schedule->command('clinic:whatsapp-reminders')->everyTenMinutes()->withoutOverlapping(30);
 
+            //PosInnova hotel: close yesterday at each hotel's audit time, if nobody did it by hand
+            $schedule->command('hotel:night-audit')->everyFifteenMinutes()->withoutOverlapping(30);
+
         }
 
         if ($env === 'demo') {

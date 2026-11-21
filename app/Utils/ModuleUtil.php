@@ -576,6 +576,10 @@ class ModuleUtil extends Util
             'hospital' => ['name' => __('lang_v1.hospital'),
                 'tooltip' => __('lang_v1.hospital_module_tooltip'),
             ],
+            // PosInnova: hotel module (rooms, reservations, the guest's bill, night audit)
+            'hotel' => ['name' => __('hotel.module'),
+                'tooltip' => __('hotel.module_tooltip'),
+            ],
         ];
     }
 
