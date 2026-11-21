@@ -95,6 +95,7 @@
     {{-- observations --}}
     @if (! empty($d['observations']))
         <div class="br-h">{{ __('review.observations') }}</div>
+        <div class="br-intro">{{ __('review.intro_obs') }}</div>
         <table class="br-obs" id="br_observations">
             @foreach ($d['observations'] as [$tone, $text])
                 <tr><td style="width:18px;"><span class="br-dot {{ $tone }}"></span></td><td>{{ $text }}</td></tr>
@@ -104,6 +105,7 @@
 
     {{-- income statement --}}
     <div class="br-h">{{ __('review.income_statement') }} <small>· {{ __('review.income_note') }}</small></div>
+    <div class="br-intro">{{ __('review.intro_income') }}</div>
     <div class="br-scroll">
     <table class="br-t br-keep" id="br_income">
         <thead><tr><th></th><th class="num">{{ __('review.this_period') }}</th>@if ($prev)<th class="num">{{ __('review.previous_period') }}</th><th class="num">{{ __('review.change') }}</th>@endif</tr></thead>
@@ -125,6 +127,7 @@
 
     {{-- sales activity --}}
     <div class="br-h">{{ __('review.sales_activity') }}</div>
+    <div class="br-intro">{{ __('review.intro_sales') }}</div>
     <table class="br-two"><tr>
         <td class="col l">
             <table class="br-t" id="br_sales">
@@ -188,6 +191,7 @@
 
     {{-- money in and out --}}
     <div class="br-h">{{ __('review.money') }} <small>· {{ __('review.money_note') }}</small></div>
+    <div class="br-intro">{{ __('review.intro_money') }}</div>
     <table class="br-two"><tr>
         <td class="col l">
             <table class="br-t" id="br_money_in">
@@ -212,8 +216,36 @@
         </td>
     </tr></table>
 
+    {{-- from profit to cash --}}
+    @php
+        $br = $d['bridge'];
+        $sign = fn ($v) => $v < 0 ? '− ' . $m(-$v) : '+ ' . $m($v);
+    @endphp
+    <div class="br-h">{{ __('review.bridge_title') }}</div>
+    <div class="br-intro">{{ __('review.intro_bridge') }}</div>
+    <table class="br-t br-keep" id="br_bridge">
+        <tr class="sub"><td>{{ __('review.b_net') }}</td><td class="num">{{ $m($br['profit']) }}</td></tr>
+        <tr><td class="indent">{{ __($br['receivables'] < 0 ? 'review.b_rec_up' : 'review.b_rec_down') }}
+            <div class="br-muted br-small">{{ __('review.b_rec_detail', ['start' => $m($br['rec_start']), 'end' => $m($d['receivables']['total'])]) }}</div></td>
+            <td class="num">{{ $sign($br['receivables']) }}</td></tr>
+        <tr><td class="indent">{{ __($br['payables'] >= 0 ? 'review.b_pay_up' : 'review.b_pay_down') }}
+            <div class="br-muted br-small">{{ __('review.b_pay_detail', ['start' => $m($br['pay_start']), 'end' => $m($d['payables']['total'])]) }}</div></td>
+            <td class="num">{{ $sign($br['payables']) }}</td></tr>
+        <tr><td class="indent">{{ __($br['stock'] < 0 ? 'review.b_stock_up' : 'review.b_stock_down') }}
+            <div class="br-muted br-small">{{ __('review.b_stock_detail', ['start' => $m($d['stock']['opening']), 'end' => $m($d['stock']['closing'])]) }}</div></td>
+            <td class="num">{{ $sign($br['stock']) }}</td></tr>
+        @if (abs($br['other']) > 0)
+            <tr><td class="indent">{{ __('review.b_other') }}</td><td class="num">{{ $sign($br['other']) }}</td></tr>
+        @endif
+        <tr class="grand"><td>{{ __('review.b_cash') }}</td><td class="num {{ $br['cash'] < 0 ? 'br-neg' : '' }}">{{ $m($br['cash']) }}</td></tr>
+    </table>
+    @if (abs($br['other']) > max(1000, 0.25 * max(abs($br['cash']), abs($br['profit']))))
+        <div class="br-intro" id="br_bridge_other" style="margin-top:6px;">⚠ {{ __('review.b_other_big') }}</div>
+    @endif
+
     {{-- expenses --}}
     <div class="br-h">{{ __('review.expenses_by_category') }}</div>
+    <div class="br-intro">{{ __('review.intro_expenses') }}</div>
     <table class="br-t" id="br_expenses">
         <thead><tr><th>{{ __('review.category') }}</th><th class="num">{{ __('review.count') }}</th><th class="num">{{ __('review.amount') }}</th><th style="width:28%;"></th><th class="num">{{ __('review.share') }}</th></tr></thead>
         @forelse ($d['expenses']['rows'] as $x)
@@ -230,6 +262,7 @@
     @foreach (['receivables' => 'customer', 'payables' => 'supplier'] as $key => $side)
         @php $b = $d[$key]; @endphp
         <div class="br-h">{{ __('review.' . $key . '_title', ['date' => $dt($d['end'])]) }}</div>
+        <div class="br-intro">{{ __('review.intro_' . $key) }}</div>
         @if ($b['total'] <= 0 && $b['gross'] <= 0)
             <div class="br-muted" id="br_{{ $key }}_none">{{ __('review.' . $key . '_none') }}</div>
         @else
@@ -265,6 +298,7 @@
     {{-- stock --}}
     @php $st = $d['stock']; @endphp
     <div class="br-h">{{ __('review.stock') }}</div>
+    <div class="br-intro">{{ __('review.intro_stock') }}</div>
     <table class="br-two"><tr>
         <td class="col l">
             <table class="br-t" id="br_stock">
@@ -292,6 +326,7 @@
 
     {{-- data checks --}}
     <div class="br-h">{{ __('review.checks') }} <small>· {{ __('review.checks_note') }}</small></div>
+    <div class="br-intro">{{ __('review.intro_checks') }}</div>
     <table class="br-t br-keep" id="br_checks">
         @php
             $rows = [
@@ -308,6 +343,14 @@
                 <td style="width:12%;">@if ($n) <span class="br-pill warn">{{ __('review.to_check') }}</span> @else <span class="br-pill ok">{{ __('review.ok') }}</span> @endif</td>
                 <td>{{ $text ?: __('review.chk_ok') }} @if ($n)<div class="br-muted br-small">{{ __('review.chk_' . $k . '_fix') }}</div>@endif</td>
             </tr>
+        @endforeach
+    </table>
+
+    {{-- how to read this report --}}
+    <div class="br-h">{{ __('review.glossary') }}</div>
+    <table class="br-t br-gloss" id="br_glossary">
+        @foreach (['g_sales', 'g_cogs', 'g_gross', 'g_margin', 'g_expenses', 'g_losses', 'g_net', 'g_cash', 'g_receivables', 'g_payables', 'g_stock_value', 'g_compare'] as $g)
+            <tr><td class="term">{{ __('review.' . $g) }}</td><td>{{ __('review.' . $g . '_d') }}</td></tr>
         @endforeach
     </table>
 

@@ -15,6 +15,9 @@
     .br-rule { border-top: 3px solid #15803d; margin: 14px 0 18px; height: 0; }
     .br-h { font-size: 15px; font-weight: 700; color: #101828; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #eaecf0; }
     .br-h { page-break-after: avoid; }
+    .br-intro { color: #475467; font-size: 12px; margin: -3px 0 9px; line-height: 1.45; }
+    .br-gloss td { vertical-align: top; }
+    .br-gloss td.term { width: 27%; font-weight: 700; color: #101828; }
     .br-h small { font-weight: 500; color: #667085; font-size: 12px; }
     .br-kpis td { width: 25%; padding: 0 6px; vertical-align: top; }
     .br-kpis td:first-child { padding-left: 0; } .br-kpis td:last-child { padding-right: 0; }

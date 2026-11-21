@@ -106,6 +106,7 @@ class BusinessReview
                 'income' => $this->incomeStatement($ppl, $pcost),
             ];
         }
+        $out['bridge'] = $this->bridge($business_id, $location_id, $s, $permitted, $out);
         $out['observations'] = $this->observations($out);
 
         return $out;
@@ -792,6 +793,29 @@ class BusinessReview
         return ['year' => $y, 'q' => $q, 'missing' => $missing->values()->all(), 'days_left' => Carbon::today()->diffInDays($e, false) + 1, 'end' => $e];
     }
 
+    /**
+     * From profit to cash: why the money that came in (net) differs from the net profit.
+     * profit - more owed by customers + more owed to suppliers - stock built up (+ the rest) = money movement
+     */
+    public function bridge($business_id, $location_id, Carbon $s, $permitted, array $d)
+    {
+        $before = $s->copy()->subDay();
+        $rec0 = $this->balances($business_id, $location_id, $before, $permitted, 'customer')['total'];
+        $pay0 = $this->balances($business_id, $location_id, $before, $permitted, 'supplier')['total'];
+        $profit = (float) $d['income']['net'];
+        $rec = $d['receivables']['total'] - $rec0;   // more owed by customers = less cash
+        $pay = $d['payables']['total'] - $pay0;      // more owed to suppliers = cash kept
+        $stock = $d['stock']['closing'] - $d['stock']['opening']; // stock built up = cash spent
+        $cash = (float) $d['money']['net'];
+        $other = $cash - ($profit - $rec + $pay - $stock);
+
+        return [
+            'profit' => $profit, 'cash' => $cash,
+            'receivables' => -$rec, 'payables' => $pay, 'stock' => -$stock, 'other' => abs($other) < 0.005 ? 0 : $other,
+            'rec_start' => $rec0, 'pay_start' => $pay0,
+        ];
+    }
+
     public static function change($now, $before)
     {
         if ($before === null || abs((float) $before) < 0.005) {
@@ -828,8 +852,35 @@ class BusinessReview
         }
         if ($inc['net'] < 0) {
             $o[] = ['red', __('review.obs_loss', ['amount' => $f(abs($inc['net']))])];
+            // the main reason for the loss
+            $drivers = ['lr_losses' => $inc['losses'], 'lr_expenses' => $inc['expenses'], 'lr_discounts' => $inc['discounts']];
+            if ($inc['gross'] < 0) {
+                $drivers['lr_gross'] = -$inc['gross'];
+            }
+            arsort($drivers);
+            $k = array_key_first($drivers);
+            if ($drivers[$k] > 0) {
+                $o[] = ['red', __('review.obs_loss_reason', ['reason' => __('review.' . $k, ['amount' => $f($drivers[$k])])])];
+            }
         } elseif ($inc['margin'] !== null) {
             $o[] = ['slate', __('review.obs_margin', ['pct' => number_format($inc['margin'], 1), 'net' => number_format((float) $inc['net_margin'], 1)])];
+        }
+        // why the money that came in differs from the profit
+        $b = $d['bridge'] ?? null;
+        if ($b && abs($b['cash'] - $b['profit']) > max(1000, abs($b['profit']) * 0.2)) {
+            $parts = ['rec' => $b['receivables'], 'pay' => $b['payables'], 'stock' => $b['stock']];
+            $want = $b['cash'] < $b['profit'] ? -1 : 1; // the parts that push the same way as the gap
+            $best = null;
+            foreach ($parts as $k => $v) {
+                if ($v * $want > 0 && ($best === null || abs($v) > abs($parts[$best]))) {
+                    $best = $k;
+                }
+            }
+            if ($best !== null && abs($parts[$best]) >= abs($b['cash'] - $b['profit']) * 0.3) {
+                $reason = ['rec' => $parts['rec'] < 0 ? 'r_rec_up' : 'r_rec_down', 'pay' => $parts['pay'] > 0 ? 'r_pay_up' : 'r_pay_down', 'stock' => $parts['stock'] < 0 ? 'r_stock_up' : 'r_stock_down'][$best];
+                $o[] = ['blue', __('review.obs_cash_reason', ['profit' => $f($b['profit']), 'cash' => $f($b['cash']),
+                    'reason' => __('review.' . $reason, ['amount' => $f(abs($parts[$best]))])])];
+            }
         }
         $rec = $d['receivables'];
         if ($rec['total'] > 0) {

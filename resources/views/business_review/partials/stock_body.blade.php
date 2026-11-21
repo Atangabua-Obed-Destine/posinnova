@@ -63,6 +63,7 @@
 
     @if (! empty($s['observations']))
         <div class="br-h">{{ __('review.observations') }}</div>
+        <div class="br-intro">{{ __('review.intro_obs') }}</div>
         <table class="br-obs" id="sc_observations">
             @foreach ($s['observations'] as [$tone, $text])
                 <tr><td style="width:18px;"><span class="br-dot {{ $tone }}"></span></td><td>{{ $text }}</td></tr>
@@ -72,6 +73,7 @@
 
     {{-- each location --}}
     <div class="br-h">{{ __('review.sc_locations') }}</div>
+    <div class="br-intro">{{ __('review.intro_sc_locations') }}</div>
     <div class="br-scroll">
     <table class="br-t br-keep" id="sc_locations">
         <thead><tr><th>{{ __('business.location') }}</th><th class="num">{{ __('review.sc_counts') }}</th><th>{{ __('review.sc_last') }}</th><th class="num">{{ __('review.sc_coverage') }}</th><th class="num">{{ $in(__('review.sc_short')) }}</th><th class="num">{{ $in(__('review.sc_over')) }}</th><th class="num">{{ $in(__('review.sc_stock_value_h')) }}</th></tr></thead>
@@ -92,6 +94,7 @@
 
     {{-- the counts --}}
     <div class="br-h">{{ __('review.sc_counts_title') }}</div>
+    <div class="br-intro">{{ __('review.intro_sc_counts') }}</div>
     @if (empty($s['counts']))
         <div class="br-muted" id="sc_no_counts">{{ __('review.sc_no_counts', ['q' => $qlabel]) }}</div>
     @else
@@ -132,6 +135,7 @@
     {{-- products short --}}
     @if (! empty($s['short_products']))
         <div class="br-h">{{ __('review.sc_short_products') }}</div>
+        <div class="br-intro">{{ __('review.intro_sc_short') }}</div>
         <div class="br-scroll">
         <table class="br-t" id="sc_short_products">
             <thead><tr><th>#</th><th>{{ __('sale.product') }}</th><th class="num">{{ __('review.sc_times') }}</th><th class="num">{{ __('review.sc_qty_short') }}</th><th class="num">{{ __('review.sc_value_short') }}</th></tr></thead>
@@ -150,6 +154,7 @@
 
     {{-- other write-offs --}}
     <div class="br-h">{{ __('review.sc_adjustments') }} <small>· {{ __('review.sc_adjustments_note') }}</small></div>
+    <div class="br-intro">{{ __('review.intro_sc_adjustments') }}</div>
     @if (empty($s['adjustments']))
         <div class="br-muted" id="sc_no_adjustments">{{ __('review.sc_no_adjustments') }}</div>
     @else
@@ -165,11 +170,19 @@
 
     {{-- at risk now --}}
     <div class="br-h">{{ __('review.sc_risk') }} <small>· {{ __('review.sc_risk_note') }}</small></div>
+    <div class="br-intro">{{ __('review.intro_sc_risk') }}</div>
     <table class="br-t br-keep" id="sc_risk">
         <tr><td>{{ __('review.stock_expired', ['n' => $s['expiry']['expired_items']]) }}</td><td class="num {{ $s['expiry']['expired_value'] > 0 ? 'br-neg' : '' }}">{{ $m($s['expiry']['expired_value']) }}</td></tr>
         <tr><td>{{ __('review.stock_expiring', ['n' => $s['expiry']['soon_items']]) }}</td><td class="num">{{ $m($s['expiry']['soon_value']) }}</td></tr>
         <tr><td>{{ __('review.sc_recount_open') }}</td><td class="num">{{ number_format($s['recount']['n']) }} @if ($s['recount']['n'])<span class="br-muted br-small">({{ $m($s['recount']['value']) }})</span>@endif</td></tr>
         <tr><td>{{ __('review.sc_low_stock') }}</td><td class="num">{{ number_format($s['low_stock']) }}</td></tr>
+    </table>
+
+    <div class="br-h">{{ __('review.glossary') }}</div>
+    <table class="br-t br-gloss" id="sc_glossary">
+        @foreach (['gs_count', 'gs_short', 'gs_over', 'gs_net', 'gs_coverage', 'gs_recount', 'gs_writeoff', 'gs_value'] as $g)
+            <tr><td class="term">{{ __('review.' . $g) }}</td><td>{{ __('review.' . $g . '_d') }}</td></tr>
+        @endforeach
     </table>
 
     <div class="br-h">{{ __('review.notes') }}</div>
