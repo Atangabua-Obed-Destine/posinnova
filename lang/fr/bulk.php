@@ -20,7 +20,7 @@ return [
     'label_bag' => 'sac', 'label_pack' => 'paquet', 'label_bottle' => 'bouteille', 'label_tin' => 'boîte', 'label_carton' => 'carton',
     'label_sack' => 'sac', 'label_box' => 'caisse', 'label_jar' => 'bocal', 'label_cylinder' => 'bouteille de gaz',
 
-    'counted_in' => 'Stock compté en :labels',
+    'counted_in' => "Stock compté à l'unité (:label)",
     'one_is' => '1 :label = :size :unit',
     'last_yield' => 'Rendement du dernier : :pct %',
     'last_title' => 'Terminé le :date par :name',
