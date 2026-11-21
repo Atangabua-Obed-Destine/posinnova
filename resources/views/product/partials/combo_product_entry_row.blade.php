@@ -16,7 +16,12 @@
 				<input type="hidden" name="composition_variation_id[]" value="{{ $variation->id }}">
 		</td>
 		<td class="text-center">
-			{!! Form::text('quantity[]', @num_format($quantity), ['class' => 'form-control col-sm-12 input-sm quantity input_number mousetrap', 'required', 'style '=> "width: 77px"]); !!}
+			@php
+				// PosInnova: a recipe quantity keeps its decimals (0.01 bag), whatever the currency's precision
+				$pi_dec = (session('currency') ?? [])['decimal_separator'] ?? '.';
+				$pi_qty = rtrim(rtrim(number_format((float) $quantity, 4, $pi_dec, (session('currency') ?? [])['thousand_separator'] ?? ','), '0'), $pi_dec);
+			@endphp
+			{!! Form::text('quantity[]', $pi_qty, ['class' => 'form-control col-sm-12 input-sm quantity input_number mousetrap', 'required', 'style '=> "width: 77px"]); !!}
 
 			@if(!empty($sub_units))
                 <br>

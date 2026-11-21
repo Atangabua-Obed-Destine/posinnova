@@ -19,8 +19,9 @@
                 <tr><th style="width:40%;">{{ __('business.location') }}</th><td>{{ optional($c->location)->name }}</td></tr>
                 <tr><th>{{ __('bulk.h_opened') }}</th><td>{{ $dt($c->opened_at) }} · {{ $who($c->opener) }}</td></tr>
                 <tr><th>{{ __('bulk.h_finished') }}</th><td>{{ $dt($c->closed_at) }} · {{ $who($c->closer) }}@if ($c->containers > 1) · <strong>{{ __('bulk.n_at_once', ['n' => $qf($c->containers), 'label' => $label]) }}</strong>@endif</td></tr>
-                <tr><th>{{ __('bulk.h_expected') }}</th><td>{{ $qf($c->expected_usage) }} {{ $unit }} <span class="text-muted">({{ __('bulk.of_label', ['share' => $qf($c->expected_usage / max(0.0001, $item->container_size)), 'label' => $label]) }})</span></td></tr>
-                <tr><th>{{ __('bulk.h_used') }}</th><td>{{ $qf($c->actual_usage) }} {{ $unit }} <span class="text-muted">({{ $qf($c->containers) }} {{ $label }})</span></td></tr>
+                @php $one = abs($item->container_size - 1) < 0.00005; @endphp
+                <tr><th>{{ __('bulk.h_expected') }}</th><td>{{ __('bulk.of_label', ['share' => $qf($c->expected_usage / max(0.0001, $item->container_size)), 'label' => $label]) }}@if (! $one) <span class="text-muted">({{ $qf($c->expected_usage) }} {{ $unit }})</span>@endif</td></tr>
+                <tr><th>{{ __('bulk.h_used') }}</th><td>{{ $qf($c->containers) }} {{ $label }}@if (! $one) <span class="text-muted">({{ $qf($c->actual_usage) }} {{ $unit }})</span>@endif</td></tr>
                 <tr><th>{{ __('bulk.h_yield') }}</th><td><span class="bk-pill {{ $flag === 'low' ? 'bad' : ($flag === 'high' ? 'warn' : 'ok') }}">{{ number_format((float) $c->yield_pct, 0) }}%</span>
                     <span class="text-muted">{{ __('bulk.range', ['low' => $item->low_pct, 'high' => $item->high_pct]) }}</span></td></tr>
                 <tr><th>{{ $c->value >= 0 ? __('bulk.h_lost') : __('bulk.h_extra') }}</th><td>{{ $tu->num_f(abs($c->value), true) }}

@@ -80,7 +80,7 @@
                     <table class="table table-condensed bk-table">
                         <thead><tr><th>{{ __('bulk.h_item') }}</th><th class="text-right">{{ __('bulk.h_finished_n') }}</th><th class="text-right">{{ __('bulk.h_avg_yield') }}</th><th class="text-right">{{ __('bulk.h_low_n') }}</th><th class="text-right">{{ __('bulk.h_lost') }}</th></tr></thead>
                         @foreach ($summary['items'] as $s)
-                            <tr><td>{{ $s['name'] }}</td><td class="text-right">{{ $qf($s['containers']) }} {{ __('bulk.label_' . $s['label']) }}</td>
+                            <tr><td>{{ $s['name'] }}</td><td class="text-right">{{ $qf($s['containers']) }}</td>
                                 <td class="text-right">{{ $s['avg_yield'] !== null ? number_format($s['avg_yield'], 0) . '%' : '—' }}</td>
                                 <td class="text-right">@if ($s['low'])<span class="bk-pill bad">{{ $s['low'] }}</span>@else 0 @endif</td>
                                 <td class="text-right">{{ $tu->num_f($s['lost'], true) }}</td></tr>

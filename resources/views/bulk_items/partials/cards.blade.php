@@ -19,7 +19,7 @@
             <div class="bk-card-head">
                 <div>
                     <div class="bk-name">{{ $item->name() }}</div>
-                    <div class="bk-sub">{{ __('bulk.one_is', ['label' => $label, 'size' => $qf($item->container_size), 'unit' => $unit]) }}</div>
+                    <div class="bk-sub">{{ abs($item->container_size - 1) < 0.00005 ? __('bulk.counted_in', ['label' => $label]) : __('bulk.one_is', ['label' => $label, 'size' => $qf($item->container_size), 'unit' => $unit]) }}</div>
                 </div>
                 @if ($last)
                     <span class="bk-pill {{ $flag === 'low' ? 'bad' : ($flag === 'high' ? 'warn' : 'ok') }}" title="{{ __('bulk.last_title', ['date' => $dt($last->closed_at), 'name' => trim(optional($last->closer)->first_name . ' ' . optional($last->closer)->last_name)]) }}">
