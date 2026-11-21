@@ -22,12 +22,12 @@ class InnovaSuperadminPassword extends Command
     {
         $this->newLine();
         $this->line('  The superadmin <options=bold>'.InnovaSetup::username().'</> will have this password on every installation.');
-        $this->line('  At least 12 characters, with letters and numbers. It is stored only as a one-way hash.');
+        $this->line('  At least 8 characters, with letters and numbers. It is stored only as a one-way hash.');
         $this->newLine();
 
         $password = $this->askHidden('New superadmin password');
-        if (strlen($password) < 12 || ! preg_match('/[A-Za-z]/', $password) || ! preg_match('/\d/', $password)) {
-            $this->error('  Too weak: at least 12 characters, with letters and numbers. Nothing was changed.');
+        if (strlen($password) < 8 || ! preg_match('/[A-Za-z]/', $password) || ! preg_match('/\d/', $password)) {
+            $this->error('  Too weak: at least 8 characters, with letters and numbers. Nothing was changed.');
 
             return self::FAILURE;
         }

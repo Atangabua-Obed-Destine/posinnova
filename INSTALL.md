@@ -154,6 +154,6 @@ To set or change it, on the I-NNOVA computer:
 php artisan innova:superadmin-password
 ```
 
-Type the new password twice (12 characters or more, letters and numbers), then commit and push `config/innova.php`. New installations get it by themselves; an existing installation gets it at its next `php artisan innova:update`, or right away with `php artisan innova:superadmin`.
+Type the new password twice (8 characters or more, letters and numbers), then commit and push `config/innova.php`. New installations get it by themselves; an existing installation gets it at its next `php artisan innova:update`, or right away with `php artisan innova:superadmin`.
 
 Keep this password private: whoever has it can sign in as superadmin on every installation.

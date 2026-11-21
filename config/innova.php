@@ -26,7 +26,7 @@ return [
         //     php artisan innova:superadmin-password
         // then commit and push. Installs pick it up at install, or with
         //     php artisan innova:superadmin
-        'password_hash' => '',
+        'password_hash' => '$2y$12$H6n5.tfOKJ0YAfiSGMqn1ub12YTlyC8DlCu/HPqvW7DDKGGHB6hrG',
     ],
 
     // The package the client's business is subscribed to (all features, free)
