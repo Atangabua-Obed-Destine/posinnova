@@ -81,6 +81,19 @@ class HomeController extends Controller
             return view('home.hospital', compact('dash'));
         }
 
+        //PosInnova: the same for a hotel. Home is the hotel's day once rooms exist; people who may see
+        //sales figures get a "Sales" tab (?view=sales) for the usual dashboard. Housekeepers land on their rooms.
+        if (! $hospital_home && in_array('hotel', $enabled_modules)
+            && ! (request()->input('view') == 'sales' && \App\Utils\ClinicDashboard::canSeeSales($user, $business_id))
+            && \App\HotelRoom::where('business_id', $business_id)->where('is_active', 1)->exists()) {
+            if ($user->can('hotel.view')) {
+                return app(\App\Http\Controllers\HotelController::class)->home();
+            }
+            if ($user->can('hotel.housekeeping')) {
+                return redirect()->action([\App\Http\Controllers\HotelController::class, 'housekeeping']);
+            }
+        }
+
         $is_admin = $this->businessUtil->is_admin(auth()->user());
 
         if (! auth()->user()->can('dashboard.data')) {

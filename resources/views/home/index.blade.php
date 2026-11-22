@@ -31,6 +31,7 @@
         'calendar' => '<path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/>',
         'down' => '<path d="M6 9l6 6l6 -6"/>',
         'hospital' => '<path d="M3 21l18 0"/><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16"/><path d="M9 21v-4a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v4"/><path d="M10 9l4 0"/><path d="M12 7l0 4"/>',
+        'bed' => '<path d="M7 9m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M22 17v-3h-20"/><path d="M2 8v9"/><path d="M12 14h10v-2a3 3 0 0 0 -3 -3h-7v5z"/>',
         'store' => '<path d="M3 21l18 0"/><path d="M3 7v1a3 3 0 0 0 6 0v-1m0 1a3 3 0 0 0 6 0v-1m0 1a3 3 0 0 0 6 0v-1h-18l2 -4h14l2 4"/><path d="M5 21l0 -10.15"/><path d="M19 21l0 -10.15"/><path d="M9 21v-4a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v4"/>',
     ];
     $ih_icon = function ($k) use ($ih_paths) {
@@ -144,6 +145,12 @@
         <div class="ih-tabs" role="tablist">
             <a class="ih-tab" role="tab" aria-selected="false" href="{{ action([\App\Http\Controllers\HomeController::class, 'index']) }}">{!! $ih_icon('hospital') !!} {{ __('clinic.dash_tab_hospital') }}</a>
             <a class="ih-tab is-on" role="tab" aria-selected="true" href="{{ action([\App\Http\Controllers\HomeController::class, 'index'], ['view' => 'sales']) }}">{!! $ih_icon('store') !!} {{ __('clinic.dash_tab_sales') }}</a>
+        </div>
+    @elseif (in_array('hotel', $ih_mods) && auth()->user()->can('hotel.view'))
+        {{-- PosInnova: hotel module on = this sales dashboard is the "Sales" tab of the hotel home --}}
+        <div class="ih-tabs" role="tablist" id="ih_hotel_tabs">
+            <a class="ih-tab" role="tab" aria-selected="false" href="{{ action([\App\Http\Controllers\HotelController::class, 'home']) }}">{!! $ih_icon('bed') !!} {{ __('hotel.dash_tab_hotel') }}</a>
+            <a class="ih-tab is-on" role="tab" aria-selected="true" href="{{ action([\App\Http\Controllers\HomeController::class, 'index'], ['view' => 'sales']) }}">{!! $ih_icon('store') !!} {{ __('hotel.dash_tab_sales') }}</a>
         </div>
     @endif
     <div class="ih-top">

@@ -63,7 +63,8 @@ class HotelController extends HotelBaseController
 
         return view('hotel.home', [
             'today' => $today, 'rooms' => $rooms, 'board' => $board, 'arrivals' => $arrivals, 'departures' => $departures,
-            'in_house' => $in_house, 'owed' => $owed, 'unpaid' => $unpaid, 'sellable' => $sellable, 'expected' => max(0, $expected),
+            'in_house' => $in_house, 'owed' => $owed, 'unpaid' => $unpaid,
+            'sales_tab' => \App\Utils\ClinicDashboard::canSeeSales(auth()->user(), $biz), 'sellable' => $sellable, 'expected' => max(0, $expected),
             'next_audit' => $next_audit, 'last_audit' => HotelNightAudit::where('business_id', $biz)->orderByDesc('audit_date')->first(),
             'summary' => $summary, 'attention' => $attention, 'folio' => $folio, 'fmt' => fn ($v) => $this->money($v), 'num' => fn ($v) => $this->money($v, false),
         ]);

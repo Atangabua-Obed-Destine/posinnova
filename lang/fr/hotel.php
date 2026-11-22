@@ -126,6 +126,8 @@ return [
     'audit_reason_cancel' => 'Annulée à l\'audit de nuit',
     'audit_reason_lapsed' => 'Réservation provisoire non confirmée à temps',
 
+    'dash_tab_hotel' => 'Hôtel',
+    'dash_tab_sales' => 'Ventes',
     'greet_morning' => 'Bonjour, :name',
     'greet_afternoon' => 'Bon après-midi, :name',
     'greet_evening' => 'Bonsoir, :name',

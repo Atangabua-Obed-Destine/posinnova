@@ -128,6 +128,8 @@ return [
     'audit_reason_lapsed' => 'Tentative booking not confirmed in time',
 
     // home
+    'dash_tab_hotel' => 'Hotel',
+    'dash_tab_sales' => 'Sales',
     'greet_morning' => 'Good morning, :name',
     'greet_afternoon' => 'Good afternoon, :name',
     'greet_evening' => 'Good evening, :name',

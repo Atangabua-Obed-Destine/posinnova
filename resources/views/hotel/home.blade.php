@@ -15,6 +15,13 @@
     $dirty = collect($board)->where('state', 'dirty')->count() + collect($board)->filter(fn ($s) => in_array($s['state'], ['occ', 'dep']) && $s['room']->hk_status === 'dirty')->count();
 @endphp
 <section class="content ht" id="ht_home">
+    {{-- Home of a hotel: this page; the usual sales dashboard is its second tab --}}
+    @if ($sales_tab)
+        <nav class="ht-tabs" id="ht_home_tabs">
+            <a class="on" href="{{ action([\App\Http\Controllers\HomeController::class, 'index']) }}" aria-current="page">{{ __('hotel.dash_tab_hotel') }}</a>
+            <a href="{{ action([\App\Http\Controllers\HomeController::class, 'index'], ['view' => 'sales']) }}" id="ht_tab_sales">{{ __('hotel.dash_tab_sales') }}</a>
+        </nav>
+    @endif
     <div class="ht-head">
         <div>
             <h1>{{ __('hotel.' . $greet, ['name' => auth()->user()->first_name]) }}</h1>
