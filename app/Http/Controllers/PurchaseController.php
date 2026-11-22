@@ -984,6 +984,7 @@ class PurchaseController extends Controller
                 ->active()
                 ->where('business_id', $business_id)
                 ->whereNull('variations.deleted_at')
+                ->withoutSystemServices() // PosInnova: clinic fees and hotel nights are not bought
                 ->select(
                     'products.id as product_id',
                     'products.name',

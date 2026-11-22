@@ -1880,6 +1880,8 @@ class ProductUtil extends Util
 
         $query->where('products.business_id', $business_id)
                 ->where('products.type', '!=', 'modifier');
+        //PosInnova: the system's service products (clinic fees, hotel nights) are never picked by hand
+        Product::hideSystemServices($query);
 
         if (! empty($product_types)) {
             $query->whereIn('products.type', $product_types);
@@ -2008,6 +2010,8 @@ class ProductUtil extends Util
                   ->join('product_variations as pv', 'variations.product_variation_id', '=', 'pv.id')
                   ->where('p.business_id', $business_id)
                   ->whereIn('p.type', ['single', 'variable']);
+        //PosInnova: no stock to report on the system's service products (clinic fees, hotel nights)
+        Product::hideSystemServices($query, 'p');
 
         $permitted_locations = auth()->user()->permitted_locations();
         $location_filter = '';

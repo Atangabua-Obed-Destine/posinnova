@@ -89,7 +89,8 @@ class ProductController extends Controller
                 })
                 ->whereNull('v.deleted_at')
                 ->where('products.business_id', $business_id)
-                ->where('products.type', '!=', 'modifier');
+                ->where('products.type', '!=', 'modifier')
+                ->withoutSystemServices(); // PosInnova: "Consultation", "Laboratory test"... are not goods to manage
 
             if (! empty($location_id) && $location_id != 'none') {
                 if ($permitted_locations == 'all' || in_array($location_id, $permitted_locations)) {
@@ -1440,7 +1441,8 @@ class ProductController extends Controller
 
             $products = Product::join('variations', 'products.id', '=', 'variations.product_id')
                 ->where('products.business_id', $business_id)
-                ->where('products.type', '!=', 'modifier');
+                ->where('products.type', '!=', 'modifier')
+                ->withoutSystemServices();
 
             //Include search
             if (! empty($term)) {

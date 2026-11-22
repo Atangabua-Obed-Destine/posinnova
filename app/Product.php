@@ -147,6 +147,25 @@ class Product extends Model
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
+    /**
+     * PosInnova: the service products behind clinic and hotel invoices ("Consultation", "Laboratory test",
+     * "Room Standard, night"...: App\Utils\ClinicServices, HotelServices) are made and used by the system so
+     * that a fee can be a line of an ordinary invoice. They are not goods: no stock, not sold on the till.
+     * They stay out of the product lists, searches and stock reports (sales reports still count them).
+     */
+    const SYSTEM_SERVICE_SKU = '^(SVC|HTL)-';
+
+    /** Adds "not a system service product" to a query whose products table is $alias. */
+    public static function hideSystemServices($query, $alias = 'products')
+    {
+        return $query->whereRaw("NOT (COALESCE({$alias}.sku, '') REGEXP ? AND {$alias}.enable_stock = 0 AND {$alias}.not_for_selling = 1)", [self::SYSTEM_SERVICE_SKU]);
+    }
+
+    public function scopeWithoutSystemServices($query, $alias = 'products')
+    {
+        return self::hideSystemServices($query, $alias);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('products.is_inactive', 0);
