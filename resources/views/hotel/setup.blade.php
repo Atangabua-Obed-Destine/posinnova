@@ -194,6 +194,7 @@
                 <label class="ht-card" style="margin:0;display:flex;gap:10px;font-weight:400;cursor:pointer;"><input type="radio" name="charge_mode" value="nightly" @checked($settings['charge_mode'] === 'nightly')> <span><strong>{{ __('hotel.mode_nightly') }}</strong><span class="ht-muted ht-small" style="display:block;">{{ __('hotel.mode_nightly_desc') }}</span></span></label>
                 <label class="ht-card" style="margin:0;display:flex;gap:10px;font-weight:400;cursor:pointer;"><input type="radio" name="charge_mode" value="checkin" @checked($settings['charge_mode'] === 'checkin')> <span><strong>{{ __('hotel.mode_checkin') }}</strong><span class="ht-muted ht-small" style="display:block;">{{ __('hotel.mode_checkin_desc') }}</span></span></label>
             </div>
+            <label style="display:flex;gap:10px;align-items:center;font-weight:500;"><input type="checkbox" name="pay_first" value="1" @checked($settings['pay_first'])> {{ __('hotel.pay_first_setting') }}</label>
             <label style="display:flex;gap:10px;align-items:center;font-weight:500;"><input type="checkbox" name="police_card" value="1" @checked($settings['police_card'])> {{ __('hotel.police_card_setting') }}</label>
             <label style="display:flex;gap:10px;align-items:center;font-weight:500;margin-bottom:14px;"><input type="checkbox" name="require_inspection" value="1" @checked($settings['require_inspection'])> {{ __('hotel.inspection_setting') }}</label>
             <button class="ht-btn pri">{{ __('hotel.save') }}</button>

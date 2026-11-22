@@ -38,6 +38,16 @@ class HotelController extends HotelBaseController
         $summary = HotelAudit::summary($biz, $today->toDateString());
 
         $attention = [];
+        // guests pay before they sleep: who is in the hotel and not paid up to tonight
+        $unpaid = collect();
+        if (Hotel::settings($biz)['pay_first']) {
+            foreach ($in_house as $r) {
+                $c = $folio->coverage($r);
+                if ($c && $c['to_collect'] > 0.004) {
+                    $unpaid->push(['res' => $r, 'amount' => $c['to_collect']]);
+                }
+            }
+        }
         foreach ($arrivals as $a) {
             if ($a->room && ! Hotel::sellable($a->room)) {
                 $attention[] = ['tone' => 'amber', 'text' => __('hotel.att_dirty_arrival', ['room' => $a->room->number, 'name' => optional($a->contact)->name]), 'url' => action([self::class, 'housekeeping'])];
@@ -53,7 +63,7 @@ class HotelController extends HotelBaseController
 
         return view('hotel.home', [
             'today' => $today, 'rooms' => $rooms, 'board' => $board, 'arrivals' => $arrivals, 'departures' => $departures,
-            'in_house' => $in_house, 'owed' => $owed, 'sellable' => $sellable, 'expected' => max(0, $expected),
+            'in_house' => $in_house, 'owed' => $owed, 'unpaid' => $unpaid, 'sellable' => $sellable, 'expected' => max(0, $expected),
             'next_audit' => $next_audit, 'last_audit' => HotelNightAudit::where('business_id', $biz)->orderByDesc('audit_date')->first(),
             'summary' => $summary, 'attention' => $attention, 'folio' => $folio, 'fmt' => fn ($v) => $this->money($v), 'num' => fn ($v) => $this->money($v, false),
         ]);

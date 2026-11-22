@@ -411,7 +411,7 @@ class HotelFolio
      *
      * @return int nights kept because they were paid
      */
-    public function releaseNightsFrom(HotelReservation $res, $date, $user_id)
+    public function releaseNightsFrom(HotelReservation $res, $date, $user_id, $forget = false)
     {
         $kept = 0;
         $lines = HotelFolioLine::where('reservation_id', $res->id)->where('kind', 'night')->whereNull('voided_at')
@@ -426,10 +426,94 @@ class HotelFolio
                 }
             }
             $this->void($res, $line->id, __('hotel.void_not_slept'), $user_id);
+            if ($forget) {
+                // a stay shortened while the guest is in the hotel: if it is extended again, the night is charged again
+                HotelFolioLine::where('id', $line->id)->update(['night_key' => null]);
+            }
         }
         // credit given back by cancelled nights goes on what the stay still owes
         $this->applyCredit($res->fresh(), $user_id);
 
         return $kept;
+    }
+
+    /** What one night costs the guest: the room, and the tourist tax of its type. */
+    public function nightCost(HotelReservation $res)
+    {
+        return round((float) $res->rate + (float) optional(HotelRoomType::find($res->room_type_id))->tourist_tax, 4);
+    }
+
+    /**
+     * A guest in the hotel, seen the pay-first way: is the stay paid up to tonight? The nights up to tonight
+     * that are not on the bill yet count as owed, at the price of the stay; money held as credit counts as paid.
+     *
+     * @return array|null null when the guest is not in the hotel, else
+     *                    ['to_collect' => what is missing to be paid up to tonight (0 when covered),
+     *                     'paid_until' => the last night covered, Y-m-d (null when something is missing),
+     *                     'whole_stay' => every night of the stay is covered, 'night_cost' => x,
+     *                     'counted_until' => the last night already inside these figures (to price an extension)]
+     */
+    public function coverage(HotelReservation $res)
+    {
+        if ($res->status !== 'checked_in') {
+            return null;
+        }
+        $cost = $this->nightCost($res);
+        $last = $res->departure->copy()->subDay();       // the last night of the stay
+        $tonight = Hotel::hotelDay($res->business_id)->copy();
+        if ($tonight->gt($last)) {
+            $tonight = $last->copy();                    // leaving today (or late to leave): nothing new tonight
+        }
+        if ($tonight->lt($res->arrival)) {
+            $tonight = $res->arrival->copy();
+        }
+        // a cancelled night keeps its date: it is not charged again, so it is not owed either
+        $on_bill = HotelFolioLine::where('reservation_id', $res->id)->whereNotNull('night_key')->pluck('night_key')
+            ->map(fn ($d) => Carbon::parse($d)->toDateString())->all();
+        $missing = count(array_diff(Hotel::nights($res->arrival, $tonight->copy()->addDay()), $on_bill));
+        $need = round($this->balance($res) + $missing * $cost, 2);
+        // nights charged ahead ("all nights at check-in") are inside the balance already
+        $counted = fn ($d) => max($d->toDateString(), $on_bill ? max($on_bill) : '');
+        if ($need > 0.004) {
+            return ['to_collect' => $need, 'paid_until' => null, 'whole_stay' => false, 'night_cost' => $cost, 'counted_until' => $counted($tonight)];
+        }
+        // the nights after tonight: one already on the bill is inside the balance; the others take what credit is left
+        $spare = -$need;
+        $until = $tonight->copy();
+        foreach (Hotel::nights($tonight->copy()->addDay(), $res->departure) as $night) {
+            if (! in_array($night, $on_bill, true)) {
+                if ($cost > 0 && $spare + 0.004 < $cost) {
+                    break;
+                }
+                $spare -= $cost;
+            }
+            $until = Carbon::parse($night);
+        }
+
+        return ['to_collect' => 0.0, 'paid_until' => $until->toDateString(), 'whole_stay' => $until->gte($last), 'night_cost' => $cost, 'counted_until' => $counted($until)];
+    }
+
+    /**
+     * "All nights at check-in": when the dates of a guest in the hotel change, the bill follows at once.
+     * Nights added go on the bill; nights given up come off it when no money was paid on them (a night
+     * paid in money stays, and is sorted out at check-out).
+     *
+     * @return int nights added to the bill
+     */
+    public function followDates(HotelReservation $res, $user_id)
+    {
+        if ($res->status !== 'checked_in' || Hotel::settings($res->business_id)['charge_mode'] !== 'checkin') {
+            return 0;
+        }
+        $this->releaseNightsFrom($res, $res->departure->toDateString(), $user_id, true);
+        $res->refresh();
+        $n = 0;
+        foreach (Hotel::nights($res->arrival, $res->departure) as $night) {
+            if ($this->postNight($res, $night, $user_id)) {
+                $n++;
+            }
+        }
+
+        return $n;
     }
 }

@@ -35,6 +35,7 @@ class Hotel
         'deposit_rule' => 'first_night', // first_night | none | full
         'police_card' => 1,
         'require_inspection' => 0,
+        'pay_first' => 1,             // guests pay before they sleep: the screens show who is not paid up to tonight
     ];
 
     const SOURCES = ['walk_in', 'phone', 'whatsapp', 'booking_com', 'agency', 'company', 'other'];

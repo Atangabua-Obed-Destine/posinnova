@@ -112,6 +112,7 @@ class HotelReservationController extends HotelBaseController
 
         return view('hotel.stay', [
             'res' => $res, 'statement' => $folio->statement($res), 'balance' => $folio->balance($res),
+            'cover' => Hotel::settings($biz)['pay_first'] ? $folio->coverage($res) : null, 'night_cost' => $folio->nightCost($res),
             'guests' => $res->guests()->get(), 'moves' => \DB::table('hotel_room_moves as m')->leftJoin('hotel_rooms as f', 'f.id', '=', 'm.from_room_id')
                 ->leftJoin('hotel_rooms as t', 't.id', '=', 'm.to_room_id')->where('m.reservation_id', $res->id)
                 ->select('m.*', 'f.number as from_no', 't.number as to_no')->orderBy('m.id')->get(),
@@ -133,7 +134,8 @@ class HotelReservationController extends HotelBaseController
         return $this->attempt(function () use ($request, $res) {
             $arr = Hotel::parseDate($request->input('arrival', $res->arrival->toDateString()));
             $dep = Hotel::parseDate($request->input('departure', $res->departure->toDateString()));
-            \DB::transaction(function () use ($request, $res, $arr, $dep) {
+            return \DB::transaction(function () use ($request, $res, $arr, $dep) {
+                $dates_changed = false;
                 if ($res->status !== 'checked_in' && $request->filled('room_type_id') && (int) $request->input('room_type_id') !== (int) $res->room_type_id) {
                     $type = HotelRoomType::where('business_id', $res->business_id)->findOrFail($request->input('room_type_id'));
                     $res->room_type_id = $type->id;
@@ -144,6 +146,7 @@ class HotelReservationController extends HotelBaseController
                 }
                 if ($arr !== $res->arrival->toDateString() || $dep !== $res->departure->toDateString()) {
                     $res = Hotel::changeDates($res, $arr, $dep);
+                    $dates_changed = true;
                 }
                 if ($res->status !== 'checked_in' && $request->has('room_id') && (string) $request->input('room_id') !== (string) $res->room_id) {
                     Hotel::assignRoom($res, $request->input('room_id') ?: null);
@@ -165,8 +168,19 @@ class HotelReservationController extends HotelBaseController
                     $res->notes = mb_substr(trim((string) $request->input('notes')), 0, 500) ?: null;
                 }
                 $res->save();
+                if ($res->status !== 'checked_in') {
+                    return null;
+                }
+                // a guest in the hotel: the bill follows the new dates, and the money for the added nights can be taken at once
+                $folio = new HotelFolio();
+                if ($dates_changed) {
+                    $folio->followDates($res, auth()->id());
+                }
+                $pay = $request->filled('amount') ? (float) $this->tu->num_uf($request->input('amount')) : 0;
+
+                return $pay > 0 ? $folio->receive($res->fresh(), $pay, $request->input('method', 'cash'), $dates_changed ? __('hotel.pay_note_extension') : null, auth()->id()) : null;
             });
-        }, __('hotel.res_saved'));
+        }, fn ($r) => __('hotel.res_saved').($r ? ' '.__('hotel.payment_taken', ['amount' => $this->money($r['paid'] + $r['credit']), 'ref' => $r['ref']]) : ''));
     }
 
     public function confirm($id)

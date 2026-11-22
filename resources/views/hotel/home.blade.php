@@ -118,10 +118,13 @@
         </div>
         <div class="ht-card">
             <h2>{{ __('hotel.needs_attention') }}</h2>
+            @foreach ($unpaid as $u)
+                <a class="ht-note amber ht-unpaid" href="{{ action([$R, 'show'], [$u['res']->id]) }}">{{ __('hotel.att_unpaid', ['room' => optional($u['res']->room)->number ?: '—', 'name' => optional($u['res']->contact)->name, 'amount' => $fmt($u['amount'])]) }}</a>
+            @endforeach
             @forelse ($attention as $at)
                 <a class="ht-note {{ $at['tone'] }}" href="{{ $at['url'] }}">{{ $at['text'] }}</a>
             @empty
-                <div class="ht-empty">{{ __('hotel.all_good') }}</div>
+                @if ($unpaid->isEmpty())<div class="ht-empty">{{ __('hotel.all_good') }}</div>@endif
             @endforelse
         </div>
     </div>

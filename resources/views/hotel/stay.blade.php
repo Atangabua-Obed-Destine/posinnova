@@ -39,6 +39,16 @@ details.ht-panel-d > summary { font-weight: 700; }
     </div>
 
     @if ($res->notes)<div class="ht-note blue">{{ $res->notes }}</div>@endif
+    @if ($cover)
+        @if ($cover['to_collect'] > 0.004)
+            <div class="ht-note amber" id="ht_cover" data-collect="{{ $cover['to_collect'] }}" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;">
+                <span>{!! __('hotel.cover_due', ['amount' => '<strong>' . e($fmt($cover['to_collect'])) . '</strong>']) !!}</span>
+                @if ($can['desk'] || $can['res'])<button type="button" class="ht-btn sm" id="ht_cover_pay">{{ __('hotel.take_payment') }}</button>@endif
+            </div>
+        @else
+            <div class="ht-note green" id="ht_cover" data-collect="0" data-until="{{ $cover['paid_until'] }}">{{ $cover['whole_stay'] ? __('hotel.cover_whole', ['date' => $res->departure->format('d/m')]) : __('hotel.cover_until', ['date' => \Carbon\Carbon::parse($cover['paid_until'])->format('d/m'), 'next' => \Carbon\Carbon::parse($cover['paid_until'])->addDay()->format('d/m')]) }}</div>
+        @endif
+    @endif
     @if (in_array($res->status, ['cancelled', 'no_show']))
         <div class="ht-note red">{{ __('hotel.st_' . $res->status) }} · {{ optional($res->cancelled_at)->format('d/m/Y H:i') }}{{ $res->cancel_reason ? ' · ' . $res->cancel_reason : '' }}</div>
     @endif
@@ -62,7 +72,7 @@ details.ht-panel-d > summary { font-weight: 700; }
                 <details class="ht-panel-d" id="ht_d_pay">
                     <summary>{{ $open ? __('hotel.take_deposit') : __('hotel.take_payment') }}</summary>
                     <form method="POST" action="{{ action([$R, 'payment'], [$res->id]) }}" class="ht-mini" id="ht_pay_form">@csrf
-                        <div class="ht-f" style="margin:0;"><label for="ht_p_amount">{{ __('hotel.amount') }}</label><input class="ht-in" name="amount" id="ht_p_amount" inputmode="decimal" value="{{ $balance > 0 ? $num($balance) : '' }}" required></div>
+                        <div class="ht-f" style="margin:0;"><label for="ht_p_amount">{{ __('hotel.amount') }}</label><input class="ht-in" name="amount" id="ht_p_amount" inputmode="decimal" value="{{ $cover && $cover['to_collect'] > 0.004 ? $num($cover['to_collect']) : ($balance > 0 ? $num($balance) : '') }}" required></div>
                         <div class="ht-f" style="margin:0;"><label for="ht_p_method">{{ __('hotel.paid_by') }}</label>
                             <select class="ht-in" name="method" id="ht_p_method">@foreach ($payment_types as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></div>
                         <div class="ht-f" style="margin:0;flex:1;"><label for="ht_p_note">{{ __('hotel.note') }}</label><input class="ht-in" name="note" id="ht_p_note" maxlength="150" style="width:100%;"></div>
@@ -169,7 +179,20 @@ details.ht-panel-d > summary { font-weight: 700; }
                     <summary style="cursor:pointer;font-weight:700;">{{ $in ? __('hotel.extend_shorten') : __('hotel.change_booking') }}</summary>
                     <form method="POST" action="{{ action([$R, 'update'], [$res->id]) }}" style="margin-top:10px;">@csrf
                         @if (! $in)<div class="ht-f"><label for="ht_e_arr">{{ __('hotel.arrival') }}</label><input class="ht-in" type="date" name="arrival" id="ht_e_arr" value="{{ $res->arrival->toDateString() }}"></div>@endif
-                        <div class="ht-f"><label for="ht_e_dep">{{ __('hotel.departure') }}</label><input class="ht-in" type="date" name="departure" id="ht_e_dep" value="{{ $res->departure->toDateString() }}"></div>
+                        @if ($in)
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;" id="ht_e_quick">
+                                @foreach ([1, 2, 3] as $n)<button type="button" class="ht-chip" data-add="{{ $n }}">{{ trans_choice('hotel.plus_nights', $n, ['n' => $n]) }}</button>@endforeach
+                            </div>
+                        @endif
+                        <div class="ht-f"><label for="ht_e_dep">{{ $in ? __('hotel.new_departure') : __('hotel.departure') }}</label><input class="ht-in" type="date" name="departure" id="ht_e_dep" value="{{ $res->departure->toDateString() }}"
+                            @if ($in) min="{{ $today->toDateString() }}" data-current="{{ $res->departure->toDateString() }}" data-from="{{ $res->departure->max($today)->toDateString() }}" data-cost="{{ $night_cost }}" data-collect="{{ $cover ? $cover['to_collect'] : 0 }}" data-counted="{{ $cover ? $cover['counted_until'] : $res->departure->copy()->subDay()->toDateString() }}" @endif></div>
+                        @if ($in)
+                            <div class="ht-note blue" id="ht_e_calc" hidden data-more1="{{ __('hotel.ext_more_1') }}" data-more="{{ __('hotel.ext_more_n') }}" data-less1="{{ __('hotel.ext_less_1') }}" data-less="{{ __('hotel.ext_less_n') }}"></div>
+                            <div id="ht_e_money" hidden>
+                                <div class="ht-f"><label for="ht_e_amount">{{ __('hotel.ext_pay_now') }}</label><input class="ht-in" name="amount" id="ht_e_amount" inputmode="decimal"><span class="ht-muted ht-small">{{ __('hotel.ext_pay_hint') }}</span></div>
+                                <div class="ht-f"><label for="ht_e_method">{{ __('hotel.paid_by') }}</label><select class="ht-in" name="method" id="ht_e_method">@foreach ($payment_types as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></div>
+                            </div>
+                        @endif
                         @if (! $in)
                             <div class="ht-f"><label for="ht_e_type">{{ __('hotel.room_type') }}</label><select class="ht-in" name="room_type_id" id="ht_e_type">@foreach ($types as $t)<option value="{{ $t->id }}" @selected($t->id == $res->room_type_id)>{{ $t->name }}</option>@endforeach</select></div>
                             <div class="ht-f"><label for="ht_e_room">{{ __('hotel.room') }}</label><select class="ht-in" name="room_id" id="ht_e_room"><option value="">{{ __('hotel.any_free_room') }}</option>
@@ -209,6 +232,45 @@ details.ht-panel-d > summary { font-weight: 700; }
 @endsection
 
 @section('javascript')
+<script>
+(function () {
+    var cover = document.getElementById('ht_cover_pay'), pay = document.getElementById('ht_d_pay');
+    if (cover && pay) {
+        cover.addEventListener('click', function () { pay.open = true; pay.scrollIntoView({ block: 'center' }); var a = document.getElementById('ht_p_amount'); if (a) a.focus(); });
+    }
+    var dep = document.getElementById('ht_e_dep'), calc = document.getElementById('ht_e_calc'), money = document.getElementById('ht_e_money'), amount = document.getElementById('ht_e_amount');
+    if (!dep || !calc || !dep.dataset.current) return;
+    var cost = parseFloat(dep.dataset.cost) || 0, owed = parseFloat(dep.dataset.collect) || 0, touched = false;
+    var fmt = function (n, sym) { return window.__currency_trans_from_en ? __currency_trans_from_en(n, sym) : String(Math.round(n)); };
+    var day = function (s) { var p = s.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000; };
+    var iso = function (d) { return new Date(d * 86400000).toISOString().slice(0, 10); };
+    var show = function () {
+        var n = dep.value ? day(dep.value) - day(dep.dataset.current) : 0;
+        calc.hidden = n === 0;
+        money.hidden = n <= 0;
+        if (n > 0) {
+            var total = n * cost;
+            calc.textContent = (n === 1 ? calc.dataset.more1 : calc.dataset.more).replace(':n', n).replace(':cost', fmt(cost, false)).replace(':amount', fmt(total, true));
+            // proposed: everything the guest owes up to the new departure (what is missing today, and the nights not paid yet)
+            var unpaid = Math.max(0, day(dep.value) - 1 - day(dep.dataset.counted));
+            if (!touched) amount.value = fmt(owed + unpaid * cost, false);
+        } else {
+            if (n < 0) calc.textContent = (n === -1 ? calc.dataset.less1 : calc.dataset.less).replace(':n', -n);
+            if (!touched) amount.value = '';
+        }
+    };
+    amount.addEventListener('input', function () { touched = true; });
+    dep.addEventListener('change', show);
+    dep.addEventListener('input', show);
+    [].forEach.call(document.querySelectorAll('#ht_e_quick [data-add]'), function (b) {
+        b.addEventListener('click', function () {
+            dep.value = iso(day(dep.dataset.from) + parseInt(b.dataset.add, 10));
+            [].forEach.call(document.querySelectorAll('#ht_e_quick .ht-chip'), function (x) { x.classList.toggle('on', x === b); });
+            show();
+        });
+    });
+})();
+</script>
 @if (session('hotel_print'))
 <script>window.open(@json(action([$R, 'printFolio'], [$res->id])), '_blank');</script>
 @endif
