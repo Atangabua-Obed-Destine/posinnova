@@ -30,11 +30,11 @@
 <div class="tw-rounded-2xl tw-bg-white tw-ring-1 tw-ring-gray-200 tw-overflow-hidden tw-shadow-sm">
     @foreach($lab_request->lines as $line)
         <div class="tw-p-4 tw-border-b tw-border-gray-50 last:tw-border-0">
-            <div class="tw-flex tw-items-center tw-justify-between tw-gap-2">
+            {{-- a result of several lines (findings written as points) goes under the test's name, not beside it --}}
+            @php $long = str_contains((string) $line->result_value, "\n") || mb_strlen((string) $line->result_value) > 28; @endphp
+            <div class="tw-flex {{ $long ? 'tw-flex-col' : 'tw-items-center tw-justify-between' }} tw-gap-2">
                 <p class="tw-text-sm tw-font-medium tw-text-gray-800">{{ $line->test_name }}</p>
-                <p class="tw-text-base tw-font-bold {{ $line->result_flag ? ($flagColors[$line->result_flag] ?? 'tw-text-gray-800') : 'tw-text-gray-800' }} tw-shrink-0">
-                    {{ $line->result_value ?: '—' }} <span class="tw-text-xs tw-text-gray-400">{{ $line->unit }}</span>
-                </p>
+                <p class="tw-text-base tw-font-bold {{ $line->result_flag ? ($flagColors[$line->result_flag] ?? 'tw-text-gray-800') : 'tw-text-gray-800' }} {{ $long ? '' : 'tw-shrink-0' }}" style="white-space:pre-line;">{{ $line->result_value ?: '—' }} <span class="tw-text-xs tw-text-gray-400">{{ $line->unit }}</span></p>
             </div>
             <div class="tw-flex tw-items-center tw-justify-between tw-mt-1 tw-gap-2">
                 <p class="tw-text-xs tw-text-gray-400">@lang('lang_v1.normal_range'): {{ $line->normal_range ?: '—' }}</p>

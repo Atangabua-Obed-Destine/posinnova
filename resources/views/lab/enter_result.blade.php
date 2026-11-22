@@ -29,42 +29,58 @@
     {{-- PosInnova: is the test paid? an unpaid one asks before results go in --}}
     @include('clinic.partials.request_payment', ['pay' => $pay, 'req' => $lr, 'ack' => true])
 
+    {{-- PosInnova: one card per test (a table squeezed the result into a tiny box on a phone). The result takes
+         a number, a word, or several lines written as points. --}}
+    <style>
+        .lab-line { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin-bottom: 12px; background: #fff; }
+        .lab-line-head { display: flex; flex-wrap: wrap; gap: 2px 14px; align-items: baseline; margin-bottom: 10px; }
+        .lab-line-head strong { font-size: 16px; color: #0f172a; }
+        .lab-line-ref { color: #64748b; font-size: 13px; }
+        .lab-line-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 10px 16px; align-items: start; }
+        @media (max-width: 767px) { .lab-line-grid { grid-template-columns: minmax(0, 1fr); } }
+        .lab-line label { display: block; font-weight: 600; font-size: 13px; color: #334155; margin: 0 0 4px; }
+        .lab-line .form-control { font-size: 16px; }
+        .lab-line textarea.lab-value { font-weight: 600; }
+        .lab-line .lab-side { display: grid; gap: 10px; }
+        .lab-help { color: #64748b; font-size: 13px; margin: 0 0 12px; }
+    </style>
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.test_results')])
-        <div class="table-responsive">
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th style="width:22%;">@lang('lang_v1.test_name')</th>
-                        <th style="width:14%;">@lang('lang_v1.normal_range')</th>
-                        <th style="width:8%;">@lang('lang_v1.unit')</th>
-                        <th style="width:22%;">@lang('lang_v1.result')</th>
-                        <th style="width:14%;">@lang('lang_v1.flag')</th>
-                        <th style="width:20%;">@lang('lang_v1.notes')</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($lr->lines as $line)
-                        <tr data-line="{{ $line->id }}" data-test="{{ $line->test_name }}" data-unit="{{ $line->unit }}" data-range="{{ $line->normal_range }}">
-                            <td><strong>{{ $line->test_name }}</strong></td>
-                            <td>{{ $line->normal_range ?: '-' }}</td>
-                            <td>{{ $line->unit ?: '-' }}</td>
-                            <td>{!! Form::text("results[{$line->id}][value]", $line->result_value, ['class' => 'form-control input-sm lab-value', 'aria-label' => __('lang_v1.result')]) !!}
-                                @if (! empty($result_options[$line->lab_test_id]))
-                                    <div class="lab-opts" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
-                                        @foreach ($result_options[$line->lab_test_id] as $opt)
-                                            <button type="button" class="btn btn-xs btn-default lab-opt" data-v="{{ $opt }}">{{ $opt }}</button>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </td>
-                            <td>{!! Form::select("results[{$line->id}][flag]", $flags, $line->result_flag, ['class' => 'form-control input-sm lab-flag', 'aria-label' => __('lang_v1.flag')]) !!}
-                                <small class="text-muted lab-flag-auto" style="display:none;">@lang('clinic.lab_flag_suggested')</small></td>
-                            <td>{!! Form::text("results[{$line->id}][notes]", $line->result_notes, ['class' => 'form-control input-sm', 'aria-label' => __('lang_v1.notes')]) !!}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+        <p class="lab-help"><i class="fas fa-info-circle"></i> @lang('clinic.lab_result_help')</p>
+        @foreach($lr->lines as $line)
+            @php $wordy = trim((string) $line->unit) === '' && trim((string) $line->normal_range) === ''; @endphp
+            <div class="lab-line" data-line="{{ $line->id }}" data-test="{{ $line->test_name }}" data-unit="{{ $line->unit }}" data-range="{{ $line->normal_range }}">
+                <div class="lab-line-head">
+                    <strong>{{ $line->test_name }}</strong>
+                    @if (trim((string) $line->normal_range) !== '')<span class="lab-line-ref">@lang('lang_v1.normal_range'): {{ $line->normal_range }}</span>@endif
+                    @if (trim((string) $line->unit) !== '')<span class="lab-line-ref">@lang('lang_v1.unit'): {{ $line->unit }}</span>@endif
+                </div>
+                <div class="lab-line-grid">
+                    <div>
+                        <label for="lab_v_{{ $line->id }}">@lang('lang_v1.result')</label>
+                        <textarea name="results[{{ $line->id }}][value]" id="lab_v_{{ $line->id }}" class="form-control lab-value pi-points {{ $wordy ? '' : 'pi-quiet' }}" rows="{{ $wordy ? 3 : 1 }}" maxlength="5000"
+                            placeholder="{{ __($wordy ? 'clinic.lab_result_ph_words' : 'clinic.lab_result_ph') }}">{{ $line->result_value }}</textarea>
+                        @if (! empty($result_options[$line->lab_test_id]))
+                            <div class="lab-opts" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+                                @foreach ($result_options[$line->lab_test_id] as $opt)
+                                    <button type="button" class="btn btn-xs btn-default lab-opt" data-v="{{ $opt }}">{{ $opt }}</button>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                    <div class="lab-side">
+                        <div>
+                            <label for="lab_f_{{ $line->id }}">@lang('lang_v1.flag')</label>
+                            {!! Form::select("results[{$line->id}][flag]", $flags, $line->result_flag, ['class' => 'form-control lab-flag', 'id' => 'lab_f_' . $line->id]) !!}
+                            <small class="text-muted lab-flag-auto" style="display:none;">@lang('clinic.lab_flag_suggested')</small>
+                        </div>
+                        <div>
+                            <label for="lab_n_{{ $line->id }}">@lang('lang_v1.notes')</label>
+                            <textarea name="results[{{ $line->id }}][notes]" id="lab_n_{{ $line->id }}" class="form-control pi-points pi-quiet" rows="1" maxlength="2000" placeholder="{{ __('clinic.lab_notes_ph') }}">{{ $line->result_notes }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endforeach
     @endcomponent
 
     <div class="row">
@@ -98,6 +114,7 @@
         'partial' => __('clinic.lab_partial_note'),
     ];
 @endphp
+@include('clinic.partials.points_js')
 <script>
     // PosInnova: one click puts a usual answer in; a number outside the normal range suggests High / Low
     // (only while the flag was not chosen by hand)
@@ -124,18 +141,18 @@
             hint.style.display = '';
         }
         document.addEventListener('input', function (e) {
-            if (e.target.classList && e.target.classList.contains('lab-value')) { suggest(e.target.closest('tr')); }
+            if (e.target.classList && e.target.classList.contains('lab-value')) { suggest(e.target.closest('.lab-line')); }
         });
         document.addEventListener('change', function (e) {
             if (e.target.classList && e.target.classList.contains('lab-flag') && e.isTrusted) {
                 e.target.setAttribute('data-manual', '1');
-                e.target.closest('tr').querySelector('.lab-flag-auto').style.display = 'none';
+                e.target.closest('.lab-line').querySelector('.lab-flag-auto').style.display = 'none';
             }
         });
         document.addEventListener('click', function (e) {
             var b = e.target.closest && e.target.closest('.lab-opt');
             if (!b) { return; }
-            var tr = b.closest('tr'), input = tr.querySelector('.lab-value');
+            var tr = b.closest('.lab-line'), input = tr.querySelector('.lab-value');
             input.value = b.getAttribute('data-v');
             input.dispatchEvent(new Event('input', { bubbles: true }));
             [].forEach.call(tr.querySelectorAll('.lab-opt'), function (x) { x.classList.toggle('btn-primary', x === b); x.classList.toggle('btn-default', x !== b); });
@@ -153,8 +170,8 @@
             var btn = e.submitter && e.submitter.form === form ? e.submitter : null;
             var validate = btn && btn.value === 'validate';
             var rows = [[L.patient, L.name]], missing = [], filled = 0;
-            [].slice.call(form.querySelectorAll('tr[data-line]')).forEach(function (tr) {
-                var input = tr.querySelector('input[name$="[value]"]'), flag = tr.querySelector('select[name$="[flag]"]');
+            [].slice.call(form.querySelectorAll('.lab-line[data-line]')).forEach(function (tr) {
+                var input = tr.querySelector('[name$="[value]"]'), flag = tr.querySelector('select[name$="[flag]"]');
                 var v = input.value.trim();
                 input.style.borderColor = '';
                 if (v) {

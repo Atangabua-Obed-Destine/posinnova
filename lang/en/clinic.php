@@ -1545,6 +1545,13 @@ return [
     'rs_drop_confirm' => 'Remove what was brought back and start this consultation again?',
     'cf_g_back_t' => 'Closed the page by mistake?',
     'cf_g_back' => 'An orange bar at the top of every page takes you back to the patient. What you typed is kept on this phone or computer until you save.',
+    // ---- writing in points
+    'pts_btn' => 'Points',
+    'pts_btn_help' => 'Write as a list: one point per line. Enter starts the next point.',
+    'lab_result_help' => 'A result can be a number, a word, or several findings: tap "Points" to write them as a list, one per line.',
+    'lab_notes_ph' => 'Optional. "- " starts a list.',
+    'lab_result_ph' => 'Result',
+    'lab_result_ph_words' => 'What was found. Tap "Points" for a list.',
     'cons_save_later' => 'Save and continue later',
     'cons_save_later_help' => 'Send the patient to the lab or imaging, then open the consultation again from the queue or the visit: the results show at the top and you can finish it.',
     // lab tests and imaging studies

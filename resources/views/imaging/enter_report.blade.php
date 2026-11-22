@@ -35,7 +35,7 @@
         @endif
         <div class="form-group">
             {!! Form::label('report', __('lang_v1.report') . ':*') !!}
-            {!! Form::textarea('report', $ir->report, ['class' => 'form-control', 'rows' => 10, 'required', 'placeholder' => __('lang_v1.report_findings_placeholder')]) !!}
+            {!! Form::textarea('report', $ir->report, ['class' => 'form-control pi-points', 'rows' => 10, 'required', 'placeholder' => __('lang_v1.report_findings_placeholder')]) !!}
         </div>
     @endcomponent
 

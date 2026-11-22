@@ -82,7 +82,7 @@
                         <tr>
                             <td>{{ $line->test_name }}</td>
                             <td>
-                                <strong>{{ $line->result_value ?: '-' }}</strong>
+                                <strong style="white-space:pre-line;">{{ $line->result_value ?: '-' }}</strong>
                                 @if (($amendments ?? collect())->where('lab_request_line_id', $line->id)->count())
                                     <span class="label label-warning">@lang('clinic.amended')</span>
                                 @endif
@@ -96,7 +96,7 @@
                                     -
                                 @endif
                             </td>
-                            <td>{{ $line->result_notes ?: '-' }}</td>
+                            <td style="white-space:pre-line;">{{ $line->result_notes ?: '-' }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -133,7 +133,7 @@
                     <div class="col-md-3">
                         <div class="form-group">
                             {!! Form::label('new_value', __('clinic.amend_new_value') . ':*') !!}
-                            {!! Form::text('new_value', null, ['class' => 'form-control', 'required', 'maxlength' => 191]) !!}
+                            {!! Form::textarea('new_value', null, ['class' => 'form-control pi-points', 'required', 'maxlength' => 5000, 'rows' => 2]) !!}
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -160,7 +160,7 @@
             <ul class="list-unstyled" style="margin:0;">
                 @foreach ($amendments as $am)
                     <li style="padding:6px 0; border-bottom:1px solid #eee;">
-                        <strong>{{ __('clinic.amended_from_to', ['test' => $am->test_name, 'from' => $am->old_value ?? '-', 'to' => $am->new_value]) }}</strong>
+                        <strong style="white-space:pre-line;">{{ __('clinic.amended_from_to', ['test' => $am->test_name, 'from' => $am->old_value ?? '-', 'to' => $am->new_value]) }}</strong>
                         <span class="text-muted">· {{ __('clinic.amended_by_on', ['user' => $am->amended_by_name ?: '-', 'date' => app(\App\Utils\Util::class)->format_date($am->created_at, true)]) }}</span>
                         <br>{{ $am->reason }}
                     </li>
@@ -170,4 +170,5 @@
     @endif
 
 </section>
+@include('clinic.partials.points_js')
 @endsection

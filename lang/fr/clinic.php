@@ -1546,6 +1546,13 @@ return [
     'rs_drop_confirm' => 'Retirer ce qui a été remis et recommencer cette consultation ?',
     'cf_g_back_t' => 'Page fermée par erreur ?',
     'cf_g_back' => 'Une barre orange en haut de chaque page vous ramène au patient. Ce que vous avez saisi est gardé sur ce téléphone ou cet ordinateur jusqu\'à l\'enregistrement.',
+    // ---- écrire par points
+    'pts_btn' => 'Points',
+    'pts_btn_help' => 'Écrire en liste : un point par ligne. Entrée commence le point suivant.',
+    'lab_result_help' => 'Un résultat peut être un chiffre, un mot ou plusieurs constats : touchez « Points » pour les écrire en liste, un par ligne.',
+    'lab_notes_ph' => 'Facultatif. « - » commence une liste.',
+    'lab_result_ph' => 'Résultat',
+    'lab_result_ph_words' => 'Ce qui a été constaté. Touchez « Points » pour une liste.',
     'cons_save_later' => 'Enregistrer et reprendre plus tard',
     'cons_save_later_help' => 'Envoyez le patient au laboratoire ou à l\'imagerie, puis rouvrez la consultation depuis la file d\'attente ou la visite : les résultats s\'affichent en haut et vous pouvez la terminer.',
     // examens de laboratoire et d'imagerie

@@ -143,7 +143,7 @@
                     <div style="margin-top:4px;">
                         <span class="text-muted">{{ @format_date($lr->requested_at) }}:</span>
                         @foreach ($lr->lines as $line)
-                            <span style="white-space:nowrap;">{{ $line->test_name }} <strong>{{ trim($line->result_value . ' ' . $line->unit) ?: '-' }}</strong>@if (in_array($line->result_flag, ['high', 'low', 'critical'])) <span class="label {{ $line->result_flag == 'critical' ? 'label-danger' : 'label-warning' }}">@lang('lang_v1.lab_flag_' . $line->result_flag)</span>@endif</span>{{ $loop->last ? '' : ' · ' }}
+                            <span style="white-space:nowrap;">{{ $line->test_name }} <strong>{{ trim(preg_replace('/\s*\n\s*/', '; ', (string) $line->result_value) . ' ' . $line->unit) ?: '-' }}</strong>@if (in_array($line->result_flag, ['high', 'low', 'critical'])) <span class="label {{ $line->result_flag == 'critical' ? 'label-danger' : 'label-warning' }}">@lang('lang_v1.lab_flag_' . $line->result_flag)</span>@endif</span>{{ $loop->last ? '' : ' · ' }}
                         @endforeach
                         <a href="{{ action([\App\Http\Controllers\LabRequestController::class, 'show'], [$lr->id]) }}" target="_blank">@lang('clinic.hist_view')</a>
                     </div>
@@ -219,7 +219,7 @@
             <div class="col-sm-12">
                 <div class="form-group" style="margin-bottom:0;">
                     {!! Form::label('history_of_complaint', __('clinic.cons_history_of_complaint') . ':') !!}
-                    {!! Form::textarea('history_of_complaint', $fv('history_of_complaint'), ['class' => 'form-control', 'rows' => 3, 'id' => 'history_of_complaint', 'placeholder' => __('clinic.cons_history_of_complaint_ph')]) !!}
+                    {!! Form::textarea('history_of_complaint', $fv('history_of_complaint'), ['class' => 'form-control pi-points', 'rows' => 3, 'id' => 'history_of_complaint', 'placeholder' => __('clinic.cons_history_of_complaint_ph')]) !!}
                 </div>
             </div>
         </div>
@@ -487,7 +487,7 @@
             <div class="col-sm-7">
                 <div class="form-group" style="margin-bottom:0;">
                     {!! Form::label('management_plan', __('clinic.cons_management_plan') . ':') !!}
-                    {!! Form::textarea('management_plan', $fv('management_plan'), ['class' => 'form-control', 'rows' => 3, 'id' => 'management_plan', 'placeholder' => __('clinic.cons_management_plan_ph')]) !!}
+                    {!! Form::textarea('management_plan', $fv('management_plan'), ['class' => 'form-control pi-points', 'rows' => 3, 'id' => 'management_plan', 'placeholder' => __('clinic.cons_management_plan_ph')]) !!}
                 </div>
             </div>
             <div class="col-sm-5">
@@ -579,6 +579,7 @@
 @section('javascript')
 @include('consultation.partials.doctor_lists_js')
 @include('consultation.exam.assets')
+@include('clinic.partials.points_js')
 <script>
 /* PosInnova: the consultation form explains itself: the guide card (open the first time), the numbered parts */
 (function () {

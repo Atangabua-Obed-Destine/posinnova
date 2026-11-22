@@ -131,7 +131,7 @@
     #record_confirm_modal .rc-amount { font-size: 32px; font-weight: 700; color: #0f172a; line-height: 1.2; }
     #record_confirm_modal .rc-rows { width: 100%; margin-bottom: 10px; font-size: 14px; }
     #record_confirm_modal .rc-rows th { color: #64748b; font-weight: normal; padding: 6px 8px 6px 0; width: 38%; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
-    #record_confirm_modal .rc-rows td { color: #0f172a; font-weight: 600; padding: 6px 0; border-bottom: 1px solid #f1f5f9; word-break: break-word; }
+    #record_confirm_modal .rc-rows td { color: #0f172a; font-weight: 600; padding: 6px 0; border-bottom: 1px solid #f1f5f9; word-break: break-word; white-space: pre-line; }
     #record_confirm_modal .rc-note { display: none; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 10px; }
     #record_confirm_modal .rc-check { display: flex; gap: 10px; align-items: flex-start; font-weight: 600; font-size: 14px; color: #0f172a; cursor: pointer; margin: 6px 0 0; padding: 10px 12px; border: 1px dashed #cbd5e1; border-radius: 8px; }
     #record_confirm_modal .rc-check input { width: 18px; height: 18px; margin: 1px 0 0; flex-shrink: 0; cursor: pointer; }

@@ -39,7 +39,7 @@
                             <td style="width:40%;">{{ $line->test_name }}</td>
                             <td>
                                 @if (trim((string) $line->result_value) !== '')
-                                    <strong>{{ $line->result_value }}</strong> {{ $line->unit }}
+                                    <strong style="white-space:pre-line;">{{ $line->result_value }}</strong> {{ $line->unit }}
                                     @if (in_array($line->result_flag, ['high', 'low', 'critical']))
                                         <span class="label {{ $line->result_flag == 'critical' ? 'label-danger' : 'label-warning' }}">@lang('lang_v1.lab_flag_' . $line->result_flag)</span>
                                     @endif

@@ -132,7 +132,7 @@
     @else
         @foreach ($lab_requests as $lr)
             @foreach ($lr->lines as $line)
-                <div>• {{ $line->test_name }}@if (trim((string) $line->result_value) !== ''): <strong>{{ $line->result_value }}</strong> {{ $line->unit }}@if (in_array($line->result_flag, ['high', 'low', 'critical'])) ({{ __('lang_v1.lab_flag_' . $line->result_flag) }})@endif @if ($line->normal_range)<small>[{{ $line->normal_range }}]</small>@endif @endif</div>
+                <div>• {{ $line->test_name }}@if (trim((string) $line->result_value) !== ''): <strong style="white-space:pre-line;">{{ $line->result_value }}</strong> {{ $line->unit }}@if (in_array($line->result_flag, ['high', 'low', 'critical'])) ({{ __('lang_v1.lab_flag_' . $line->result_flag) }})@endif @if ($line->normal_range)<small>[{{ $line->normal_range }}]</small>@endif @endif</div>
             @endforeach
         @endforeach
         @foreach ($imaging_requests as $ir)

@@ -96,6 +96,7 @@ $(function () {
         $('#consultation_type, #specialty, #referral_to').trigger('change.select2');
         $('.specialty_field').toggle($('#consultation_type').val() === 'specialist');
         $('.vitals-bmi').first().trigger('input');
+        if (window.PiPoints) { window.PiPoints.init(form); } // the text boxes take the height of what came back
         if (snap.rx && rxBody && CF.addRx) {
             $(rxBody).children('tr').not('[data-locked]').remove();
             snap.rx.forEach(function (row) { CF.addRx(row, true); });

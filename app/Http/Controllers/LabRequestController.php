@@ -260,7 +260,7 @@ class LabRequestController extends Controller
         $back = redirect()->action([\App\Http\Controllers\LabRequestController::class, 'show'], [$lab_request->id]);
 
         $line = $lab_request->lines->firstWhere('id', (int) $request->input('line_id'));
-        $new_value = trim((string) $request->input('new_value'));
+        $new_value = mb_substr(trim(str_replace(["\r\n", "\r"], "\n", (string) $request->input('new_value'))), 0, 5000);
         $reason = trim((string) $request->input('reason'));
         $new_flag = $request->input('new_flag');
         $new_flag = in_array($new_flag, ['normal', 'high', 'low', 'critical'], true) ? $new_flag : null;
@@ -277,14 +277,14 @@ class LabRequestController extends Controller
                 'lab_request_line_id' => $line->id,
                 'old_value' => $line->result_value,
                 'old_flag' => $line->result_flag,
-                'new_value' => mb_substr($new_value, 0, 191),
+                'new_value' => $new_value,
                 'new_flag' => $new_flag,
                 'reason' => $reason,
                 'amended_by' => $request->session()->get('user.id'),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-            $line->result_value = mb_substr($new_value, 0, 191);
+            $line->result_value = $new_value;
             $line->result_flag = $new_flag;
             $line->save();
             DB::commit();
@@ -404,9 +404,11 @@ class LabRequestController extends Controller
                     continue;
                 }
                 $r = $results[$line->id];
-                $line->result_value = $r['value'] ?? null;
+                // a result can be several lines (findings written as points): kept as typed, tidy line ends
+                $clean = fn ($v, $max) => ($v = trim(str_replace(["\r\n", "\r"], "\n", (string) $v))) === '' ? null : mb_substr($v, 0, $max);
+                $line->result_value = $clean($r['value'] ?? null, 5000);
                 $line->result_flag = ! empty($r['flag']) ? $r['flag'] : null;
-                $line->result_notes = $r['notes'] ?? null;
+                $line->result_notes = $clean($r['notes'] ?? null, 2000);
                 if (! empty($line->result_value)) {
                     $line->resulted_by = $request->session()->get('user.id');
                     $line->resulted_at = now();

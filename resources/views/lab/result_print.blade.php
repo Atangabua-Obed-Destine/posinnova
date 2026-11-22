@@ -66,7 +66,7 @@
             @foreach($lab_request->lines as $line)
                 <tr>
                     <td>{{ $line->test_name }}</td>
-                    <td class="{{ in_array($line->result_flag, ['high','low','critical']) ? 'flag-' . $line->result_flag : '' }}">{{ $line->result_value ?: '-' }}</td>
+                    <td class="{{ in_array($line->result_flag, ['high','low','critical']) ? 'flag-' . $line->result_flag : '' }}" style="white-space:pre-line;">{{ $line->result_value ?: '-' }}</td>
                     <td>{{ $line->normal_range ?: '-' }}</td>
                     <td>{{ $line->unit ?: '-' }}</td>
                     <td>{{ $line->result_flag ? __('lang_v1.lab_flag_' . $line->result_flag) : '-' }}</td>
