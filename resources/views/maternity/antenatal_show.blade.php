@@ -47,6 +47,9 @@
                     <tr><th>@lang('lang_v1.blood_group_father')</th><td>{{ $r->blood_group_father ?: '-' }}</td></tr>
                     <tr><th>@lang('lang_v1.hiv_status')</th><td>{{ $r->hiv_status ? __('lang_v1.' . $r->hiv_status) : '-' }}</td></tr>
                 </table>
+                @if ($r->notes)
+                    <p id="anc_notes" style="white-space:pre-line;"><strong>@lang('lang_v1.notes'):</strong><br>{{ $r->notes }}</p>
+                @endif
                 @if($r->delivery)
                     <a href="{{ action([\App\Http\Controllers\DeliveryController::class, 'show'], [$r->delivery->id]) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline tw-w-full">
                         <i class="fas fa-baby"></i> @lang('lang_v1.view_delivery')
@@ -69,7 +72,7 @@
                             <div class="col-sm-3"><div class="form-group">{!! Form::label('fundal_height', __('lang_v1.fundal_height') . ':') !!}{!! Form::number('fundal_height', null, ['class' => 'form-control', 'step' => '0.1', 'min' => 0]) !!}</div></div>
                             <div class="col-sm-3"><div class="form-group">{!! Form::label('fetal_heart_rate', __('lang_v1.fetal_heart_rate') . ':') !!}{!! Form::number('fetal_heart_rate', null, ['class' => 'form-control', 'min' => 0]) !!}</div></div>
                             <div class="col-sm-3"><div class="form-group">{!! Form::label('presentation', __('lang_v1.presentation') . ':') !!}{!! Form::text('presentation', null, ['class' => 'form-control']) !!}</div></div>
-                            <div class="col-sm-6"><div class="form-group">{!! Form::label('complications', __('lang_v1.complications') . ':') !!}{!! Form::text('complications', null, ['class' => 'form-control']) !!}</div></div>
+                            <div class="col-sm-6"><div class="form-group">{!! Form::label('complications', __('lang_v1.complications') . ':') !!}{!! Form::textarea('complications', null, ['class' => 'form-control pi-points pi-quiet', 'rows' => 1, 'maxlength' => 2000]) !!}</div></div>
                             <div class="col-sm-3"><div class="form-group">{!! Form::label('next_visit_date', __('lang_v1.next_visit') . ':') !!}{!! Form::date('next_visit_date', null, ['class' => 'form-control']) !!}</div></div>
                         </div>
                         <button type="submit" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-primary tw-text-white">@lang('lang_v1.record_anc_visit')</button>
@@ -103,6 +106,20 @@
                                     <td>{{ $v->fetal_heart_rate ?? '-' }}</td>
                                     <td>{{ $v->next_visit_date ? @format_date($v->next_visit_date) : '-' }}</td>
                                 </tr>
+                                @if ($v->fundal_height || $v->presentation || $v->complications || $v->notes)
+                                    <tr class="anc-visit-more">
+                                        <td></td>
+                                        <td colspan="6" style="color:#475569;">
+                                            @if ($v->fundal_height || $v->presentation)
+                                                <div>@if ($v->fundal_height)<strong>@lang('lang_v1.fundal_height'):</strong> {{ $v->fundal_height + 0 }}@endif
+                                                    @if ($v->fundal_height && $v->presentation) · @endif
+                                                    @if ($v->presentation)<strong>@lang('lang_v1.presentation'):</strong> {{ $v->presentation }}@endif</div>
+                                            @endif
+                                            @if ($v->complications)<div style="white-space:pre-line;"><strong>@lang('lang_v1.complications'):</strong><br>{{ $v->complications }}</div>@endif
+                                            @if ($v->notes)<div style="white-space:pre-line;"><strong>@lang('lang_v1.notes'):</strong><br>{{ $v->notes }}</div>@endif
+                                        </td>
+                                    </tr>
+                                @endif
                             @empty
                                 <tr><td colspan="7" class="text-center text-muted">@lang('lang_v1.no_records_found')</td></tr>
                             @endforelse
@@ -114,4 +131,5 @@
     </div>
 
 </section>
+@include('clinic.partials.points_js')
 @endsection

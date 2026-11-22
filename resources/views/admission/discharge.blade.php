@@ -53,7 +53,7 @@
             <div class="col-sm-12">
                 <div class="form-group">
                     {!! Form::label('discharge_notes', __('lang_v1.discharge_notes') . ':') !!}
-                    {!! Form::textarea('discharge_notes', null, ['class' => 'form-control', 'rows' => 4, 'placeholder' => __('lang_v1.discharge_summary_placeholder')]) !!}
+                    {!! Form::textarea('discharge_notes', null, ['class' => 'form-control pi-points', 'rows' => 4, 'placeholder' => __('lang_v1.discharge_summary_placeholder')]) !!}
                 </div>
             </div>
         </div>
@@ -74,6 +74,7 @@
     {{-- Pay-due modal (reuse customer payment flow) --}}
     <div class="modal fade pay_contact_due_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel"></div>
 </section>
+@include('clinic.partials.points_js')
 @endsection
 
 @section('javascript')

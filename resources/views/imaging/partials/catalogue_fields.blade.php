@@ -29,8 +29,9 @@
     <div class="col-sm-12">
         <div class="form-group">
             {!! Form::label('report_template', __('clinic.img_report_template') . ':') !!}
-            {!! Form::textarea('report_template', $imaging->report_template ?? null, ['class' => 'form-control', 'rows' => 6, 'maxlength' => 20000, 'placeholder' => __('clinic.img_report_template_ph')]) !!}
+            {!! Form::textarea('report_template', $imaging->report_template ?? null, ['class' => 'form-control pi-points', 'rows' => 6, 'maxlength' => 20000, 'placeholder' => __('clinic.img_report_template_ph')]) !!}
             <p class="help-block">@lang('clinic.img_report_template_help')</p>
+            @include('clinic.partials.points_js')
         </div>
     </div>
 </div>

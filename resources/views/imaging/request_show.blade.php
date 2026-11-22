@@ -50,7 +50,7 @@
                     <tr><th>@lang('lang_v1.radiology_location')</th><td>{{ optional($ir->location)->name ?: '-' }}</td></tr>
                 </table>
                 @if($ir->clinical_notes)
-                    <p><strong>@lang('lang_v1.clinical_notes'):</strong> {{ $ir->clinical_notes }}</p>
+                    <p style="white-space:pre-line;"><strong>@lang('lang_v1.clinical_notes'):</strong> {{ $ir->clinical_notes }}</p>
                 @endif
             @endcomponent
         </div>

@@ -29,7 +29,7 @@
         @if (! empty($b['unit']))<span class="input-group-addon">{{ $b['unit'] }}</span>@endif
     </div>
 @elseif ($b['type'] == 'notes')
-    <textarea class="form-control input-sm" name="{{ $name }}" rows="2" aria-label="{{ $aria }}">{{ $val }}</textarea>
+    <textarea class="form-control input-sm pi-points" name="{{ $name }}" rows="2" aria-label="{{ $aria }}">{{ $val }}</textarea>
 @else
     <input type="text" class="form-control input-sm" name="{{ $name }}" value="{{ $val }}" maxlength="500" aria-label="{{ $aria }}">
 @endif

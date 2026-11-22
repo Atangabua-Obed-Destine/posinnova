@@ -18,7 +18,7 @@
         <span class="tw-text-lg tw-font-semibold">{{ optional($ir->patient)->name }}</span>
         <span class="tw-text-sm tw-text-gray-600 tw-ml-3"><strong>@lang('lang_v1.file_number'):</strong> {{ optional($pd)->file_number ?: '-' }}</span>
         @if($ir->clinical_notes)
-            <p class="tw-mt-2 tw-text-sm tw-text-gray-600"><strong>@lang('lang_v1.clinical_notes'):</strong> {{ $ir->clinical_notes }}</p>
+            <p class="tw-mt-2 tw-text-sm tw-text-gray-600" style="white-space:pre-line;"><strong>@lang('lang_v1.clinical_notes'):</strong> {{ $ir->clinical_notes }}</p>
         @endif
     </div>
 

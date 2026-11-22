@@ -97,7 +97,7 @@
                 @if ($c->history_of_complaint)
                     <p style="white-space:pre-line;"><strong>@lang('clinic.cons_history_of_complaint'):</strong><br>{{ $c->history_of_complaint }}</p>
                 @endif
-                <p><strong>@lang('lang_v1.examination_notes'):</strong><br>{{ $c->examination_notes ?: '-' }}</p>
+                <p style="white-space:pre-line;"><strong>@lang('lang_v1.examination_notes'):</strong><br>{{ $c->examination_notes ?: '-' }}</p>
                 <p style="white-space:pre-line;"><strong>@lang('clinic.cons_provisional_diagnosis'):</strong><br>{{ $c->diagnosis ?: '-' }}</p>
                 @if ($c->differential_diagnosis)
                     <p style="white-space:pre-line;"><strong>@lang('clinic.cons_differential_diagnosis'):</strong><br>{{ $c->differential_diagnosis }}</p>

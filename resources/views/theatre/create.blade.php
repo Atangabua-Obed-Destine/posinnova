@@ -56,7 +56,7 @@
                 <div class="col-sm-12">
                     <div class="form-group">
                         {!! Form::label('preop_notes', __('lang_v1.preop_notes') . ':') !!}
-                        {!! Form::textarea('preop_notes', null, ['class' => 'form-control', 'rows' => 3, 'placeholder' => __('lang_v1.preop_checklist_placeholder')]) !!}
+                        {!! Form::textarea('preop_notes', null, ['class' => 'form-control pi-points', 'rows' => 3, 'placeholder' => __('lang_v1.preop_checklist_placeholder')]) !!}
                     </div>
                 </div>
             </div>
@@ -71,6 +71,7 @@
 
         {!! Form::close() !!}
     </section>
+@include('clinic.partials.points_js')
 @endsection
 
 @section('javascript')

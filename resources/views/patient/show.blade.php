@@ -142,7 +142,7 @@
                     </div>
                     @if(optional($pd)->notes)
                         <div class="col-md-12">
-                            <div class="well well-sm"><strong>@lang('lang_v1.additional_notes'):</strong> {{ $pd->notes }}</div>
+                            <div class="well well-sm" style="white-space:pre-line;"><strong>@lang('lang_v1.additional_notes'):</strong> {{ $pd->notes }}</div>
                         </div>
                     @endif
                 </div>

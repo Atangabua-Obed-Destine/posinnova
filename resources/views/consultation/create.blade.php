@@ -448,7 +448,7 @@
             <div class="col-sm-12">
                 <div class="form-group">
                     {!! Form::label('lab_clinical_notes', __('lang_v1.clinical_notes') . ':') !!}
-                    {!! Form::text('lab_clinical_notes', null, ['class' => 'form-control', 'placeholder' => __('lang_v1.clinical_notes_placeholder')]) !!}
+                    {!! Form::textarea('lab_clinical_notes', null, ['class' => 'form-control pi-points pi-quiet', 'rows' => 1, 'maxlength' => 2000, 'placeholder' => __('lang_v1.clinical_notes_placeholder')]) !!}
                 </div>
             </div>
         </div>
@@ -662,6 +662,7 @@ $(document).ready(function () {
         $.get(EX.form_url, { template_id: id }).done(function (html) {
             $exBody.html(html);
             window.ExamForm.init($exBody[0]);
+            if (window.PiPoints) { window.PiPoints.init($exBody[0]); }
             if (cb) { cb(true); }
         }).fail(function () { $exBody.empty(); toastr.error(EX.error); if (cb) { cb(false); } });
     }

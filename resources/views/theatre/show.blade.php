@@ -50,15 +50,15 @@
                     {!! Form::open(['url' => action([\App\Http\Controllers\TheatreController::class, 'record'], [$t->id]), 'method' => 'post']) !!}
                     <div class="form-group">
                         {!! Form::label('preop_notes', __('lang_v1.preop_notes') . ':') !!}
-                        {!! Form::textarea('preop_notes', $t->preop_notes, ['class' => 'form-control', 'rows' => 2]) !!}
+                        {!! Form::textarea('preop_notes', $t->preop_notes, ['class' => 'form-control pi-points', 'rows' => 2]) !!}
                     </div>
                     <div class="form-group">
                         {!! Form::label('intraop_notes', __('lang_v1.intraop_notes') . ':') !!}
-                        {!! Form::textarea('intraop_notes', $t->intraop_notes, ['class' => 'form-control', 'rows' => 3]) !!}
+                        {!! Form::textarea('intraop_notes', $t->intraop_notes, ['class' => 'form-control pi-points', 'rows' => 3]) !!}
                     </div>
                     <div class="form-group">
                         {!! Form::label('postop_notes', __('lang_v1.postop_notes') . ':') !!}
-                        {!! Form::textarea('postop_notes', $t->postop_notes, ['class' => 'form-control', 'rows' => 2]) !!}
+                        {!! Form::textarea('postop_notes', $t->postop_notes, ['class' => 'form-control pi-points', 'rows' => 2]) !!}
                     </div>
                     <div class="form-group">
                         {!! Form::label('status', __('lang_v1.update_status') . ':') !!}
@@ -70,13 +70,14 @@
                 @endcomponent
             @else
                 @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.operative_notes')])
-                    <p><strong>@lang('lang_v1.preop_notes'):</strong><br>{{ $t->preop_notes ?: '-' }}</p>
-                    <p><strong>@lang('lang_v1.intraop_notes'):</strong><br>{{ $t->intraop_notes ?: '-' }}</p>
-                    <p><strong>@lang('lang_v1.postop_notes'):</strong><br>{{ $t->postop_notes ?: '-' }}</p>
+                    <p style="white-space:pre-line;"><strong>@lang('lang_v1.preop_notes'):</strong><br>{{ $t->preop_notes ?: '-' }}</p>
+                    <p style="white-space:pre-line;"><strong>@lang('lang_v1.intraop_notes'):</strong><br>{{ $t->intraop_notes ?: '-' }}</p>
+                    <p style="white-space:pre-line;"><strong>@lang('lang_v1.postop_notes'):</strong><br>{{ $t->postop_notes ?: '-' }}</p>
                 @endcomponent
             @endif
         </div>
     </div>
 
 </section>
+@include('clinic.partials.points_js')
 @endsection

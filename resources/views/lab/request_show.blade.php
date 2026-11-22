@@ -60,7 +60,7 @@
             @endif
         </div>
         @if($lr->clinical_notes)
-            <p class="tw-mt-2 tw-text-sm tw-text-gray-600"><strong>@lang('lang_v1.clinical_notes'):</strong> {{ $lr->clinical_notes }}</p>
+            <p class="tw-mt-2 tw-text-sm tw-text-gray-600" style="white-space:pre-line;"><strong>@lang('lang_v1.clinical_notes'):</strong> {{ $lr->clinical_notes }}</p>
         @endif
     </div>
 

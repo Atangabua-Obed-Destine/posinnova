@@ -68,10 +68,10 @@
                     <tr><th>@lang('lang_v1.admitting_doctor')</th><td>{{ optional($a->admittingDoctor)->user_full_name ?? '-' }}</td></tr>
                     <tr><th>@lang('lang_v1.admitted_by')</th><td>{{ optional($a->admittedBy)->user_full_name ?? '-' }}</td></tr>
                     <tr><th>@lang('lang_v1.deposit')</th><td><span class="display_currency" data-currency_symbol="true">{{ $a->deposit_amount }}</span></td></tr>
-                    <tr><th>@lang('lang_v1.reason_for_admission')</th><td>{{ $a->reason_for_admission ?: '-' }}</td></tr>
+                    <tr><th>@lang('lang_v1.reason_for_admission')</th><td style="white-space:pre-line;">{{ $a->reason_for_admission ?: '-' }}</td></tr>
                     @if($a->status == 'discharged')
                         <tr><th>@lang('lang_v1.discharge_date')</th><td>{{ @format_datetime($a->discharge_date) }}</td></tr>
-                        <tr><th>@lang('lang_v1.discharge_notes')</th><td>{{ $a->discharge_notes ?: '-' }}</td></tr>
+                        <tr><th>@lang('lang_v1.discharge_notes')</th><td style="white-space:pre-line;">{{ $a->discharge_notes ?: '-' }}</td></tr>
                     @endif
                 </table>
             </div>
@@ -170,7 +170,7 @@
                             <div class="col-sm-2 col-xs-6"><div class="form-group">{!! Form::label('pain_score', __('lang_v1.pain_score')) !!}{!! Form::number('pain_score', null, ['class' => 'form-control', 'min' => 0, 'max' => 10]) !!}</div></div>
                             <div class="col-sm-2 col-xs-6"><div class="form-group">{!! Form::label('blood_sugar', __('lang_v1.blood_sugar')) !!}{!! Form::number('blood_sugar', null, ['class' => 'form-control', 'min' => 0]) !!}</div></div>
                             <div class="col-sm-2 col-xs-6"><div class="form-group">{!! Form::label('weight', __('lang_v1.weight_kg')) !!}{!! Form::number('weight', null, ['class' => 'form-control', 'step' => '0.01', 'min' => 0]) !!}</div></div>
-                            <div class="col-sm-6"><div class="form-group">{!! Form::label('notes', __('lang_v1.notes')) !!}{!! Form::text('notes', null, ['class' => 'form-control']) !!}</div></div>
+                            <div class="col-sm-6"><div class="form-group">{!! Form::label('notes', __('lang_v1.notes')) !!}{!! Form::textarea('notes', null, ['class' => 'form-control pi-points pi-quiet', 'rows' => 1, 'maxlength' => 2000]) !!}</div></div>
                         </div>
                         <button type="submit" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-primary tw-text-white">@lang('lang_v1.record_vitals')</button>
                         {!! Form::close() !!}
@@ -233,7 +233,7 @@
                             <div class="col-sm-2"><div class="form-group">{!! Form::label('route', __('lang_v1.route')) !!}{!! Form::select('route', ['' => '-', 'PO' => 'PO', 'IV' => 'IV', 'IM' => 'IM', 'SC' => 'SC', 'PR' => 'PR', 'Topical' => 'Topical', 'Inhaled' => 'Inhaled'], null, ['class' => 'form-control']) !!}</div></div>
                             <div class="col-sm-2"><div class="form-group">{!! Form::label('status', __('lang_v1.status') . ':*') !!}{!! Form::select('status', ['given' => __('lang_v1.mar_given'), 'refused' => __('lang_v1.mar_refused'), 'held' => __('lang_v1.mar_held'), 'missed' => __('lang_v1.mar_missed')], 'given', ['class' => 'form-control', 'required']) !!}</div></div>
                             <div class="col-sm-2"><div class="form-group">{!! Form::label('administered_at', __('lang_v1.time')) !!}{!! Form::text('administered_at', \Carbon::now()->format('Y-m-d H:i'), ['class' => 'form-control']) !!}</div></div>
-                            <div class="col-sm-12"><div class="form-group">{!! Form::label('notes', __('lang_v1.notes')) !!}{!! Form::text('notes', null, ['class' => 'form-control']) !!}</div></div>
+                            <div class="col-sm-12"><div class="form-group">{!! Form::label('notes', __('lang_v1.notes')) !!}{!! Form::textarea('notes', null, ['class' => 'form-control pi-points pi-quiet', 'rows' => 1, 'maxlength' => 2000]) !!}</div></div>
                         </div>
                         <button type="submit" class="tw-dw-btn tw-dw-btn-sm tw-bg-green-600 tw-text-white tw-border-none">@lang('lang_v1.record_administration')</button>
                         {!! Form::close() !!}
@@ -253,7 +253,7 @@
                                     <td>{{ $m->route ?: '-' }}</td>
                                     <td><span class="label {{ $mar_labels[$m->status] ?? 'label-default' }}">{{ __('lang_v1.mar_' . $m->status) }}</span></td>
                                     <td>{{ optional($m->administeredBy)->user_full_name ?? '-' }}</td>
-                                    <td>{{ $m->notes ?: '-' }}</td>
+                                    <td style="white-space:pre-line;">{{ $m->notes ?: '-' }}</td>
                                 </tr>
                             @empty
                                 <tr><td colspan="7" class="text-center text-muted">@lang('lang_v1.no_mar_yet')</td></tr>
@@ -271,7 +271,7 @@
                         <div class="row">
                             <div class="col-sm-3"><div class="form-group">{!! Form::label('shift', __('lang_v1.shift')) !!}{!! Form::select('shift', ['' => '-', 'morning' => __('lang_v1.morning'), 'afternoon' => __('lang_v1.afternoon'), 'night' => __('lang_v1.night')], null, ['class' => 'form-control']) !!}</div></div>
                             <div class="col-sm-3"><div class="form-group">{!! Form::label('note_type', __('lang_v1.note_type')) !!}{!! Form::select('note_type', ['general' => __('lang_v1.note_type_general'), 'observation' => __('lang_v1.note_type_observation'), 'intervention' => __('lang_v1.note_type_intervention'), 'incident' => __('lang_v1.note_type_incident'), 'handover' => __('lang_v1.note_type_handover')], 'general', ['class' => 'form-control']) !!}</div></div>
-                            <div class="col-sm-12"><div class="form-group">{!! Form::label('note', __('lang_v1.note') . ':*') !!}{!! Form::textarea('note', null, ['class' => 'form-control', 'rows' => 3, 'required']) !!}</div></div>
+                            <div class="col-sm-12"><div class="form-group">{!! Form::label('note', __('lang_v1.note') . ':*') !!}{!! Form::textarea('note', null, ['class' => 'form-control pi-points', 'rows' => 3, 'required']) !!}</div></div>
                         </div>
                         <button type="submit" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-primary tw-text-white">@lang('lang_v1.add_note')</button>
                         {!! Form::close() !!}
@@ -395,7 +395,7 @@
                             </div>
                             <div class="form-group">
                                 {!! Form::label('reason', __('lang_v1.reason') . ':') !!}
-                                {!! Form::textarea('reason', null, ['class' => 'form-control', 'rows' => 2]) !!}
+                                {!! Form::textarea('reason', null, ['class' => 'form-control pi-points pi-quiet', 'rows' => 2]) !!}
                             </div>
                             <p class="help-block">@lang('lang_v1.transfer_bed_note')</p>
                         </div>
@@ -414,6 +414,7 @@
     <div class="modal fade pay_contact_due_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel"></div>
 
 </section>
+@include('clinic.partials.points_js')
 @endsection
 
 @section('javascript')

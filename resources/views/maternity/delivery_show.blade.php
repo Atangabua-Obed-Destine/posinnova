@@ -33,7 +33,10 @@
                     <tr><th>@lang('lang_v1.delivery_date')</th><td>{{ @format_datetime($d->delivery_date) }}</td></tr>
                     <tr><th>@lang('lang_v1.delivery_type')</th><td>{{ __('lang_v1.delivery_type_' . $d->delivery_type) }}</td></tr>
                     <tr><th>@lang('lang_v1.attended_by')</th><td>{{ optional($d->attendedBy)->user_full_name ?? '-' }}</td></tr>
-                    <tr><th>@lang('lang_v1.complications')</th><td>{{ $d->complications ?: '-' }}</td></tr>
+                    <tr><th>@lang('lang_v1.complications')</th><td style="white-space:pre-line;">{{ $d->complications ?: '-' }}</td></tr>
+                    @if ($d->notes)
+                        <tr><th>@lang('lang_v1.notes')</th><td style="white-space:pre-line;">{{ $d->notes }}</td></tr>
+                    @endif
                     <tr><th>@lang('lang_v1.delivery_fee')</th><td><span class="display_currency" data-currency_symbol="true">{{ $d->fee }}</span></td></tr>
                 </table>
             @endcomponent

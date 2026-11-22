@@ -356,7 +356,8 @@
     <div class="row">
         <div class="col-md-12">
             <div class="form-group">
-                {!! Form::textarea('notes', ! empty($pf_quick) ? '' : optional($pd)->notes, ['class' => 'form-control', 'rows' => 3, 'id' => 'patient_notes', 'placeholder' => __('lang_v1.additional_notes')]) !!}
+                {!! Form::textarea('notes', ! empty($pf_quick) ? '' : optional($pd)->notes, ['class' => 'form-control pi-points pi-quiet', 'rows' => 3, 'id' => 'patient_notes', 'placeholder' => __('lang_v1.additional_notes')]) !!}
+                @include('clinic.partials.points_js')
             </div>
         </div>
     </div>

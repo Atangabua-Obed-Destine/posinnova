@@ -76,7 +76,7 @@
                 <div class="col-sm-12">
                     <div class="form-group">
                         {!! Form::label('reason_for_admission', __('lang_v1.reason_for_admission') . ':') !!}
-                        {!! Form::textarea('reason_for_admission', null, ['class' => 'form-control', 'rows' => 2]) !!}
+                        {!! Form::textarea('reason_for_admission', null, ['class' => 'form-control pi-points', 'rows' => 2]) !!}
                     </div>
                 </div>
             </div>
@@ -114,6 +114,7 @@
 
         {!! Form::close() !!}
     </section>
+@include('clinic.partials.points_js')
 @endsection
 
 @section('javascript')

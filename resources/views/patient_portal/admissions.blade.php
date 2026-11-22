@@ -22,7 +22,7 @@
                 <div class="tw-rounded-xl tw-bg-gray-50 tw-p-2"><p class="tw-text-[10px] tw-text-gray-400">@lang('lang_v1.discharge_date')</p><p class="tw-text-xs tw-font-semibold tw-text-gray-700">{{ $a->discharge_date ? @format_date($a->discharge_date) : '—' }}</p></div>
                 <div class="tw-rounded-xl tw-bg-gray-50 tw-p-2"><p class="tw-text-[10px] tw-text-gray-400">@lang('lang_v1.days')</p><p class="tw-text-xs tw-font-semibold tw-text-gray-700">{{ $a->days_admitted }}</p></div>
             </div>
-            @if($a->discharge_notes)<p class="tw-text-xs tw-text-gray-500 tw-mt-2"><strong>@lang('lang_v1.discharge_notes'):</strong> {{ $a->discharge_notes }}</p>@endif
+            @if($a->discharge_notes)<p class="tw-text-xs tw-text-gray-500 tw-mt-2" style="white-space:pre-line;"><strong>@lang('lang_v1.discharge_notes'):</strong> {{ $a->discharge_notes }}</p>@endif
         </div>
     @empty
         @include('patient_portal.partials.empty', ['msg' => __('lang_v1.no_admissions'), 'icon' => 'fa-procedures'])

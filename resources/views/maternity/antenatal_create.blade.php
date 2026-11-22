@@ -77,7 +77,7 @@
                 <div class="col-sm-12">
                     <div class="form-group">
                         {!! Form::label('notes', __('lang_v1.notes') . ':') !!}
-                        {!! Form::textarea('notes', null, ['class' => 'form-control', 'rows' => 2]) !!}
+                        {!! Form::textarea('notes', null, ['class' => 'form-control pi-points', 'rows' => 2]) !!}
                     </div>
                 </div>
             </div>
@@ -92,6 +92,7 @@
 
         {!! Form::close() !!}
     </section>
+@include('clinic.partials.points_js')
 @endsection
 
 @section('javascript')
