@@ -8,25 +8,28 @@
     $H = \App\Http\Controllers\HotelController::class;
     $S = \App\Http\Controllers\HotelSetupController::class;
     $u = auth()->user();
-    $tone = ['free' => '#e5f4e4;color:#05603a', 'occ' => '#e7f1fb;color:#1849a9', 'arr' => '#f4f3ff;color:#5925dc', 'dep' => '#fdead7;color:#b93815', 'dirty' => '#fef0c7;color:#93370d', 'ooo' => '#f2f4f7;color:#475467'];
+    $tone = ['free' => '#32d583;color:#053321', 'occ' => '#53b1fd;color:#0b2545', 'arr' => '#bdb4fe;color:#27115f', 'dep' => '#fd853a;color:#3b1505', 'dirty' => '#fdb022;color:#3d2400', 'ooo' => '#98a2b3;color:#101828'];
     $filters = ['all' => [__('hotel.all'), $total], 'free' => [__('hotel.state_free'), ($counts['free'] ?? 0) + ($counts['arr'] ?? 0)], 'occ' => [__('hotel.state_occ'), ($counts['occ'] ?? 0) + ($counts['dep'] ?? 0)],
         'arr' => [__('hotel.state_arr'), $counts['arr'] ?? 0], 'dep' => [__('hotel.state_dep'), $counts['dep'] ?? 0], 'dirty' => [__('hotel.state_dirty'), $counts['dirty'] ?? 0], 'ooo' => [__('hotel.state_ooo'), $counts['ooo'] ?? 0]];
 @endphp
 <style>
-.ht-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.ht-tile { display: flex; flex-direction: column; gap: 3px; min-height: 132px; padding: 11px 12px; border-radius: 12px; border: 2px solid transparent; text-align: left; font: inherit; cursor: pointer; min-width: 0; }
-.ht-tile .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.ht-tile .no { font-size: 20px; font-weight: 700; }
-.ht-tile .st { font-size: 12px; font-weight: 700; text-align: right; }
-.ht-tile .ty { font-size: 12.5px; }
+.ht-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+/* dark cards, the state as a bright bar at the foot: the colours are read from across the desk */
+.ht-tile { display: flex; flex-direction: column; min-height: 168px; padding: 0; border-radius: 12px; border: 2px solid #1d2939; background: #1d2939; color: #fff; text-align: left; font: inherit; cursor: pointer; min-width: 0; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,40,.25); }
+.ht-tile:hover { background: #253247; }
+.ht-tile .bd { display: flex; flex-direction: column; gap: 3px; flex: 1; padding: 11px 12px 10px; min-width: 0; }
+.ht-tile .no { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.ht-tile .ty { font-size: 12.5px; color: #d0d5dd; }
 .ht-tile .gu { font-size: 14px; font-weight: 700; margin-top: auto; padding-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.ht-tile .ln { font-size: 12.5px; }
-.ht-tile .mo { font-size: 12.5px; font-weight: 700; }
-.ht-tile .mo.due { color: #b42318; }
-.ht-tile .fl { font-size: 12px; font-weight: 700; color: #93370d; }
-.ht-tile.sel { border-color: #101828; }
-.ht-tile.dim { opacity: .28; }
-.ht-tile.st-ooo { background-image: repeating-linear-gradient(135deg, transparent 0 8px, rgba(71,84,103,.08) 8px 16px); }
+.ht-tile .ln { font-size: 12.5px; color: #e4e7ec; }
+.ht-tile .mo { font-size: 12.5px; font-weight: 700; color: #6ce9a6; }
+.ht-tile .mo.due { color: #fda29b; }
+.ht-tile .fl { font-size: 12px; font-weight: 700; color: #fec84b; }
+.ht-tile .bar { display: block; padding: 8px 10px; text-align: center; font-size: 13.5px; font-weight: 700; }
+.ht-tile.sel { border-color: #fff; box-shadow: 0 0 0 3px #4f46e5; }
+.ht-tile.dim { opacity: .25; }
+.ht-tile.st-ooo .bd { background-image: repeating-linear-gradient(135deg, transparent 0 8px, rgba(255,255,255,.05) 8px 16px); }
+.ht-chip .ht-sw { width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; flex: none; }
 .ht-panel { display: none; }
 .ht-panel.on { display: block; }
 </style>
@@ -44,7 +47,7 @@
     @else
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;" role="group" aria-label="{{ __('hotel.show_rooms') }}">
         @foreach ($filters as $k => [$label, $n])
-            <button type="button" class="ht-chip {{ $k === 'all' ? 'on' : '' }}" data-filter="{{ $k }}">{{ $label }} {{ $n }}</button>
+            <button type="button" class="ht-chip {{ $k === 'all' ? 'on' : '' }}" data-filter="{{ $k }}">@if ($k !== 'all')<span class="ht-sw" style="background: {{ explode(';', $tone[$k])[0] }}"></span>@endif{{ $label }} {{ $n }}</button>
         @endforeach
     </div>
 
@@ -57,9 +60,10 @@
                     <div class="ht-tiles">
                         @foreach ($states as $st)
                             @php $room = $st['room']; $res = $st['res']; @endphp
-                            <button type="button" class="ht-tile st-{{ $st['state'] }}" style="background: {{ $tone[$st['state']] }}" data-room="{{ $room->id }}" data-state="{{ $st['state'] }}" id="ht_tile_{{ $room->number }}" aria-pressed="false">
+                            <button type="button" class="ht-tile st-{{ $st['state'] }}" data-room="{{ $room->id }}" data-state="{{ $st['state'] }}" id="ht_tile_{{ $room->number }}" aria-pressed="false">
                                 @php $state = $st['state']; $type = $room->type; $left = $res ? $today->diffInDays($res->departure, false) : 0; @endphp
-                                <span class="top"><span class="no">{{ $room->number }}</span><span class="st">{{ __('hotel.state_' . $state) }}</span></span>
+                                <span class="bd">
+                                <span class="no">{{ $room->number }}</span>
                                 <span class="ty">{{ optional($type)->name }}@if (optional($type)->capacity) · {{ trans_choice('hotel.sleeps_n', $type->capacity, ['n' => $type->capacity]) }}@endif</span>
                                 @if (in_array($state, ['occ', 'dep']))
                                     <span class="gu">{{ optional($res->contact)->name }}</span>
@@ -78,6 +82,8 @@
                                     <span class="gu">{{ $state === 'dirty' ? __('hotel.to_clean') : __('hotel.ready') }}</span>
                                     @if ($type)<span class="ln">{{ __('hotel.tile_per_night', ['amount' => $fmt($type->rate_room_only)]) }}</span>@endif
                                 @endif
+                                </span>
+                                <span class="bar" style="background: {{ $tone[$state] }}">{{ __('hotel.state_' . $state) }}</span>
                             </button>
                         @endforeach
                     </div>

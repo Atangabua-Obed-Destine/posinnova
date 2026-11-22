@@ -13,15 +13,23 @@
     $want_room = old('room_id', $res->room_id ?: optional($rooms->first(fn ($r) => $sellable($r)))->id);
 @endphp
 <style>
-.ht-rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-.ht-roomopt { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; border: 2px solid #eaecf0; background: #fff; cursor: pointer; margin: 0; font-weight: 400; min-width: 0; }
-.ht-roomopt .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.ht-roomopt .no { font-size: 20px; font-weight: 700; }
-.ht-roomopt .ty { font-weight: 600; }
-.ht-roomopt .pr { font-weight: 700; margin-top: 4px; }
+.ht-rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.ht-roomopt { position: relative; display: flex; flex-direction: column; border-radius: 12px; border: 2px solid #1d2939; background: #1d2939; color: #fff; cursor: pointer; margin: 0; font-weight: 400; min-width: 0; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,40,.25); }
+.ht-roomopt:hover { background: #253247; }
 .ht-roomopt input { position: absolute; opacity: 0; }
-.ht-roomopt.on { border-color: #4f46e5; background: #f5f8ff; }
-.ht-roomopt:focus-within { outline: 2px solid #84adff; }
+.ht-roomopt .in { display: flex; flex-direction: column; gap: 4px; flex: 1; padding: 12px 14px; }
+.ht-roomopt .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ht-roomopt .no { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.ht-roomopt .tick { display: none; width: 24px; height: 24px; border-radius: 50%; background: #fff; color: #4f46e5; font-weight: 700; align-items: center; justify-content: center; }
+.ht-roomopt .ty { font-weight: 600; }
+.ht-roomopt .sub { font-size: 12.5px; color: #d0d5dd; }
+.ht-roomopt .pr { font-weight: 700; margin-top: 4px; }
+.ht-roomopt .bk { font-size: 12px; font-weight: 700; color: #d9d6fe; }
+.ht-roomopt .bar { display: block; padding: 8px 10px; text-align: center; font-size: 13.5px; font-weight: 700; background: #32d583; color: #053321; }
+.ht-roomopt .bar.no { background: #fdb022; color: #3d2400; }
+.ht-roomopt.on { border-color: #fff; box-shadow: 0 0 0 3px #4f46e5; }
+.ht-roomopt.on .tick { display: inline-flex; }
+.ht-roomopt:focus-within { outline: 2px solid #84adff; outline-offset: 3px; }
 .ht-card-g { border: 1px solid #eaecf0; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
 </style>
 <section class="content ht" id="ht_checkin">
@@ -49,11 +57,14 @@
                                 <label class="ht-roomopt {{ (string) $want_room === (string) $room->id ? 'on' : '' }}">
                                     <input type="radio" name="room_id" value="{{ $room->id }}" @checked((string) $want_room === (string) $room->id) data-clean="{{ $clean ? 1 : 0 }}" data-no="{{ $room->number }}">
                                     @php $type = $res->roomType; @endphp
-                                    <span class="top"><span class="no">{{ $room->number }}</span><span class="ht-pill {{ $clean ? 'ht-p-free' : 'ht-p-dirty' }}">{{ $clean ? __('hotel.ready') : __('hotel.to_clean') }}</span></span>
-                                    <span class="ty">{{ optional($type)->name }}</span>
-                                    <span class="ht-muted ht-small">@if ((string) $room->floor !== ''){{ __('hotel.floor_n', ['n' => $room->floor]) }} · @endif{{ optional($type)->capacity ? trans_choice('hotel.sleeps_n', $type->capacity, ['n' => $type->capacity]) : '' }}</span>
-                                    <span class="pr">{{ __('hotel.tile_per_night', ['amount' => $fmt($res->rate)]) }}</span>
-                                    @if ($room->id == $res->room_id)<span class="ht-pill ht-p-arr" style="align-self:flex-start;">{{ __('hotel.booked_for_guest') }}</span>@endif
+                                    <span class="in">
+                                        <span class="top"><span class="no">{{ $room->number }}</span><span class="tick" aria-hidden="true">✓</span></span>
+                                        <span class="ty">{{ optional($type)->name }}</span>
+                                        <span class="sub">@if ((string) $room->floor !== ''){{ __('hotel.floor_n', ['n' => $room->floor]) }} · @endif{{ optional($type)->capacity ? trans_choice('hotel.sleeps_n', $type->capacity, ['n' => $type->capacity]) : '' }}</span>
+                                        <span class="pr">{{ __('hotel.tile_per_night', ['amount' => $fmt($res->rate)]) }}</span>
+                                        @if ($room->id == $res->room_id)<span class="bk">{{ __('hotel.booked_for_guest') }}</span>@endif
+                                    </span>
+                                    <span class="bar {{ $clean ? 'ok' : 'no' }}">{{ $clean ? __('hotel.ready') : __('hotel.to_clean') }}</span>
                                 </label>
                             @endforeach
                         </div>
