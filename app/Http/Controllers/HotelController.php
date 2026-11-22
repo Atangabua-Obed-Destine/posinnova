@@ -103,10 +103,20 @@ class HotelController extends HotelBaseController
         $rooms = HotelRoom::where('business_id', $biz)->where('is_active', 1)->with('type')->orderBy('floor')->orderBy('number')->get();
         $states = $this->roomStates($biz, $rooms);
         $counts = collect($states)->countBy('state')->all();
+        // what each occupied room still has to pay: with "pay first", everything up to tonight
+        $folio = new HotelFolio();
+        $pay_first = Hotel::settings($biz)['pay_first'];
+        foreach ($states as $id => $s) {
+            if (in_array($s['state'], ['occ', 'dep'])) {
+                $cover = $pay_first ? $folio->coverage($s['res']) : null;
+                $states[$id]['owe'] = $cover ? (float) $cover['to_collect'] : max(0, $folio->balance($s['res']));
+            }
+        }
 
         return view('hotel.board', [
             'floors' => collect($states)->groupBy(fn ($s) => (string) ($s['room']->floor ?? '')),
-            'counts' => $counts, 'total' => count($states), 'folio' => new HotelFolio(), 'fmt' => fn ($v) => $this->money($v),
+            'counts' => $counts, 'total' => count($states), 'folio' => $folio, 'fmt' => fn ($v) => $this->money($v),
+            'today' => Hotel::today(),
         ]);
     }
 

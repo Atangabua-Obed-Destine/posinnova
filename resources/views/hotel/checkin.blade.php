@@ -13,8 +13,12 @@
     $want_room = old('room_id', $res->room_id ?: optional($rooms->first(fn ($r) => $sellable($r)))->id);
 @endphp
 <style>
-.ht-rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-.ht-roomopt { display: flex; flex-direction: column; gap: 3px; padding: 11px 12px; border-radius: 12px; border: 2px solid #eaecf0; background: #fff; cursor: pointer; margin: 0; font-weight: 400; }
+.ht-rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.ht-roomopt { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; border: 2px solid #eaecf0; background: #fff; cursor: pointer; margin: 0; font-weight: 400; min-width: 0; }
+.ht-roomopt .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ht-roomopt .no { font-size: 20px; font-weight: 700; }
+.ht-roomopt .ty { font-weight: 600; }
+.ht-roomopt .pr { font-weight: 700; margin-top: 4px; }
 .ht-roomopt input { position: absolute; opacity: 0; }
 .ht-roomopt.on { border-color: #4f46e5; background: #f5f8ff; }
 .ht-roomopt:focus-within { outline: 2px solid #84adff; }
@@ -44,9 +48,12 @@
                                 @php $clean = $sellable($room); @endphp
                                 <label class="ht-roomopt {{ (string) $want_room === (string) $room->id ? 'on' : '' }}">
                                     <input type="radio" name="room_id" value="{{ $room->id }}" @checked((string) $want_room === (string) $room->id) data-clean="{{ $clean ? 1 : 0 }}" data-no="{{ $room->number }}">
-                                    <strong style="font-size:18px;">{{ $room->number }}</strong>
-                                    <span style="font-size:13px;font-weight:600;color:{{ $clean ? '#067647' : '#b54708' }};">{{ $clean ? __('hotel.free_clean') : __('hotel.free_dirty') }}</span>
-                                    @if ($room->id == $res->room_id)<span class="ht-muted ht-small">{{ __('hotel.booked_for_guest') }}</span>@endif
+                                    @php $type = $res->roomType; @endphp
+                                    <span class="top"><span class="no">{{ $room->number }}</span><span class="ht-pill {{ $clean ? 'ht-p-free' : 'ht-p-dirty' }}">{{ $clean ? __('hotel.ready') : __('hotel.to_clean') }}</span></span>
+                                    <span class="ty">{{ optional($type)->name }}</span>
+                                    <span class="ht-muted ht-small">@if ((string) $room->floor !== ''){{ __('hotel.floor_n', ['n' => $room->floor]) }} · @endif{{ optional($type)->capacity ? trans_choice('hotel.sleeps_n', $type->capacity, ['n' => $type->capacity]) : '' }}</span>
+                                    <span class="pr">{{ __('hotel.tile_per_night', ['amount' => $fmt($res->rate)]) }}</span>
+                                    @if ($room->id == $res->room_id)<span class="ht-pill ht-p-arr" style="align-self:flex-start;">{{ __('hotel.booked_for_guest') }}</span>@endif
                                 </label>
                             @endforeach
                         </div>

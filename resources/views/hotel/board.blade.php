@@ -13,11 +13,17 @@
         'arr' => [__('hotel.state_arr'), $counts['arr'] ?? 0], 'dep' => [__('hotel.state_dep'), $counts['dep'] ?? 0], 'dirty' => [__('hotel.state_dirty'), $counts['dirty'] ?? 0], 'ooo' => [__('hotel.state_ooo'), $counts['ooo'] ?? 0]];
 @endphp
 <style>
-.ht-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-.ht-tile { display: flex; flex-direction: column; gap: 3px; min-height: 100px; padding: 11px 12px; border-radius: 12px; border: 2px solid transparent; text-align: left; font: inherit; cursor: pointer; }
-.ht-tile .no { font-size: 18px; font-weight: 700; }
-.ht-tile .ty { font-size: 12px; opacity: .85; }
-.ht-tile .gu { font-size: 13px; font-weight: 600; margin-top: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ht-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.ht-tile { display: flex; flex-direction: column; gap: 3px; min-height: 132px; padding: 11px 12px; border-radius: 12px; border: 2px solid transparent; text-align: left; font: inherit; cursor: pointer; min-width: 0; }
+.ht-tile .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ht-tile .no { font-size: 20px; font-weight: 700; }
+.ht-tile .st { font-size: 12px; font-weight: 700; text-align: right; }
+.ht-tile .ty { font-size: 12.5px; }
+.ht-tile .gu { font-size: 14px; font-weight: 700; margin-top: auto; padding-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.ht-tile .ln { font-size: 12.5px; }
+.ht-tile .mo { font-size: 12.5px; font-weight: 700; }
+.ht-tile .mo.due { color: #b42318; }
+.ht-tile .fl { font-size: 12px; font-weight: 700; color: #93370d; }
 .ht-tile.sel { border-color: #101828; }
 .ht-tile.dim { opacity: .28; }
 .ht-tile.st-ooo { background-image: repeating-linear-gradient(135deg, transparent 0 8px, rgba(71,84,103,.08) 8px 16px); }
@@ -52,9 +58,26 @@
                         @foreach ($states as $st)
                             @php $room = $st['room']; $res = $st['res']; @endphp
                             <button type="button" class="ht-tile st-{{ $st['state'] }}" style="background: {{ $tone[$st['state']] }}" data-room="{{ $room->id }}" data-state="{{ $st['state'] }}" id="ht_tile_{{ $room->number }}" aria-pressed="false">
-                                <span class="no">{{ $room->number }}</span>
-                                <span class="ty">{{ optional($room->type)->name }} · {{ __('hotel.state_' . $st['state']) }}</span>
-                                <span class="gu">{{ $res ? optional($res->contact)->name : ($st['state'] === 'ooo' ? ($room->ooo_reason ?: __('hotel.state_ooo')) : ($st['state'] === 'dirty' ? __('hotel.to_clean') : __('hotel.ready'))) }}</span>
+                                @php $state = $st['state']; $type = $room->type; $left = $res ? $today->diffInDays($res->departure, false) : 0; @endphp
+                                <span class="top"><span class="no">{{ $room->number }}</span><span class="st">{{ __('hotel.state_' . $state) }}</span></span>
+                                <span class="ty">{{ optional($type)->name }}@if (optional($type)->capacity) · {{ trans_choice('hotel.sleeps_n', $type->capacity, ['n' => $type->capacity]) }}@endif</span>
+                                @if (in_array($state, ['occ', 'dep']))
+                                    <span class="gu">{{ optional($res->contact)->name }}</span>
+                                    <span class="ln">{{ $left <= 0 ? __('hotel.tile_leaves_today') : __('hotel.tile_leaves', ['date' => $res->departure->format('d/m')]) . ' · ' . trans_choice('hotel.tile_nights_left', $left, ['n' => $left]) }}</span>
+                                    @if ($st['owe'] > 0.004)<span class="mo due">{{ __('hotel.tile_collect', ['amount' => $fmt($st['owe'])]) }}</span>
+                                    @else<span class="mo">{{ __('hotel.tile_paid') }}</span>@endif
+                                    @if ($room->hk_status === 'dirty')<span class="fl">{{ __('hotel.to_clean') }}</span>@endif
+                                @elseif ($state === 'arr')
+                                    <span class="gu">{{ optional($res->contact)->name }}</span>
+                                    <span class="ln">{{ $res->arrival->lt($today) ? __('hotel.tile_was_due', ['date' => $res->arrival->format('d/m')]) : __('hotel.tile_arrives') }} · {{ trans_choice('hotel.n_nights', $res->nights(), ['n' => $res->nights()]) }}</span>
+                                    @if (! $room->isTidy())<span class="fl">{{ __('hotel.to_clean') }}</span>@endif
+                                @elseif ($state === 'ooo')
+                                    <span class="gu">{{ $room->ooo_reason ?: __('hotel.state_ooo') }}</span>
+                                    <span class="ln">{{ $room->ooo_to ? __('hotel.until_date', ['date' => $room->ooo_to->format('d/m')]) : __('hotel.until_further') }}</span>
+                                @else
+                                    <span class="gu">{{ $state === 'dirty' ? __('hotel.to_clean') : __('hotel.ready') }}</span>
+                                    @if ($type)<span class="ln">{{ __('hotel.tile_per_night', ['amount' => $fmt($type->rate_room_only)]) }}</span>@endif
+                                @endif
                             </button>
                         @endforeach
                     </div>
