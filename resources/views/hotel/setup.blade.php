@@ -3,77 +3,138 @@
 
 @section('content')
 @include('hotel.partials.styles')
-@php $S = \App\Http\Controllers\HotelSetupController::class; @endphp
+@php
+    $S = \App\Http\Controllers\HotelSetupController::class;
+    $cur = session('currency')['symbol'] ?? (session('currency')['code'] ?? '');
+    $n_rooms = $rooms->where('is_active', true)->count();
+    $has_types = $types->isNotEmpty();
+    $steps = [
+        'types' => ['done' => $has_types, 'd' => $has_types ? trans_choice('hotel.n_types', $types->count(), ['n' => $types->count()]) : __('hotel.step_types_d')],
+        'rooms' => ['done' => $n_rooms > 0, 'd' => $n_rooms > 0 ? trans_choice('hotel.n_rooms', $n_rooms, ['n' => $n_rooms]) : __('hotel.step_rooms_d')],
+        'settings' => ['done' => false, 'd' => __('hotel.step_settings_d')],
+    ];
+@endphp
 <style>
+.ht-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.ht-step { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid #eaecf0; border-radius: 12px; background: #fff; text-decoration: none !important; color: #344054 !important; min-height: 60px; }
+.ht-step .n { width: 30px; height: 30px; border-radius: 50%; background: #f2f4f7; color: #475467; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+.ht-step .t { font-weight: 700; display: block; line-height: 1.25; }
+.ht-step .d { font-size: 12.5px; color: #667085; display: block; line-height: 1.3; margin-top: 2px; }
+.ht-step.done .n { background: #067647; color: #fff; }
+.ht-step.on { border-color: #1849a9; box-shadow: 0 0 0 1px #1849a9; }
+.ht-step.on .n { background: #1849a9; color: #fff; }
+.ht-hint { font-size: 12.5px; color: #667085; line-height: 1.35; }
+.ht-prices { border-top: 1px solid #eaecf0; padding-top: 14px; margin-top: 2px; }
+.ht-prices h3 { margin: 0 0 2px; }
+.ht-type { border: 1px solid #eaecf0; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+.ht-type:last-child { margin-bottom: 0; }
+.ht-type-h { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.ht-type-h .nm { font-size: 16px; font-weight: 700; }
+.ht-type-p { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 12px 0; }
+.ht-type-p > div { background: #f9fafb; border-radius: 8px; padding: 8px 10px; }
+.ht-type-p .l { font-size: 12px; color: #667085; display: block; }
+.ht-type-p .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ht-type-p .v.off { font-weight: 500; color: #98a2b3; }
+.ht-type form { border-top: 1px solid #eaecf0; margin-top: 12px; padding-top: 14px; }
+.ht-next { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 12px; background: #e5f4e4; color: #05603a; font-weight: 600; margin-bottom: 16px; }
 .ht-t .ht-in { min-height: 36px; padding: 6px 8px; }
-.ht-t .w-s { width: 90px; } .ht-t .w-m { width: 130px; } .ht-t .w-l { min-width: 150px; }
+.ht-t .w-s { width: 90px; } .ht-t .w-m { width: 130px; }
+@media (max-width: 760px) { .ht-steps { grid-template-columns: 1fr; } }
 </style>
 <section class="content ht" id="ht_setup">
     <div class="ht-head"><div><h1>{{ __('hotel.menu_setup') }}</h1><p>{{ __('hotel.setup_lead') }}</p></div></div>
-    <nav class="ht-tabs">
-        <a href="{{ action([$S, 'index'], ['tab' => 'types']) }}" class="{{ $tab === 'types' ? 'on' : '' }}" id="ht_tab_types">{{ __('hotel.tab_types') }}</a>
-        <a href="{{ action([$S, 'index'], ['tab' => 'rooms']) }}" class="{{ $tab === 'rooms' ? 'on' : '' }}" id="ht_tab_rooms">{{ __('hotel.tab_rooms') }} ({{ $rooms->where('is_active', true)->count() }})</a>
-        <a href="{{ action([$S, 'index'], ['tab' => 'settings']) }}" class="{{ $tab === 'settings' ? 'on' : '' }}" id="ht_tab_settings">{{ __('hotel.tab_settings') }}</a>
+
+    <nav class="ht-steps" aria-label="{{ __('hotel.menu_setup') }}">
+        @foreach (array_keys($steps) as $i => $k)
+            <a href="{{ action([$S, 'index'], ['tab' => $k]) }}" class="ht-step {{ $tab === $k ? 'on' : '' }} {{ $steps[$k]['done'] ? 'done' : '' }}" id="ht_tab_{{ $k }}" @if ($tab === $k) aria-current="step" @endif>
+                <span class="n">@if ($steps[$k]['done'])&#10003;@else{{ $i + 1 }}@endif</span>
+                <span><span class="t">{{ __('hotel.step_n', ['n' => $i + 1]) }} · {{ __('hotel.tab_' . $k) }}</span><span class="d">{{ $steps[$k]['d'] }}</span></span>
+            </a>
+        @endforeach
     </nav>
 
     @if ($tab === 'types')
-        <div class="ht-card" style="padding:6px 6px 2px;">
-            <h2 style="padding:8px 10px 0;">{{ __('hotel.tab_types') }}</h2>
-            <div class="ht-scroll"><table class="ht-t" id="ht_types_table">
-                <thead><tr><th>{{ __('hotel.room_type') }}</th><th>{{ __('hotel.sleeps') }}</th><th>{{ __('hotel.rooms') }}</th><th>{{ __('hotel.plan_room_only') }} *</th><th>{{ __('hotel.plan_bb') }}</th><th>{{ __('hotel.plan_corporate') }}</th><th>{{ __('hotel.tourist_tax_night') }}</th><th>{{ __('hotel.active') }}</th><th></th></tr></thead>
-                <tbody>
+        @if ($has_types)
+            <div class="ht-next" id="ht_next">
+                <span>{{ $n_rooms > 0 ? __('hotel.next_more_rooms_t') : __('hotel.next_rooms_t') }}</span>
+                <a class="ht-btn ok" href="{{ action([$S, 'index'], ['tab' => 'rooms']) }}">{{ __('hotel.next_rooms_b') }} &rarr;</a>
+            </div>
+            <div class="ht-card" id="ht_types_list">
+                <h2>{{ __('hotel.your_types') }}</h2>
                 @foreach ($types as $t)
-                    <tr>
-                        <td><form method="POST" action="{{ action([$S, 'updateType'], [$t->id]) }}" id="ht_type_f{{ $t->id }}">@csrf</form>
-                            <input class="ht-in w-l" name="name" value="{{ $t->name }}" form="ht_type_f{{ $t->id }}" required aria-label="{{ __('hotel.room_type') }}">
-                            <input class="ht-in w-l" name="description" value="{{ $t->description }}" form="ht_type_f{{ $t->id }}" placeholder="{{ __('hotel.description') }}" style="margin-top:4px;" aria-label="{{ __('hotel.description') }}"></td>
-                        <td><input class="ht-in w-s" type="number" min="1" max="20" name="capacity" value="{{ $t->capacity }}" form="ht_type_f{{ $t->id }}" aria-label="{{ __('hotel.sleeps') }}"></td>
-                        <td>{{ $t->rooms_count }}</td>
-                        @foreach (['rate_room_only', 'rate_bb', 'rate_corporate', 'tourist_tax'] as $col)
-                            <td><input class="ht-in w-m" name="{{ $col }}" value="{{ $num($t->{$col}) }}" form="ht_type_f{{ $t->id }}" inputmode="decimal" aria-label="{{ __('hotel.col_' . $col) }}"></td>
-                        @endforeach
-                        <td><select class="ht-in w-s" name="is_active" form="ht_type_f{{ $t->id }}" aria-label="{{ __('hotel.active') }}"><option value="1" @selected($t->is_active)>{{ __('hotel.yes') }}</option><option value="0" @selected(! $t->is_active)>{{ __('hotel.no') }}</option></select></td>
-                        <td><button class="ht-btn sm" form="ht_type_f{{ $t->id }}">{{ __('hotel.save') }}</button></td>
-                    </tr>
+                    <div class="ht-type" data-type="{{ $t->id }}">
+                        <div class="ht-type-h">
+                            <div>
+                                <span class="nm">{{ $t->name }}</span>
+                                @if (! $t->is_active)<span class="ht-pill ht-p-ooo">{{ __('hotel.type_off') }}</span>@endif
+                                <div class="ht-muted ht-small">{{ trans_choice('hotel.sleeps_n', $t->capacity, ['n' => $t->capacity]) }}@if ($t->description) · {{ $t->description }}@endif</div>
+                            </div>
+                            @if ($t->rooms_count > 0)
+                                <span class="ht-pill ht-p-free">{{ trans_choice('hotel.n_rooms', $t->rooms_count, ['n' => $t->rooms_count]) }}</span>
+                            @else
+                                <a class="ht-btn sm ht-add-rooms" href="{{ action([$S, 'index'], ['tab' => 'rooms', 'type' => $t->id]) }}" style="background:#fef0c7;border-color:#fedf89;color:#93370d !important;min-height:40px;">{{ __('hotel.no_rooms_add') }} &rarr;</a>
+                            @endif
+                        </div>
+                        <div class="ht-type-p">
+                            @foreach (['rate_room_only' => 'plan_room_only', 'rate_bb' => 'price_bb', 'rate_corporate' => 'price_co', 'tourist_tax' => 'col_tourist_tax'] as $col => $label)
+                                <div><span class="l">{{ __('hotel.' . $label) }}</span>
+                                    @if ($t->{$col} === null)<span class="v off">{{ __('hotel.not_offered') }}</span>
+                                    @else<span class="v">{{ $num($t->{$col}) }} {{ $cur }}</span>@endif
+                                </div>
+                            @endforeach
+                        </div>
+                        <details class="ht-more">
+                            <summary class="ht-btn sm">{{ __('hotel.change_type') }}</summary>
+                            <form method="POST" action="{{ action([$S, 'updateType'], [$t->id]) }}" id="ht_type_f{{ $t->id }}">
+                                @csrf
+                                @include('hotel.partials.type_fields', ['t' => $t])
+                                <div class="ht-f" style="max-width:320px;">
+                                    <label for="ht_t{{ $t->id }}_active">{{ __('hotel.type_sold') }}</label>
+                                    <select class="ht-in" name="is_active" id="ht_t{{ $t->id }}_active"><option value="1" @selected($t->is_active)>{{ __('hotel.type_sold_yes') }}</option><option value="0" @selected(! $t->is_active)>{{ __('hotel.type_sold_no') }}</option></select>
+                                </div>
+                                <button class="ht-btn pri">{{ __('hotel.save_changes') }}</button>
+                            </form>
+                        </details>
+                    </div>
                 @endforeach
-                </tbody>
-            </table></div>
-            <p class="ht-muted ht-small" style="padding:4px 10px 10px;">{{ __('hotel.types_help') }}</p>
-        </div>
+            </div>
+        @else
+            <div class="ht-note blue" id="ht_types_intro"><strong>{{ __('hotel.types_intro_title') }}</strong><span style="display:block;font-weight:400;margin-top:2px;">{{ __('hotel.types_intro') }}</span></div>
+        @endif
+
         <form method="POST" action="{{ action([$S, 'storeType']) }}" class="ht-card" id="ht_type_new" style="max-width:980px;">
             @csrf
-            <h2>+ {{ __('hotel.add_type') }}</h2>
-            <div class="ht-fields">
-                <div class="ht-f"><label for="ht_nt_name">{{ __('hotel.room_type') }} *</label><input class="ht-in" name="name" id="ht_nt_name" required maxlength="100" placeholder="{{ __('hotel.type_ph') }}"></div>
-                <div class="ht-f"><label for="ht_nt_desc">{{ __('hotel.description') }}</label><input class="ht-in" name="description" id="ht_nt_desc" maxlength="255"></div>
-                <div class="ht-f"><label for="ht_nt_cap">{{ __('hotel.sleeps') }}</label><input class="ht-in" type="number" min="1" max="20" name="capacity" id="ht_nt_cap" value="2"></div>
-                <div class="ht-f"><label for="ht_nt_ro">{{ __('hotel.plan_room_only') }} *</label><input class="ht-in" name="rate_room_only" id="ht_nt_ro" required inputmode="decimal"></div>
-                <div class="ht-f"><label for="ht_nt_bb">{{ __('hotel.plan_bb') }}</label><input class="ht-in" name="rate_bb" id="ht_nt_bb" inputmode="decimal"></div>
-                <div class="ht-f"><label for="ht_nt_co">{{ __('hotel.plan_corporate') }}</label><input class="ht-in" name="rate_corporate" id="ht_nt_co" inputmode="decimal"></div>
-                <div class="ht-f"><label for="ht_nt_tax">{{ __('hotel.tourist_tax_night') }}</label><input class="ht-in" name="tourist_tax" id="ht_nt_tax" inputmode="decimal" value="0"></div>
-            </div>
-            <button class="ht-btn pri">{{ __('hotel.add_type') }}</button>
+            <h2>{{ $has_types ? __('hotel.add_another_type') : __('hotel.add_first_type') }}</h2>
+            @include('hotel.partials.type_fields', ['t' => null])
+            <button class="ht-btn pri">{{ __('hotel.save_type') }}</button>
         </form>
 
     @elseif ($tab === 'rooms')
-        @if ($types->isEmpty())
-            <div class="ht-note amber">{{ __('hotel.types_first') }}</div>
+        @if (! $has_types)
+            <a class="ht-note amber" href="{{ action([$S, 'index'], ['tab' => 'types']) }}">{{ __('hotel.types_first') }} &rarr;</a>
         @else
+            @if ($n_rooms > 0)
+                <div class="ht-next" id="ht_next">
+                    <span>{{ __('hotel.next_settings_t') }}</span>
+                    <a class="ht-btn ok" href="{{ action([$S, 'index'], ['tab' => 'settings']) }}">{{ __('hotel.next_settings_b') }} &rarr;</a>
+                </div>
+            @endif
             <form method="POST" action="{{ action([$S, 'storeRooms']) }}" class="ht-card" id="ht_rooms_new" style="max-width:980px;">
                 @csrf
-                <h2>+ {{ __('hotel.add_rooms') }}</h2>
+                <h2>{{ $n_rooms > 0 ? __('hotel.add_more_rooms') : __('hotel.add_rooms') }}</h2>
+                <p class="ht-muted" style="margin:-6px 0 14px;">{{ __('hotel.rooms_intro') }}</p>
                 <div class="ht-fields">
-                    <div class="ht-f"><label for="ht_nr_type">{{ __('hotel.room_type') }}</label><select class="ht-in" name="room_type_id" id="ht_nr_type">@foreach ($types as $t)<option value="{{ $t->id }}">{{ $t->name }}</option>@endforeach</select></div>
-                    <div class="ht-f"><label for="ht_nr_numbers">{{ __('hotel.room_numbers') }}</label><input class="ht-in" name="numbers" id="ht_nr_numbers" required placeholder="101-112"></div>
-                    <div class="ht-f"><label for="ht_nr_floor">{{ __('hotel.floor') }}</label><input class="ht-in" name="floor" id="ht_nr_floor" maxlength="30" placeholder="1"></div>
+                    <div class="ht-f"><label for="ht_nr_type">{{ __('hotel.room_type') }}</label><select class="ht-in" name="room_type_id" id="ht_nr_type">@foreach ($types as $t)<option value="{{ $t->id }}" @selected((string) $t->id === (string) request('type'))>{{ $t->name }}</option>@endforeach</select><span class="ht-hint">{{ __('hotel.rooms_type_hint') }}</span></div>
+                    <div class="ht-f"><label for="ht_nr_numbers">{{ __('hotel.room_numbers') }} *</label><input class="ht-in" name="numbers" id="ht_nr_numbers" required placeholder="101-112"><span class="ht-hint">{{ __('hotel.room_numbers_help') }}</span></div>
+                    <div class="ht-f"><label for="ht_nr_floor">{{ __('hotel.floor_optional') }}</label><input class="ht-in" name="floor" id="ht_nr_floor" maxlength="30" placeholder="1"><span class="ht-hint">{{ __('hotel.floor_hint') }}</span></div>
                 </div>
-                <p class="ht-muted ht-small" style="margin:0 0 10px;">{{ __('hotel.room_numbers_help') }}</p>
                 <button class="ht-btn pri">{{ __('hotel.add_rooms') }}</button>
             </form>
         @endif
+        @if ($rooms->isNotEmpty())
         <div class="ht-card" style="padding:6px 6px 2px;">
-            <h2 style="padding:8px 10px 0;">{{ __('hotel.tab_rooms') }}</h2>
-            @if ($rooms->isEmpty())<div class="ht-empty" style="padding:10px;">{{ __('hotel.no_rooms') }}</div>@else
+            <h2 style="padding:8px 10px 0;">{{ __('hotel.your_rooms') }}</h2>
+            <p class="ht-muted ht-small" style="padding:0 10px;margin:4px 0 6px;">{{ __('hotel.rooms_list_help') }}</p>
             <div class="ht-scroll"><table class="ht-t" id="ht_rooms_table">
                 <thead><tr><th>{{ __('hotel.room') }}</th><th>{{ __('hotel.floor') }}</th><th>{{ __('hotel.room_type') }}</th><th>{{ __('hotel.housekeeping') }}</th><th>{{ __('hotel.in_service') }}</th><th>{{ __('hotel.active') }}</th><th></th></tr></thead>
                 <tbody>
@@ -104,22 +165,29 @@
                 @endforeach
                 </tbody>
             </table></div>
-            @endif
         </div>
+        @endif
 
     @else
+        @if ($has_types && $n_rooms > 0)
+            <div class="ht-next" id="ht_next">
+                <span>{{ __('hotel.setup_done_t') }}</span>
+                <a class="ht-btn ok" href="{{ action([\App\Http\Controllers\HotelController::class, 'home']) }}">{{ __('hotel.setup_done_b') }} &rarr;</a>
+            </div>
+        @endif
         <form method="POST" action="{{ action([$S, 'saveSettings']) }}" class="ht-card" style="max-width:980px;" id="ht_settings_form">
             @csrf
             <h2>{{ __('hotel.how_hotel_works') }}</h2>
+            <p class="ht-muted" style="margin:-6px 0 14px;">{{ __('hotel.settings_intro') }}</p>
             <div class="ht-fields">
                 @if (count($locations) > 1)
                     <div class="ht-f"><label for="ht_s_loc">{{ __('hotel.hotel_location') }}</label><select class="ht-in" name="location_id" id="ht_s_loc">@foreach ($locations as $id => $n)<option value="{{ $id }}" @selected($id == $settings['location_id'])>{{ $n }}</option>@endforeach</select></div>
                 @endif
-                <div class="ht-f"><label for="ht_s_ci">{{ __('hotel.checkin_from') }}</label><input class="ht-in" type="time" name="checkin_time" id="ht_s_ci" value="{{ $settings['checkin_time'] }}"></div>
-                <div class="ht-f"><label for="ht_s_co">{{ __('hotel.checkout_by') }}</label><input class="ht-in" type="time" name="checkout_time" id="ht_s_co" value="{{ $settings['checkout_time'] }}"></div>
-                <div class="ht-f"><label for="ht_s_au">{{ __('hotel.audit_runs_at') }}</label><input class="ht-in" type="time" name="audit_time" id="ht_s_au" value="{{ $settings['audit_time'] }}"><span class="ht-muted ht-small">{{ __('hotel.audit_runs_help') }}</span></div>
-                <div class="ht-f"><label for="ht_s_lc">{{ __('hotel.late_checkout') }}</label><select class="ht-in" name="late_checkout" id="ht_s_lc"><option value="half" @selected($settings['late_checkout'] === 'half')>{{ __('hotel.late_half') }}</option><option value="none" @selected($settings['late_checkout'] === 'none')>{{ __('hotel.late_none') }}</option></select></div>
-                <div class="ht-f"><label for="ht_s_dp">{{ __('hotel.deposit_asked') }}</label><select class="ht-in" name="deposit_rule" id="ht_s_dp">@foreach (['first_night', 'none', 'full'] as $o)<option value="{{ $o }}" @selected($settings['deposit_rule'] === $o)>{{ __('hotel.dep_' . $o) }}</option>@endforeach</select></div>
+                <div class="ht-f"><label for="ht_s_ci">{{ __('hotel.checkin_from') }}</label><input class="ht-in" type="time" name="checkin_time" id="ht_s_ci" value="{{ $settings['checkin_time'] }}"><span class="ht-hint">{{ __('hotel.checkin_hint') }}</span></div>
+                <div class="ht-f"><label for="ht_s_co">{{ __('hotel.checkout_by') }}</label><input class="ht-in" type="time" name="checkout_time" id="ht_s_co" value="{{ $settings['checkout_time'] }}"><span class="ht-hint">{{ __('hotel.checkout_hint') }}</span></div>
+                <div class="ht-f"><label for="ht_s_lc">{{ __('hotel.late_checkout') }}</label><select class="ht-in" name="late_checkout" id="ht_s_lc"><option value="half" @selected($settings['late_checkout'] === 'half')>{{ __('hotel.late_half') }}</option><option value="none" @selected($settings['late_checkout'] === 'none')>{{ __('hotel.late_none') }}</option></select><span class="ht-hint">{{ __('hotel.late_hint') }}</span></div>
+                <div class="ht-f"><label for="ht_s_dp">{{ __('hotel.deposit_asked') }}</label><select class="ht-in" name="deposit_rule" id="ht_s_dp">@foreach (['first_night', 'none', 'full'] as $o)<option value="{{ $o }}" @selected($settings['deposit_rule'] === $o)>{{ __('hotel.dep_' . $o) }}</option>@endforeach</select><span class="ht-hint">{{ __('hotel.deposit_hint') }}</span></div>
+                <div class="ht-f"><label for="ht_s_au">{{ __('hotel.audit_runs_at') }}</label><input class="ht-in" type="time" name="audit_time" id="ht_s_au" value="{{ $settings['audit_time'] }}"><span class="ht-hint">{{ __('hotel.audit_runs_help') }}</span></div>
             </div>
             <h3>{{ __('hotel.when_charged') }}</h3>
             <div class="ht-grid ht-g2" style="margin-bottom:16px;">
