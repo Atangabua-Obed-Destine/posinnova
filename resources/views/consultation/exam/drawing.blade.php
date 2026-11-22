@@ -11,6 +11,8 @@
             <div class="ex-draw-blank"></div>
         @endif
         <canvas class="ex-draw-canvas" aria-label="{{ __('clinic.ex_draw_on', ['name' => $b['label']]) }}"></canvas>
+        {{-- touch screens: a swipe over the picture scrolls the page; a tap starts the drawing --}}
+        <span class="ex-draw-tap" aria-hidden="true"><i class="fas fa-pencil-alt"></i> {{ __('clinic.ex_tap_to_draw') }}</span>
     </div>
     <div class="ex-draw-tools" role="toolbar" aria-label="{{ __('clinic.ex_draw_tools') }}">
         <button type="button" class="ex-tool ex-on" data-tool="pen" data-color="#dc2626" title="{{ __('clinic.ex_pen_red') }}" aria-label="{{ __('clinic.ex_pen_red') }}"><span class="ex-dot" style="background:#dc2626"></span></button>
@@ -22,6 +24,7 @@
         <button type="button" class="ex-act" data-act="undo" title="{{ __('clinic.ex_undo') }}" aria-label="{{ __('clinic.ex_undo') }}"><i class="fas fa-undo"></i></button>
         <button type="button" class="ex-act" data-act="clear" title="{{ __('clinic.ex_clear') }}" aria-label="{{ __('clinic.ex_clear') }}"><i class="fas fa-trash-alt"></i></button>
         <button type="button" class="ex-act" data-act="full" title="{{ __('clinic.ex_full') }}" aria-label="{{ __('clinic.ex_full') }}"><i class="fas fa-expand"></i></button>
+        <button type="button" class="ex-act ex-done-btn" data-act="lock"><i class="fas fa-check"></i> {{ __('clinic.ex_done') }}</button>
     </div>
     <input type="hidden" name="exam[draw][{{ $b['id'] }}]" class="ex-draw-data" value="">
 </div>

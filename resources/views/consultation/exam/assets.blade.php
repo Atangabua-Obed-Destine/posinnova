@@ -37,7 +37,20 @@
     .ex-draw-stage { position:relative; border:1px solid #e5e7eb; border-radius:8px; background:#fff; overflow:hidden; }
     .ex-draw-base { display:block; width:100%; height:auto; user-select:none; -webkit-user-drag:none; pointer-events:none; }
     .ex-draw-blank { width:100%; aspect-ratio:3/2; background:#fff; }
-    .ex-draw-canvas { position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:crosshair; }
+    /* A finger (or pen) on a picture scrolls the page like anywhere else: the picture is tapped first to draw
+       on it (class ex-live), so nobody draws by accident while scrolling. The mouse always draws. */
+    .ex-draw-canvas { position:absolute; inset:0; width:100%; height:100%; touch-action:manipulation; cursor:crosshair; }
+    .ex-draw.ex-live .ex-draw-canvas { touch-action:none; }
+    .ex-draw.ex-live .ex-draw-stage { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,.3); }
+    .ex-draw-tap { display:none; position:absolute; left:50%; bottom:8px; transform:translateX(-50%); padding:5px 12px; border-radius:999px; background:rgba(30,27,75,.88); color:#fff; font-size:12.5px; font-weight:600; white-space:nowrap; pointer-events:none; }
+    .ex-draw-tools .ex-done-btn { display:none; width:auto; padding:0 12px; background:#4f46e5; border-color:#4f46e5; color:#fff; font-weight:700; }
+    .ex-draw.ex-live .ex-draw-tools .ex-done-btn { display:inline-block; width:auto; }
+    @media (any-pointer:coarse) {
+        .ex-draw:not(.ex-live) .ex-draw-tap { display:block; }
+        .ex-draw-tools { gap:6px; margin-top:6px; }
+        .ex-draw-tools button { width:38px; height:38px; font-size:15px; line-height:36px; }
+        .ex-draw-tools .ex-dot { width:16px; height:16px; }
+    }
     .ex-draw[data-tool="eraser"] .ex-draw-canvas { cursor:cell; }
     .ex-draw[data-tool="text"] .ex-draw-canvas { cursor:text; }
     .ex-draw-tools { display:flex; flex-wrap:wrap; gap:3px; margin-top:4px; }
@@ -122,8 +135,25 @@ window.ExamForm = (function ($) {
             $(data).trigger('change');
         }
 
+        // touch and pen: the picture is tapped first, then it takes the strokes (until "Done" or a touch elsewhere)
+        st.live = function (on) { el.classList.toggle('ex-live', !!on); if (!on) { st.tap = null; } };
+        cv.addEventListener('pointerup', function (e) {
+            var t = st.tap;
+            if (!t || t.id !== e.pointerId) { return; }
+            st.tap = null;
+            if (Math.abs(e.clientX - t.x) < 12 && Math.abs(e.clientY - t.y) < 12 && Date.now() - t.at < 700) {
+                st.live(true);
+                if (window.innerWidth < 768) { st.full(true); } // a phone: the picture takes the whole screen
+            }
+        });
+        cv.addEventListener('pointercancel', function () { st.tap = null; }); // the page scrolled: not a tap
+
         cv.addEventListener('pointerdown', function (e) {
             if (!st.ctx || (e.pointerType === 'mouse' && e.button !== 0)) { return; }
+            if (e.pointerType !== 'mouse' && !el.classList.contains('ex-live')) {
+                st.tap = { id: e.pointerId, x: e.clientX, y: e.clientY, at: Date.now() };
+                return; // not ours yet: the browser scrolls the page
+            }
             e.preventDefault();
             var p = pt(e);
             if (st.tool === 'text') {
@@ -169,6 +199,7 @@ window.ExamForm = (function ($) {
             $b.find('i').toggleClass('fa-expand', !on).toggleClass('fa-compress', on);
             $b.attr('title', on ? T.done : $b.attr('aria-label'));
             if (on) { fit(); $(window).on('resize.exd', fit); } else { stage.style.width = ''; $(window).off('resize.exd'); }
+            st.live(on); // full screen is for drawing; leaving it gives the picture back to scrolling
         };
 
         $(el).on('click', '.ex-tool', function () {
@@ -188,8 +219,16 @@ window.ExamForm = (function ($) {
                 if (window.confirm(T.clear_confirm)) { snapshot(); st.ctx.clearRect(0, 0, cv.width, cv.height); changed(); }
             }
             if (act === 'full') { st.full(!el.classList.contains('ex-full')); }
+            if (act === 'lock') { if (el.classList.contains('ex-full')) { st.full(false); } else { st.live(false); } }
         });
     }
+
+    // a touch anywhere else ends the drawing: the next swipe over the picture scrolls the page again
+    document.addEventListener('pointerdown', function (e) {
+        [].forEach.call(document.querySelectorAll('.ex-draw.ex-live'), function (el) {
+            if (!el.contains(e.target) && !el.classList.contains('ex-full') && el.__exd) { el.__exd.live(false); }
+        });
+    }, true);
 
     $(document).on('keydown', function (e) {
         if (e.which === 27) { $('.ex-draw.ex-full').each(function () { this.__exd && this.__exd.full(false); }); }

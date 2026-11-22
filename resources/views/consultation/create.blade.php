@@ -63,6 +63,43 @@
         @endif
     </div>
 
+    {{-- PosInnova: the page explains itself. Open on a doctor's first visit, then one tap away. --}}
+    <style>
+        .cf-guide { background:#eef2ff; border:1px solid #c7d2fe; border-radius:12px; padding:12px 16px; margin-bottom:16px; }
+        .cf-guide > summary { cursor:pointer; font-weight:700; font-size:15px; color:#312e81; list-style:none; display:flex; align-items:center; gap:8px; min-height:32px; }
+        .cf-guide > summary::-webkit-details-marker { display:none; }
+        .cf-guide > summary .cf-guide-more { margin-left:auto; font-weight:600; font-size:13px; color:#4338ca; white-space:nowrap; }
+        .cf-guide[open] > summary .cf-guide-open, .cf-guide:not([open]) > summary .cf-guide-close { display:none; }
+        .cf-guide ol { margin:12px 0 4px; padding:0; list-style:none; display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:10px 18px; counter-reset:cfg; }
+        .cf-guide li { display:flex; gap:10px; align-items:flex-start; color:#1e1b4b; line-height:1.45; }
+        .cf-guide li > i { flex:none; width:30px; height:30px; border-radius:8px; background:#fff; color:#4338ca; display:flex; align-items:center; justify-content:center; }
+        .cf-guide li strong { display:block; }
+        .cf-steps { display:flex; gap:6px; overflow-x:auto; padding:8px 2px; margin:0 0 12px; background:#f1f5f9; border-bottom:1px solid #e2e8f0; scrollbar-width:none; }
+        .cf-steps::-webkit-scrollbar { display:none; }
+        /* kept on screen by the script (position:sticky cannot work here: the page scrolls, not the layout's own container) */
+        .cf-steps.cf-stuck { position:fixed; top:0; z-index:900; margin:0; padding-left:8px; padding-right:8px; box-shadow:0 2px 8px rgba(15,23,42,.16); }
+        .cf-steps button { flex:none; display:inline-flex; align-items:center; gap:6px; min-height:38px; padding:5px 12px 5px 6px; border-radius:999px; border:1px solid #cbd5e1; background:#fff; color:#334155; font-weight:600; font-size:13px; white-space:nowrap; }
+        .cf-steps button .n { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:#e2e8f0; color:#334155; font-size:12px; font-weight:700; }
+        .cf-steps button.has .n { background:#067647; color:#fff; }
+        .cf-steps button.on { border-color:#4f46e5; background:#eef2ff; color:#312e81; box-shadow:inset 0 0 0 1px #4f46e5; }
+        #consultation_form { counter-reset:cf; }
+        .cf-sec { counter-increment:cf; scroll-margin-top:76px; }
+        .cf-sec .box-title::before { content:counter(cf); display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; margin-right:8px; border-radius:50%; background:#4f46e5; color:#fff; font-size:12px; font-weight:700; vertical-align:2px; }
+        .cf-hint { margin:0 0 12px; padding:8px 12px; border-radius:8px; background:#f8fafc; border-left:3px solid #a5b4fc; color:#475569; font-size:13px; line-height:1.45; }
+    </style>
+    <details class="cf-guide" id="cf_guide">
+        <summary><i class="fas fa-question-circle" aria-hidden="true"></i> @lang('clinic.cf_guide_title')
+            <span class="cf-guide-more"><span class="cf-guide-open">@lang('clinic.cf_guide_open')</span><span class="cf-guide-close">@lang('clinic.cf_guide_close')</span></span></summary>
+        <ol>
+            <li><i class="fas fa-arrow-down" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_order_t')</strong> @lang('clinic.cf_g_order')</span></li>
+            <li><i class="fas fa-list-ol" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_steps_t')</strong> @lang('clinic.cf_g_steps')</span></li>
+            <li><i class="fas fa-hand-pointer" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_pick_t')</strong> @lang('clinic.cf_g_pick')</span></li>
+            <li><i class="fas fa-pencil-alt" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_draw_t')</strong> @lang('clinic.cf_g_draw')</span></li>
+            <li><i class="fas fa-flask" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_tests_t')</strong> @lang('clinic.cf_g_tests')</span></li>
+            <li><i class="fas fa-save" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_save_t')</strong> @lang('clinic.cf_g_save') @can('consultation.finalize')@lang('clinic.cf_final_help')@endcan</span></li>
+        </ol>
+    </details>
+
     {{-- PosInnova: the patient's history while consulting --}}
     <details class="tw-bg-white tw-shadow-sm tw-rounded-xl tw-ring-1 tw-ring-gray-200 tw-p-4 tw-mb-4" id="consult_history" {{ $history->isNotEmpty() ? 'open' : '' }}>
         <summary style="cursor:pointer;font-weight:700;font-size:15px;"><i class="fas fa-history"></i> @lang('clinic.hist_title')
@@ -130,6 +167,9 @@
         </div>
     @endif
 
+    {{-- PosInnova: the parts of the form, to jump to (built by the script from the .cf-sec blocks) --}}
+    <div id="cf_steps_wrap"><nav class="cf-steps" id="cf_steps" aria-label="{{ __('clinic.cf_steps_label') }}"></nav></div>
+
     {{-- Consultation type --}}
     @php
         $spec_now = $fv('specialty');
@@ -138,7 +178,9 @@
             $spec_opts = [$spec_now => $spec_now] + $spec_opts;
         }
     @endphp
+    <div class="cf-sec" id="cf_sec_reason" data-step="{{ __('clinic.cf_step_reason') }}">
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.consultation_details')])
+        <p class="cf-hint">@lang('clinic.cf_hint_reason')</p>
         <div class="row">
             <div class="col-sm-3">
                 <div class="form-group">
@@ -172,6 +214,7 @@
             </div>
         </div>
     @endcomponent
+    </div>
 
     {{-- Vitals (filled in from the front desk when they were taken there; the saved ones when continuing) --}}
     @php
@@ -179,7 +222,9 @@
             ? collect(\App\Visit::VITALS)->mapWithKeys(fn ($f) => [$f => $num($c_edit->{$f})])->all()
             : ($visit->hasVitals() ? collect(\App\Visit::VITALS)->mapWithKeys(fn ($f) => [$f => $num($visit->{$f})])->all() : []);
     @endphp
+    <div class="cf-sec" id="cf_sec_vitals" data-step="{{ __('clinic.cf_step_vitals') }}">
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.vitals')])
+        <p class="cf-hint">@lang('clinic.cf_hint_vitals')</p>
         @if ($visit->hasVitals() && ! $c_edit)
             <p class="text-muted" id="front_vitals_note" style="margin-top:0;"><i class="fas fa-heartbeat"></i>
                 {{ __('clinic.vit_from_front_desk', ['time' => $visit->vitals_taken_at->format('H:i'), 'name' => trim(optional($visit->vitalsTakenBy)->user_full_name)]) }}
@@ -241,8 +286,10 @@
             </div>
         </div>
     @endcomponent
+    </div>
 
     {{-- PosInnova: the specialty's examination form (drawings, one-click findings) --}}
+    <div class="cf-sec" id="cf_sec_exam" data-step="{{ __('clinic.cf_step_exam') }}">
     <div class="box box-solid" id="exam_box" style="border-top:3px solid #6366f1;">
         <div class="box-header with-border" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
             <h3 class="box-title" style="flex:0 0 auto;white-space:nowrap;overflow:visible;"><i class="fas fa-clipboard-list"></i> @lang('clinic.ex_box_title')</h3>
@@ -264,6 +311,7 @@
         </div>
         <div class="box-body">
             <input type="hidden" name="exam[present]" value="1">
+            <p class="cf-hint">@lang('clinic.cf_hint_exam')</p>
             <p class="text-muted ex-box-empty" style="margin:0 0 6px;{{ $exam_now ? 'display:none;' : '' }}"><i class="fas fa-info-circle"></i> @lang('clinic.ex_box_help')</p>
             <div id="exam_form_body">
                 @if ($exam_now && $exam && (string) $exam->template_id === (string) $exam_now)
@@ -283,8 +331,12 @@
         </div>
     </div>
 
+    </div>
+
     {{-- Examination + diagnosis --}}
+    <div class="cf-sec" id="cf_sec_diag" data-step="{{ __('clinic.cf_step_diag') }}">
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.examination_and_diagnosis')])
+        <p class="cf-hint">@lang('clinic.cf_hint_diag')</p>
         <div class="row">
             <div class="col-sm-6">
                 <div class="form-group">
@@ -309,10 +361,13 @@
             </div>
         </div>
     @endcomponent
+    </div>
 
     {{-- Prescription --}}
     @if($can_prescribe)
+    <div class="cf-sec" id="cf_sec_rx" data-step="{{ __('clinic.cf_step_rx') }}">
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.prescription')])
+        <p class="cf-hint">@lang('clinic.cf_hint_rx')</p>
         <div class="row">
             <div class="col-sm-8 col-sm-offset-2">
                 <div class="form-group">
@@ -352,6 +407,7 @@
             </table>
         </div>
     @endcomponent
+    </div>
     @endif
 
     {{-- Lab requests --}}
@@ -361,7 +417,9 @@
         $asked_studies = $imaging_requests->pluck('imaging_catalogue_id')->filter()->flip()->all();
     @endphp
     @if(auth()->user()->can('lab_request.create') && $lab_tests->isNotEmpty())
+    <div class="cf-sec" id="cf_sec_lab" data-step="{{ __('clinic.cf_step_lab') }}">
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.request_lab_tests')])
+        <p class="cf-hint">@lang('clinic.cf_hint_lab')</p>
         <div class="row">
             @foreach($lab_tests as $test)
                 <div class="col-sm-4">
@@ -385,11 +443,14 @@
             </div>
         </div>
     @endcomponent
+    </div>
     @endif
 
     {{-- Imaging requests --}}
     @if(\App\Utils\ClinicSettings::sectionOn(session('user.business_id'), 'imaging') && auth()->user()->can('imaging_request.create') && $imaging_catalogue->isNotEmpty())
+    <div class="cf-sec" id="cf_sec_img" data-step="{{ __('clinic.cf_step_img') }}">
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.request_imaging')])
+        <p class="cf-hint">@lang('clinic.cf_hint_img')</p>
         <div class="row">
             @foreach($imaging_catalogue as $study)
                 <div class="col-sm-4">
@@ -405,10 +466,13 @@
             @endforeach
         </div>
     @endcomponent
+    </div>
     @endif
 
     {{-- PosInnova: management plan and the review (when to come back) --}}
+    <div class="cf-sec" id="cf_sec_plan" data-step="{{ __('clinic.cf_step_plan') }}">
     @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.cons_plan_and_review')])
+        <p class="cf-hint">@lang('clinic.cf_hint_plan')</p>
         <div class="row">
             <div class="col-sm-7">
                 <div class="form-group" style="margin-bottom:0;">
@@ -434,9 +498,12 @@
             </div>
         </div>
     @endcomponent
+    </div>
 
     {{-- Actions --}}
+    <div class="cf-sec" id="cf_sec_end" data-step="{{ __('clinic.cf_step_end') }}">
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.referral_and_actions')])
+        <p class="cf-hint">@lang('clinic.cf_hint_end')</p>
         <div class="row">
             <div class="col-sm-4">
                 <div class="form-group">
@@ -486,8 +553,13 @@
                 </button>
             @endcan
             <a href="{{ action([\App\Http\Controllers\VisitController::class, 'show'], [$visit->id]) }}" class="tw-dw-btn tw-dw-btn-outline">@lang('messages.cancel')</a>
-            <p class="help-block" style="margin-top:8px;"><i class="fas fa-info-circle"></i> @lang('clinic.cons_save_later_help')</p>
+            <p class="help-block" style="margin-top:8px;"><i class="fas fa-info-circle"></i> <strong>@lang('clinic.cons_save_later'):</strong> @lang('clinic.cons_save_later_help')</p>
+            @can('consultation.finalize')
+                <p class="help-block" id="cf_final_help"><i class="fas fa-lock"></i> <strong>@lang('lang_v1.finalize_consultation'):</strong> @lang('clinic.cf_final_help')</p>
+            @endcan
         </div>
+    </div>
+
     </div>
 
     {!! Form::close() !!}
@@ -497,6 +569,75 @@
 @section('javascript')
 @include('consultation.partials.doctor_lists_js')
 @include('consultation.exam.assets')
+<script>
+/* PosInnova: the consultation form explains itself: the guide card (open the first time), the numbered parts */
+(function () {
+    var guide = document.getElementById('cf_guide'), KEY = 'pi_consult_guide_seen';
+    var seen = false;
+    try { seen = !!window.localStorage.getItem(KEY); } catch (e) { /* private mode */ }
+    if (guide) {
+        if (!seen) { guide.open = true; }
+        guide.addEventListener('toggle', function () { if (!guide.open) { try { window.localStorage.setItem(KEY, '1'); } catch (e) { /* ignore */ } } });
+    }
+
+    var nav = document.getElementById('cf_steps');
+    var secs = [].slice.call(document.querySelectorAll('#consultation_form .cf-sec'));
+    if (!nav || !secs.length) { return; }
+    secs.forEach(function (sec, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('data-sec', sec.id);
+        b.innerHTML = '<span class="n">' + (i + 1) + '</span>';
+        b.appendChild(document.createTextNode(sec.getAttribute('data-step')));
+        b.addEventListener('click', function () { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+        nav.appendChild(b);
+    });
+    function chip(sec) { return nav.querySelector('[data-sec="' + sec.id + '"]'); }
+
+    // a tick on the parts that have something in them
+    function filled(sec) {
+        if (sec.id === 'cf_sec_end') { return false; } // the fee is filled in from the start: no tick for the last part
+        var f = sec.querySelectorAll('input[type=text]:not([readonly]):not(#search_prescription_product), input[type=number], input[type=date], textarea');
+        for (var i = 0; i < f.length; i++) { if (f[i].value && f[i].value.trim() !== '') { return true; } }
+        return !!sec.querySelector('input[type=checkbox]:checked, input[type=radio]:checked, #prescription_rows tr, .ex-draw.ex-drawn, .cla-item, .attachment-item');
+    }
+    var t = null;
+    function ticks() { secs.forEach(function (sec) { chip(sec).classList.toggle('has', filled(sec)); }); }
+    function soon() { clearTimeout(t); t = setTimeout(ticks, 250); }
+    var form = document.getElementById('consultation_form');
+    form.addEventListener('input', soon);
+    form.addEventListener('change', soon);
+    if (window.MutationObserver) { new MutationObserver(soon).observe(form, { childList: true, subtree: true }); }
+    ticks();
+
+    // the step buttons stay at the top of the screen while the form is being scrolled
+    var wrap = document.getElementById('cf_steps_wrap');
+    function stick() {
+        var w = wrap.getBoundingClientRect(), on = w.top < 0 && form.getBoundingClientRect().bottom > 160;
+        if (on && !nav.classList.contains('cf-stuck')) { wrap.style.height = wrap.offsetHeight + 'px'; }
+        nav.classList.toggle('cf-stuck', on);
+        nav.style.left = on ? w.left + 'px' : '';
+        nav.style.width = on ? w.width + 'px' : '';
+        if (!on) { wrap.style.height = ''; }
+    }
+    window.addEventListener('scroll', stick, { passive: true, capture: true });
+    window.addEventListener('resize', stick);
+    stick();
+
+    // the part being looked at
+    if (window.IntersectionObserver) {
+        var io = new IntersectionObserver(function (es) {
+            es.forEach(function (e) {
+                if (!e.isIntersecting) { return; }
+                secs.forEach(function (sec) { chip(sec).classList.toggle('on', sec === e.target); });
+                var c = chip(e.target);
+                if (nav.scrollWidth > nav.clientWidth) { nav.scrollTo({ left: c.offsetLeft - nav.clientWidth / 2 + c.offsetWidth / 2, behavior: 'smooth' }); }
+            });
+        }, { rootMargin: '-25% 0px -65% 0px' });
+        secs.forEach(function (sec) { io.observe(sec); });
+    }
+})();
+</script>
 <script>
 $(document).ready(function () {
     /* ---- the examination form: opens by itself for the specialty, or picked in the list ---- */
