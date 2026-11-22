@@ -1535,6 +1535,17 @@ return [
     'cf_hint_plan' => 'La suite, et quand le patient doit revenir.',
     'cf_hint_end' => 'Adressez le patient à un autre service si besoin, puis enregistrez avec l\'un des deux boutons ci-dessous.',
     'ex_tap_to_draw' => 'Touchez le schéma pour dessiner',
+    // ---- revenir à une consultation laissée ouverte
+    'rs_open' => 'Consultation en cours :',
+    'rs_draft' => 'Consultation à terminer :',
+    'rs_since' => 'ouverte à :time, non enregistrée',
+    'rs_saved_at' => 'enregistrée à :time',
+    'rs_restored_t' => 'Rien n\'est perdu.',
+    'rs_restored' => 'Vous avez quitté cette consultation à :time sans enregistrer. Ce que vous aviez saisi est revenu ci-dessous ; les photos, non.',
+    'rs_drop' => 'Recommencer à vide',
+    'rs_drop_confirm' => 'Retirer ce qui a été remis et recommencer cette consultation ?',
+    'cf_g_back_t' => 'Page fermée par erreur ?',
+    'cf_g_back' => 'Une barre orange en haut de chaque page vous ramène au patient. Ce que vous avez saisi est gardé sur ce téléphone ou cet ordinateur jusqu\'à l\'enregistrement.',
     'cons_save_later' => 'Enregistrer et reprendre plus tard',
     'cons_save_later_help' => 'Envoyez le patient au laboratoire ou à l\'imagerie, puis rouvrez la consultation depuis la file d\'attente ou la visite : les résultats s\'affichent en haut et vous pouvez la terminer.',
     // examens de laboratoire et d'imagerie

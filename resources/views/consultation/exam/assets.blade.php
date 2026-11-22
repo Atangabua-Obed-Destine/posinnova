@@ -101,7 +101,7 @@ window.ExamForm = (function ($) {
             var prev = el.getAttribute('data-prev');
             if (prev) {
                 var im = new Image();
-                im.onload = function () { st.ctx.drawImage(im, 0, 0, cv.width, cv.height); el.classList.add('ex-drawn'); };
+                im.onload = function () { if (st.painted) { return; } st.ctx.drawImage(im, 0, 0, cv.width, cv.height); el.classList.add('ex-drawn'); };
                 im.src = prev;
             }
         }
@@ -260,6 +260,21 @@ window.ExamForm = (function ($) {
     }
     $(function () { init(document); });
 
-    return { init: init, touched: touched };
+    /** Puts a drawing kept from an earlier, unsaved page back on its picture (url: a PNG data URL, or 'clear'). */
+    function paint(el, url) {
+        var st = el.__exd;
+        if (!st) { return; }
+        st.painted = true;
+        (function wait(n) {
+            if (!st.ctx) { if (n < 80) { setTimeout(function () { wait(n + 1); }, 100); } return; }
+            var cv = el.querySelector('.ex-draw-canvas'), data = el.querySelector('.ex-draw-data');
+            if (url === 'clear') { st.ctx.clearRect(0, 0, cv.width, cv.height); data.value = 'clear'; el.classList.remove('ex-drawn'); return; }
+            var im = new Image();
+            im.onload = function () { st.ctx.clearRect(0, 0, cv.width, cv.height); st.ctx.drawImage(im, 0, 0, cv.width, cv.height); data.value = url; el.classList.add('ex-drawn'); };
+            im.src = url;
+        })(0);
+    }
+
+    return { init: init, touched: touched, paint: paint };
 })(jQuery);
 </script>

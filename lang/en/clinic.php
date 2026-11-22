@@ -1534,6 +1534,17 @@ return [
     'cf_hint_plan' => 'What happens next, and when the patient should come back.',
     'cf_hint_end' => 'Send the patient to another department if needed, then save with one of the two buttons below.',
     'ex_tap_to_draw' => 'Tap the picture to draw',
+    // ---- coming back to a consultation left open
+    'rs_open' => 'Consultation in progress:',
+    'rs_draft' => 'Consultation to finish:',
+    'rs_since' => 'opened at :time, not saved',
+    'rs_saved_at' => 'saved at :time',
+    'rs_restored_t' => 'Nothing was lost.',
+    'rs_restored' => 'You left this consultation at :time without saving. What you had typed is back below; photos are not.',
+    'rs_drop' => 'Start again empty',
+    'rs_drop_confirm' => 'Remove what was brought back and start this consultation again?',
+    'cf_g_back_t' => 'Closed the page by mistake?',
+    'cf_g_back' => 'An orange bar at the top of every page takes you back to the patient. What you typed is kept on this phone or computer until you save.',
     'cons_save_later' => 'Save and continue later',
     'cons_save_later_help' => 'Send the patient to the lab or imaging, then open the consultation again from the queue or the visit: the results show at the top and you can finish it.',
     // lab tests and imaging studies

@@ -96,9 +96,19 @@
             <li><i class="fas fa-hand-pointer" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_pick_t')</strong> @lang('clinic.cf_g_pick')</span></li>
             <li><i class="fas fa-pencil-alt" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_draw_t')</strong> @lang('clinic.cf_g_draw')</span></li>
             <li><i class="fas fa-flask" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_tests_t')</strong> @lang('clinic.cf_g_tests')</span></li>
+            <li><i class="fas fa-undo" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_back_t')</strong> @lang('clinic.cf_g_back')</span></li>
             <li><i class="fas fa-save" aria-hidden="true"></i><span><strong>@lang('clinic.cf_g_save_t')</strong> @lang('clinic.cf_g_save') @can('consultation.finalize')@lang('clinic.cf_final_help')@endcan</span></li>
         </ol>
     </details>
+
+    {{-- PosInnova: what was typed and not saved last time is back (filled in by consultation.partials.autosave_js) --}}
+    <div class="cf-restored" id="cf_restored" role="status" hidden
+        style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-bottom:16px;padding:12px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #6ce9a6;color:#054f31;">
+        <div style="flex:1 1 240px;min-width:0;line-height:1.45;"><i class="fas fa-undo" aria-hidden="true"></i>
+            <strong>@lang('clinic.rs_restored_t')</strong> {!! __('clinic.rs_restored', ['time' => '<span data-when></span>']) !!}</div>
+        <button type="button" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline" id="cf_restored_drop" data-confirm="{{ __('clinic.rs_drop_confirm') }}">@lang('clinic.rs_drop')</button>
+    </div>
+    <style>.cf-restored[hidden] { display: none !important; }</style>
 
     {{-- PosInnova: the patient's history while consulting --}}
     <details class="tw-bg-white tw-shadow-sm tw-rounded-xl tw-ring-1 tw-ring-gray-200 tw-p-4 tw-mb-4" id="consult_history" {{ $history->isNotEmpty() ? 'open' : '' }}>
@@ -644,15 +654,18 @@ $(document).ready(function () {
     var EX = @json($exam_js);
     var $exSel = $('#exam_template'), $exBody = $('#exam_form_body');
     var exPicked = !!$exSel.val(); // a form already there (continuing) or picked by hand stays
-    function exLoad(id) {
+    function exLoad(id, cb) {
         $('.ex-box-empty').toggle(!id);
-        if (!id) { $exBody.empty(); return; }
+        if (!id) { $exBody.empty(); if (cb) { cb(true); } return; }
         $exBody.html('<p class="text-muted"><i class="fas fa-spinner fa-spin"></i></p>');
         $.get(EX.form_url, { template_id: id }).done(function (html) {
             $exBody.html(html);
             window.ExamForm.init($exBody[0]);
-        }).fail(function () { $exBody.empty(); toastr.error(EX.error); });
+            if (cb) { cb(true); }
+        }).fail(function () { $exBody.empty(); toastr.error(EX.error); if (cb) { cb(false); } });
     }
+    // for the script that brings back what was typed and not saved (consultation.partials.autosave_js)
+    window.ConsultForm = { addRx: null, loadExam: function (id, cb) { exPicked = true; $exSel.val(id).data('cur', id); exLoad(id, cb); } };
     function exSwitch(id, byHand) {
         var cur = $exSel.data('cur') || '';
         if (String(id) === String(cur)) { return; }
@@ -934,6 +947,7 @@ $(document).ready(function () {
         rxAutoQty($(this).closest('tr'));
     });
 
+    window.ConsultForm.addRx = addPrescriptionRow;
     // continuing a consultation: its prescription as saved
     $.each(@json($rx_rows), function (_, item) { addPrescriptionRow(item, true); });
     $(document).on('click', '.remove_rx_row', function (e) {
@@ -945,4 +959,5 @@ $(document).ready(function () {
     __page_leave_confirmation('#consultation_form');
 });
 </script>
+@include('consultation.partials.autosave_js')
 @endsection

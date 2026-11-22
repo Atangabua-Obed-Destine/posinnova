@@ -181,4 +181,8 @@
 
 @section('javascript')
 @include('consultation.exam.assets')
+@if (session('status.success'))
+    {{-- just saved: the copy kept on this device in case the page was closed is no longer needed --}}
+    <script>try { window.localStorage.removeItem('pi_consult_v{{ (int) $c->visit_id }}_u{{ (int) auth()->id() }}'); } catch (e) { /* private mode */ }</script>
+@endif
 @endsection

@@ -127,4 +127,35 @@ class ClinicQueue
 
         return in_array(self::payState($visit), ['due', 'partial']);
     }
+
+    /**
+     * The consultations a doctor has not finished: saved to go on later (drafts of the last two weeks, visit
+     * still open) and patients called in today or yesterday and still "with the doctor" with nothing saved.
+     * For the "Continue" bar shown on every page: [['kind' => draft|open, 'visit_id', 'name', 'time', 'url']].
+     */
+    public static function openConsultations($business_id, $user_id, $limit = 4)
+    {
+        $out = [];
+        $drafts = \App\Consultation::forBusiness($business_id)->where('status', 'draft')->where('consulted_by', $user_id)
+            ->where('updated_at', '>=', now()->subDays(14))
+            ->whereHas('visit', fn ($q) => $q->where('status', 'open'))
+            ->with('patient')->orderByDesc('updated_at')->limit($limit)->get();
+        foreach ($drafts as $c) {
+            $out[$c->visit_id] = ['kind' => 'draft', 'visit_id' => $c->visit_id, 'name' => optional($c->patient)->name,
+                'time' => $c->updated_at->isToday() ? $c->updated_at->format('H:i') : $c->updated_at->format('d/m H:i'),
+                'url' => action([\App\Http\Controllers\ConsultationController::class, 'edit'], [$c->id])];
+        }
+        $with = Visit::forBusiness($business_id)->where('status', 'open')->where('queue_status', 'with_doctor')->where('doctor_id', $user_id)
+            ->whereDate('visit_date', '>=', \Carbon::yesterday()->toDateString())
+            ->whereNotIn('id', array_keys($out) ?: [0])
+            ->with('patient')->orderByDesc('called_at')->limit($limit)->get();
+        foreach ($with as $v) {
+            $at = $v->called_at ? \Carbon::parse($v->called_at) : null;
+            $out[$v->id] = ['kind' => 'open', 'visit_id' => $v->id, 'name' => optional($v->patient)->name,
+                'time' => $at ? ($at->isToday() ? $at->format('H:i') : $at->format('d/m H:i')) : '',
+                'url' => action([\App\Http\Controllers\ConsultationController::class, 'create'], ['visit_id' => $v->id])];
+        }
+
+        return array_slice(array_values($out), 0, $limit);
+    }
 }
