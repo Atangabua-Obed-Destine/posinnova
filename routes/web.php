@@ -417,6 +417,17 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         $A = \App\Http\Controllers\HotelAuditController::class;
         $S = \App\Http\Controllers\HotelSetupController::class;
         Route::get('/', [$H, 'home']);
+        // E-Ride Hotels: the link (setup) and the requests on the hotel home
+        $E = \App\Http\Controllers\HotelErideController::class;
+        Route::post('/eride/link', [$E, 'save']);
+        Route::post('/eride/test', [$E, 'test']);
+        Route::post('/eride/resend', [$E, 'resend']);
+        Route::post('/eride/toggle', [$E, 'toggle']);
+        Route::post('/eride/remove', [$E, 'remove']);
+        Route::get('/eride/inbox', [$E, 'inbox']);
+        Route::post('/eride/keep/{inquiry_id}', [$E, 'keep']);
+        Route::post('/eride/decline/{inquiry_id}', [$E, 'decline']);
+        Route::post('/eride/reply/{inquiry_id}', [$E, 'reply']);
         Route::get('/board', [$H, 'board']);
         Route::get('/calendar', [$H, 'calendar']);
         Route::get('/housekeeping', [$H, 'housekeeping']);

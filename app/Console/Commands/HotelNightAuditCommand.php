@@ -28,6 +28,8 @@ class HotelNightAuditCommand extends Command
             config(['app.timezone' => $business->time_zone ?: $default_tz]);
             Hotel::forget();
             try {
+                // holds whose time has passed are let go (a linked hotel also does it every minute)
+                Hotel::lapseHolds($business->id);
                 $done = HotelAudit::scheduled($business->id);
                 if ($done) {
                     $this->info($business->name.': closed '.implode(', ', $done));

@@ -89,7 +89,7 @@
                                 <select class="ht-in" name="source" id="ht_source">@foreach (\App\Utils\Hotel::SOURCES as $s)<option value="{{ $s }}" @selected(old('source', 'phone') === $s)>{{ __('hotel.source_' . $s) }}</option>@endforeach</select></div>
                             <div class="ht-f"><label for="ht_status">{{ __('hotel.status') }}</label>
                                 <select class="ht-in" name="status" id="ht_status"><option value="confirmed">{{ __('hotel.st_confirmed') }}</option><option value="tentative" @selected(old('status') === 'tentative')>{{ __('hotel.st_tentative') }}</option></select></div>
-                            <div class="ht-f" id="ht_hold_wrap" hidden><label for="ht_hold">{{ __('hotel.hold_until') }}</label><input class="ht-in" type="date" name="hold_until" id="ht_hold" value="{{ old('hold_until') }}"></div>
+                            <div class="ht-f" id="ht_hold_wrap" hidden><label for="ht_hold">{{ __('hotel.hold_until') }}</label><input class="ht-in" type="datetime-local" name="hold_until" id="ht_hold" value="{{ old('hold_until') }}"></div>
                         @endif
                     </div>
                     <div class="ht-f"><label for="ht_notes">{{ __('hotel.notes') }}</label><input class="ht-in" type="text" name="notes" id="ht_notes" value="{{ old('notes') }}" maxlength="500"></div>

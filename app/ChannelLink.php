@@ -32,6 +32,12 @@ class ChannelLink extends Model
         return $q->where('is_active', 1)->whereNull('revoked_at');
     }
 
+    /** The shop channel (products, stock, orders). */
+    public function scopeShop($q)
+    {
+        return $q->where('channel', 'eride');
+    }
+
     public function isLive()
     {
         return $this->is_active && empty($this->revoked_at);

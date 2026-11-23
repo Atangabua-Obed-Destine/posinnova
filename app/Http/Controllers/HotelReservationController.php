@@ -70,7 +70,7 @@ class HotelReservationController extends HotelBaseController
             $data['arrival'] = Hotel::parseDate($data['arrival'] ?? '');
             $data['departure'] = Hotel::parseDate($data['departure'] ?? '');
             if (! empty($data['hold_until'])) {
-                $data['hold_until'] = Hotel::parseDate($data['hold_until']);
+                $data['hold_until'] = Hotel::holdUntil($data['hold_until']);
             }
             // a price other than the plan's needs a manager
             if ($request->filled('rate') && self::can('hotel.manager')) {

@@ -148,7 +148,7 @@ details.ht-panel-d > summary { font-weight: 700; }
                 @if ($res->checked_in_at)<div class="ht-row"><span class="ht-muted">{{ __('hotel.checked_in_at') }}</span><strong>{{ $res->checked_in_at->format('d/m H:i') }}</strong></div>@endif
                 @if ($res->checked_out_at)<div class="ht-row"><span class="ht-muted">{{ __('hotel.checked_out_at') }}</span><strong>{{ $res->checked_out_at->format('d/m H:i') }}</strong></div>@endif
                 @if ($res->keys_given !== null)<div class="ht-row"><span class="ht-muted">{{ __('hotel.keys') }}</span><strong>{{ $res->keys_given }}</strong></div>@endif
-                @if ($res->hold_until)<div class="ht-row"><span class="ht-muted">{{ __('hotel.hold_until') }}</span><strong>{{ $res->hold_until->format('d/m/Y') }}</strong></div>@endif
+                @if ($res->hold_until)<div class="ht-row"><span class="ht-muted">{{ __('hotel.hold_until') }}</span><strong>{{ $res->hold_until->format('d/m/Y H:i') }}</strong></div>@endif
             </div>
 
             @if ($guests->isNotEmpty())

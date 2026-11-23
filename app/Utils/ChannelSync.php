@@ -91,6 +91,9 @@ class ChannelSync
         $r = (new ChannelClient($link))->get('hello');
         $b = (array) ($r['branch'] ?? []);
         $label = trim(implode(' · ', array_unique(array_filter([$b['store'] ?? null, $b['branch'] ?? null]))));
+        if ($label === '' && ! empty($r['hotel']['name'])) {
+            $label = (string) $r['hotel']['name']; // the hotel channel names the hotel
+        }
         $f = ['branch_label' => $label !== '' ? Str::limit($label, 180, '') : $link->branch_label, 'revoked_at' => null];
         if (! empty($r['server_time'])) {
             $f['clock_skew'] = Carbon::parse($r['server_time'])->getTimestamp() - time();
@@ -316,6 +319,7 @@ class ChannelSync
                 $m->done_at = now();
                 $m->save();
                 ChannelOrders::refused($m, $e);
+                ChannelHotel::refused($m, $e);
             }
         }
 

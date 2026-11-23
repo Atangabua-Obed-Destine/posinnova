@@ -27,12 +27,15 @@ class ChannelSyncCommand extends Command
         }
         foreach ($q->get() as $link) {
             $business = Business::find($link->business_id, ['id', 'name', 'time_zone', 'enabled_modules']);
-            if (! $business || ! in_array('eride', (array) $business->enabled_modules, true)) {
+            $hotel = $link->channel === \App\Utils\ChannelHotel::CHANNEL;
+            if (! $business || ! in_array($hotel ? 'hotel' : 'eride', (array) $business->enabled_modules, true)) {
                 continue;
             }
             date_default_timezone_set($business->time_zone ?: $default_tz);
             config(['app.timezone' => $business->time_zone ?: $default_tz]);
-            $done = ChannelSync::run($link, ['full' => (bool) $this->option('full'), 'hourly' => (bool) $this->option('hourly')]);
+            $done = $hotel
+                ? \App\Utils\ChannelHotel::run($link, ['full' => (bool) $this->option('full')])
+                : ChannelSync::run($link, ['full' => (bool) $this->option('full'), 'hourly' => (bool) $this->option('hourly')]);
             $line = $business->name.' / link '.$link->id.': '.json_encode($done);
             $done['error'] ? $this->error($line) : $this->line($line);
         }

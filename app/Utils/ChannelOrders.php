@@ -25,7 +25,7 @@ class ChannelOrders
     /** The live link of a location, if any. */
     public static function linkFor($business_id, $location_id)
     {
-        return ChannelLink::where('business_id', $business_id)->where('location_id', $location_id)->live()->first();
+        return ChannelLink::where('business_id', $business_id)->where('location_id', $location_id)->shop()->live()->first();
     }
 
     /**

@@ -182,7 +182,7 @@
     @php
         // PosInnova online channels: E-Ride orders waiting for this till's location.
         $channel_locations = in_array('eride', (array) (session('business.enabled_modules') ?: []), true)
-            ? \App\ChannelLink::where('business_id', session('user.business_id'))->live()->pluck('location_id')->all() : [];
+            ? \App\ChannelLink::where('business_id', session('user.business_id'))->shop()->live()->pluck('location_id')->all() : [];
     @endphp
     @if (! empty($channel_locations) && auth()->user()->can('sell.create'))
         @include('channel.pos_panel')

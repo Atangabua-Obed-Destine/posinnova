@@ -199,6 +199,7 @@
             <label style="display:flex;gap:10px;align-items:center;font-weight:500;margin-bottom:14px;"><input type="checkbox" name="require_inspection" value="1" @checked($settings['require_inspection'])> {{ __('hotel.inspection_setting') }}</label>
             <button class="ht-btn pri">{{ __('hotel.save') }}</button>
         </form>
+        @include('hotel.partials.eride_link')
     @endif
 </section>
 @endsection

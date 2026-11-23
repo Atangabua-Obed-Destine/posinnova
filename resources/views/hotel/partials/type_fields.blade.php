@@ -43,5 +43,13 @@
             <input class="ht-in" name="tourist_tax" id="{{ $p }}_tax" inputmode="decimal" value="{{ $val('tourist_tax') }}">
             <span class="ht-hint">{{ __('hotel.price_tax_hint') }}</span>
         </div>
+        @if (! empty($eride_on))
+            {{-- E-Ride Hotels: what guests see as "from … per night" --}}
+            <div class="ht-f">
+                <label for="{{ $p }}_er">{{ __('hotel.eride_price') }}</label>
+                <input class="ht-in" name="eride_price" id="{{ $p }}_er" inputmode="decimal" value="{{ $t && $t->eride_price !== null ? $num($t->eride_price) : old('eride_price') }}" placeholder="{{ $t ? $num($t->rate_room_only) : '' }}">
+                <span class="ht-hint">{{ __('hotel.eride_price_hint') }}</span>
+            </div>
+        @endif
     </div>
 </div>

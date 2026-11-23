@@ -44,6 +44,8 @@
         </div>
     </div>
 
+    @include('hotel.partials.eride_inbox')
+
     <div class="ht-kpis">
         <div class="ht-kpi" id="ht_kpi_occ"><div class="l">{{ __('hotel.occupancy_tonight') }}</div>
             <div class="v">{{ $expected }} / {{ $sellable }} <span style="font-size:16px;color:#1849a9;">{{ $occ_pct }}%</span></div>

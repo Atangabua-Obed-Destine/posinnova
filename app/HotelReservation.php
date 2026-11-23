@@ -13,7 +13,7 @@ class HotelReservation extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'arrival' => 'date', 'departure' => 'date', 'hold_until' => 'date',
+        'arrival' => 'date', 'departure' => 'date', 'hold_until' => 'datetime',
         'checked_in_at' => 'datetime', 'checked_out_at' => 'datetime', 'cancelled_at' => 'datetime',
     ];
 

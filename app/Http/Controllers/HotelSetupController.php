@@ -29,6 +29,8 @@ class HotelSetupController extends HotelBaseController
             'rooms' => HotelRoom::where('business_id', $biz)->with('type')->orderBy('floor')->orderBy('number')->get(),
             'settings' => Hotel::settings($biz), 'locations' => BusinessLocation::where('business_id', $biz)->pluck('name', 'id'),
             'num' => fn ($v) => $v === null ? '' : $this->money($v, false), 'today' => Hotel::today(),
+            'eride_link' => \App\ChannelLink::where('business_id', $biz)->where('channel', \App\Utils\ChannelHotel::CHANNEL)->first(),
+            'eride_on' => \App\ChannelLink::where('business_id', $biz)->where('channel', \App\Utils\ChannelHotel::CHANNEL)->exists(),
         ]);
     }
 
@@ -45,7 +47,7 @@ class HotelSetupController extends HotelBaseController
             'capacity' => max(1, min(20, (int) $request->input('capacity', 2))),
             'rate_room_only' => $n('rate_room_only'), 'rate_bb' => $n('rate_bb'), 'rate_corporate' => $n('rate_corporate'),
             'tourist_tax' => $n('tourist_tax') ?? 0, 'sort_order' => (int) $request->input('sort_order', 0),
-        ];
+        ] + ($request->has('eride_price') ? ['eride_price' => $n('eride_price') ?: null] : []);
     }
 
     public function storeType(Request $request)

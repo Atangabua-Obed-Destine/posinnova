@@ -53,7 +53,7 @@ class HotelAudit
             'to_post_amount' => $in->reject(fn ($r) => in_array($r->id, $posted))->sum(fn ($r) => (float) $r->rate + (float) optional($r->roomType)->tourist_tax),
             'not_arrived' => HotelReservation::where('business_id', $business_id)->where('status', 'confirmed')->where('arrival', '<=', $date)->with(['contact', 'roomType'])->get(),
             'lapsed' => HotelReservation::where('business_id', $business_id)->where('status', 'tentative')
-                ->where(fn ($q) => $q->where('arrival', '<=', $date)->orWhere('hold_until', '<=', $date))->with('contact')->get(),
+                ->where(fn ($q) => $q->where('arrival', '<=', $date)->orWhere('hold_until', '<', Carbon::parse($date)->addDay()->toDateString()))->with('contact')->get(),
             'not_left' => $in->filter(fn ($r) => $r->departure->toDateString() <= $date),
             'open_registers' => DB::table('cash_registers as cr')->join('users as u', 'u.id', '=', 'cr.user_id')
                 ->where('cr.business_id', $business_id)->where('cr.status', 'open')
@@ -126,8 +126,8 @@ class HotelAudit
                 }
             }
             foreach (HotelReservation::where('business_id', $business_id)->where('status', 'tentative')
-                ->where(fn ($q) => $q->where('arrival', '<=', $d)->orWhere('hold_until', '<=', $d))->get() as $res) {
-                Hotel::cancel($res, $poster, __('hotel.audit_reason_lapsed'));
+                ->where(fn ($q) => $q->where('arrival', '<=', $d)->orWhere('hold_until', '<', Carbon::parse($d)->addDay()->toDateString()))->get() as $res) {
+                Hotel::cancel($res, $poster, __('hotel.audit_reason_lapsed'), 'cancelled', 'lapsed');
             }
 
             // rooms slept in need a tidy tomorrow

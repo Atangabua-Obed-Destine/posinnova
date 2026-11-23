@@ -36,9 +36,10 @@ class Hotel
         'police_card' => 1,
         'require_inspection' => 0,
         'pay_first' => 1,             // guests pay before they sleep: the screens show who is not paid up to tonight
+        'eride_hold_time' => '18:00', // an E-Ride guest's room is kept until this time on the arrival day
     ];
 
-    const SOURCES = ['walk_in', 'phone', 'whatsapp', 'booking_com', 'agency', 'company', 'other'];
+    const SOURCES = ['walk_in', 'phone', 'whatsapp', 'booking_com', 'agency', 'company', 'eride', 'other'];
 
     const EXTRAS = ['laundry', 'minibar', 'extra_bed', 'phone', 'damage', 'other'];
 
@@ -295,7 +296,8 @@ class Hotel
                 'rate' => max(0, $rate),
                 'source' => in_array($data['source'] ?? '', self::SOURCES, true) ? $data['source'] : 'walk_in',
                 'status' => ($data['status'] ?? 'confirmed') === 'tentative' ? 'tentative' : 'confirmed',
-                'hold_until' => ! empty($data['hold_until']) ? Carbon::parse($data['hold_until'])->toDateString() : null,
+                'hold_until' => self::holdUntil($data['hold_until'] ?? null),
+                'channel_ref' => ! empty($data['channel_ref']) ? mb_substr((string) $data['channel_ref'], 0, 64) : null,
                 'notes' => mb_substr(trim((string) ($data['notes'] ?? '')), 0, 500) ?: null,
                 'created_by' => $user_id,
             ]);
@@ -374,21 +376,63 @@ class Hotel
         $res->status = 'confirmed';
         $res->hold_until = null;
         $res->save();
+        ChannelHotel::event($res, 'confirmed');
     }
 
-    public static function cancel(HotelReservation $res, $user_id, $reason, $status = 'cancelled')
+    /**
+     * $why 'lapsed': a hold whose time passed (E-Ride hears "released", not "cancelled").
+     */
+    public static function cancel(HotelReservation $res, $user_id, $reason, $status = 'cancelled', $why = null)
     {
         if (! in_array($res->status, ['tentative', 'confirmed'], true)) {
             throw new HotelException(__('hotel.err_closed'));
         }
-        DB::transaction(function () use ($res, $user_id, $reason, $status) {
+        DB::transaction(function () use ($res, $user_id, $reason, $status, $why) {
             $res->status = $status;
             $res->cancelled_at = now();
             $res->cancelled_by = $user_id;
             $res->cancel_reason = mb_substr(trim((string) $reason), 0, 191) ?: null;
             $res->save();
             DB::table('hotel_room_nights')->where('reservation_id', $res->id)->delete();
+            if ($why !== 'released_by_eride') { // E-Ride let it go itself: nothing to tell it
+                ChannelHotel::event($res, $status === 'no_show' ? 'no_show' : ($why === 'lapsed' ? 'released' : 'cancelled'));
+            }
         });
+    }
+
+    /**
+     * A hold until: a date and time. A date alone (the old form, or a date field) lasts until the end of that day.
+     */
+    public static function holdUntil($v)
+    {
+        if ($v === null || trim((string) $v) === '') {
+            return null;
+        }
+        $v = trim((string) $v);
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) || preg_match('#^\d{1,2}[/-]\d{1,2}[/-]\d{4}$#', $v)) {
+            return Carbon::parse(self::parseDate($v) ?: $v)->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+        }
+        try {
+            return Carbon::parse(str_replace('T', ' ', $v))->format('Y-m-d H:i:s');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Holds whose time has passed are let go (every 15 minutes with the night audit task, every minute
+     * when the hotel is linked to E-Ride). Returns how many.
+     */
+    public static function lapseHolds($business_id)
+    {
+        $n = 0;
+        foreach (HotelReservation::where('business_id', $business_id)->where('status', 'tentative')
+            ->whereNotNull('hold_until')->where('hold_until', '<', now())->get() as $res) {
+            self::cancel($res, null, __('hotel.audit_reason_lapsed'), 'cancelled', 'lapsed');
+            $n++;
+        }
+
+        return $n;
     }
 
     /** The arrivals still to come today (and late ones), the stays leaving today, the guests in. */
@@ -484,6 +528,7 @@ class Hotel
             $res->checked_in_by = $user_id;
             $res->keys_given = $keys !== null && $keys !== '' ? max(0, (int) $keys) : null;
             $res->save();
+            ChannelHotel::event($res, 'arrived');
 
             if ($s['charge_mode'] === 'checkin') {
                 $folio = new HotelFolio();
@@ -613,6 +658,7 @@ class Hotel
             $res->checked_out_at = now();
             $res->checked_out_by = $user_id;
             $res->save();
+            ChannelHotel::event($res, 'left');
             DB::table('hotel_room_nights')->where('reservation_id', $res->id)->where('night', '>=', $today)->delete();
             if ($res->room_id) {
                 self::setHousekeeping(HotelRoom::find($res->room_id), 'dirty', $user_id);

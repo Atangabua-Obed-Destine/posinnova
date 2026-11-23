@@ -51,7 +51,7 @@ class ChannelController extends Controller
         abort_unless($this->canSetUp(), 403);
         $business_id = $this->businessId();
         $locations = BusinessLocation::where('business_id', $business_id)->where('is_active', 1)->orderBy('name')->get();
-        $links = ChannelLink::where('business_id', $business_id)->get()->keyBy('location_id');
+        $links = ChannelLink::where('business_id', $business_id)->shop()->get()->keyBy('location_id');
         $util = new Util();
         $pay = [];
         foreach ($locations as $loc) {
@@ -79,7 +79,7 @@ class ChannelController extends Controller
         abort_unless($this->canSetUp(), 403);
         $business_id = $this->businessId();
         $loc = BusinessLocation::where('business_id', $business_id)->findOrFail($location_id);
-        $link = ChannelLink::where('business_id', $business_id)->where('location_id', $loc->id)->first();
+        $link = ChannelLink::where('business_id', $business_id)->where('location_id', $loc->id)->shop()->first();
 
         $url = ChannelClient::cleanBaseUrl($request->input('base_url'));
         if (! $url) {
@@ -159,7 +159,7 @@ class ChannelController extends Controller
     public function test($location_id)
     {
         abort_unless($this->canSetUp(), 403);
-        $link = ChannelLink::where('business_id', $this->businessId())->where('location_id', $location_id)->firstOrFail();
+        $link = ChannelLink::where('business_id', $this->businessId())->where('location_id', $location_id)->shop()->firstOrFail();
         try {
             ChannelSync::hello($link);
 
@@ -174,7 +174,7 @@ class ChannelController extends Controller
     public function resend($location_id)
     {
         abort_unless($this->canSetUp(), 403);
-        $link = ChannelLink::where('business_id', $this->businessId())->where('location_id', $location_id)->firstOrFail();
+        $link = ChannelLink::where('business_id', $this->businessId())->where('location_id', $location_id)->shop()->firstOrFail();
         $link->forceFill(['full_requested' => true])->save();
         $done = ChannelSync::run($link->fresh(), ['full' => true]);
         if (! empty($done['error'])) {
@@ -187,7 +187,7 @@ class ChannelController extends Controller
     public function toggle($location_id)
     {
         abort_unless($this->canSetUp(), 403);
-        $link = ChannelLink::where('business_id', $this->businessId())->where('location_id', $location_id)->firstOrFail();
+        $link = ChannelLink::where('business_id', $this->businessId())->where('location_id', $location_id)->shop()->firstOrFail();
         $link->forceFill(['is_active' => ! $link->is_active, 'full_requested' => true])->save();
 
         return back()->with('channel_ok_'.$location_id, $link->is_active ? __('channel.on_ok') : __('channel.off_ok'));
@@ -196,7 +196,7 @@ class ChannelController extends Controller
     public function remove($location_id)
     {
         abort_unless($this->canSetUp(), 403);
-        $link = ChannelLink::where('business_id', $this->businessId())->where('location_id', $location_id)->firstOrFail();
+        $link = ChannelLink::where('business_id', $this->businessId())->where('location_id', $location_id)->shop()->firstOrFail();
         DB::table('channel_sent')->where('link_id', $link->id)->delete();
         DB::table('channel_outbox')->where('link_id', $link->id)->whereNull('done_at')->update(['done_at' => now(), 'last_error' => 'link removed in POS']);
         $link->delete();
@@ -214,7 +214,7 @@ class ChannelController extends Controller
         $category = (int) $request->input('category');
         $search = trim((string) $request->input('q', ''));
 
-        $links = ChannelLink::where('business_id', $business_id)->with('location')->get();
+        $links = ChannelLink::where('business_id', $business_id)->shop()->with('location')->get();
         $loc_id = (int) $request->input('location') ?: optional($links->first())->location_id;
 
         $q = $this->productQuery($business_id, $show, $category, $search);
@@ -382,7 +382,7 @@ class ChannelController extends Controller
             }
         });
         // A blocked category is a change without a timestamp on the products: compare everything at the next minute.
-        ChannelLink::where('business_id', $business_id)->update(['last_hourly_at' => null]);
+        ChannelLink::where('business_id', $business_id)->shop()->update(['last_hourly_at' => null]);
 
         return back()->with('status', ['success' => 1, 'msg' => __('channel.cats_ok', ['n' => count($ids)])]);
     }
