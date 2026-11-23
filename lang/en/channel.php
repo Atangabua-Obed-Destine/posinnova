@@ -163,6 +163,8 @@ return [
     'pos_paid_room' => 'On the room bill',
     'pos_finish_room' => 'Finish: charge to room :room',
     'pos_room_refused' => 'Cannot go on the room bill:',
+    'pos_cancelled_room' => 'It was rung up as :invoice and put on the bill of room :room. Take it off the bill (nothing was paid).',
+    'pos_unbill' => 'Take it off room :room\'s bill',
     'pos_drop' => 'Not now: empty the cart',
     'pos_no_pay_method' => 'Choose the payment in the payment window: the E-Ride payment method is not set for this shop.',
     'pos_no_credit_button' => 'Leave the amount at 0 and finish: the sale stays due on the E-Ride account.',

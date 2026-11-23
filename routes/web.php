@@ -408,6 +408,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::get('/pos/pending', [$C, 'posPending']);
         Route::get('/pos/order/{order_id}', [$C, 'posOrder']);
         Route::post('/pos/cancel-seen', [$C, 'posCancelSeen']);
+        Route::post('/pos/unbill', [$C, 'posUnbill']);
     });
 
     // PosInnova hotel module (Settings › Modules › Hotel)

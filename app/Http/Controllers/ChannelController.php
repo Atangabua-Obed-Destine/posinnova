@@ -428,6 +428,20 @@ class ChannelController extends Controller
         }
     }
 
+    public function posUnbill(Request $request)
+    {
+        $link = $this->posLink($request);
+        abort_unless($link, 404);
+        try {
+            $r = ChannelOrders::unbill($link, (string) $request->input('order_id'), auth()->id());
+        } catch (\Throwable $e) {
+            $r = ['ok' => false, 'message' => $e->getMessage()];
+        }
+        Cache::forget('channel_pending_'.$link->id);
+
+        return response()->json($r);
+    }
+
     public function posCancelSeen(Request $request)
     {
         $link = $this->posLink($request);

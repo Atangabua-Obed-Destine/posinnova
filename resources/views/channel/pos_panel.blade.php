@@ -9,7 +9,7 @@
         'btn', 'title', 'none', 'new_one', 'new_many', 'ring', 'paid_shop', 'paid_eride', 'unlinked', 'cancelled_t', 'cancelled_d',
         'cancelled_deleted', 'seen', 'open_sale', 'cart_busy', 'loading', 'banner', 'finish_shop', 'finish_eride', 'not_added',
         'total_diff', 'draft_hint', 'status_cancelled', 'status_rung', 'sent', 'queued', 'mismatch', 'offline', 'revoked',
-        'way_delivery', 'way_collect', 'way_eat_in', 'way_room', 'paid_room', 'finish_room', 'room_refused', 'drop', 'cancel_toast', 'no_pay_method', 'no_credit_button', 'added', 'customer', 'paid_at',
+        'way_delivery', 'way_collect', 'way_eat_in', 'way_room', 'paid_room', 'finish_room', 'room_refused', 'cancelled_room', 'unbill', 'drop', 'cancel_toast', 'no_pay_method', 'no_credit_button', 'added', 'customer', 'paid_at',
     ])->mapWithKeys(fn ($k) => [$k => __('channel.pos_'.$k)])->all();
 @endphp
 <style>
@@ -58,6 +58,7 @@
     var URL_PENDING = @json(url('eride/pos/pending'));
     var URL_ORDER = @json(url('eride/pos/order'));
     var URL_SEEN = @json(url('eride/pos/cancel-seen'));
+    var URL_UNBILL = @json(url('eride/pos/unbill'));
     var TOKEN = @json(csrf_token());
     var T = @json($ch_T);
     var POLL_MS = 20000;
@@ -98,11 +99,12 @@
         if (state.error === 'revoked') { h += '<div class="alert alert-danger">' + esc(T.revoked) + '</div>'; }
         else if (state.error === 'offline') { h += '<div class="alert alert-warning">' + esc(T.offline) + '</div>'; }
         state.cancelled.forEach(function (c) {
-            var d = c.sale_deleted ? T.cancelled_deleted : T.cancelled_d;
-            d = d.replace(':number', c.number).replace(':invoice', c.invoice_no || '—');
+            var d = c.sale_deleted ? T.cancelled_deleted : (c.room ? T.cancelled_room : T.cancelled_d);
+            d = d.replace(':number', c.number).replace(':invoice', c.invoice_no || '—').replace(':room', c.room || '');
             h += '<div class="ch-c" data-order="' + esc(c.order_id) + '"><b>' + esc(T.cancelled_t.replace(':number', c.number)) + '</b>' +
                 '<div>' + esc(d) + (c.reason ? ' (' + esc(c.reason) + ')' : '') + '</div><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
                 (c.sale_id ? '<a class="btn btn-default btn-sm" target="_blank" href="' + @json(url('sells')) + '/' + c.sale_id + '">' + esc(T.open_sale) + '</a>' : '') +
+                (c.room ? '<button type="button" class="btn btn-primary btn-sm ch-unbill">' + esc(T.unbill.replace(':room', c.room)) + '</button>' : '') +
                 '<button type="button" class="btn btn-danger btn-sm ch-seen" data-number="' + esc(c.number) + '">' + esc(T.seen) + '</button></div></div>';
         });
         if (!state.orders.length && !state.cancelled.length) {
@@ -327,6 +329,12 @@
 
     $(document).on('click', '#ch_pos_btn', function () { paint(); $('#ch_pos_modal').modal('show'); poll(); });
     $(document).on('click', '#ch_pos_list .ch-ring', function () { ringUp($(this).closest('[data-order]').attr('data-order')); });
+    $(document).on('click', '#ch_pos_list .ch-unbill', function () {
+        var $c = $(this).closest('[data-order]'), $b = $(this).prop('disabled', true);
+        $.post(URL_UNBILL, { _token: TOKEN, location_id: loc(), order_id: $c.attr('data-order') })
+            .done(function (r) { if (r && r.ok) { toastr.success(r.message); $c.remove(); poll(); } else { toastr.error((r && r.message) || T.offline); $b.prop('disabled', false); } })
+            .fail(function () { toastr.error(T.offline); $b.prop('disabled', false); });
+    });
     $(document).on('click', '#ch_pos_list .ch-seen', function () {
         var $c = $(this).closest('[data-order]');
         $.post(URL_SEEN, { _token: TOKEN, location_id: loc(), order_id: $c.attr('data-order'), number: $(this).attr('data-number') })

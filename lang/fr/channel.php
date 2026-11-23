@@ -160,6 +160,8 @@ return [
     'pos_paid_room' => 'Sur la note de chambre',
     'pos_finish_room' => 'Terminer : sur la chambre :room',
     'pos_room_refused' => 'Impossible de mettre sur la note de chambre :',
+    'pos_cancelled_room' => 'Elle était encaissée sous :invoice et mise sur la note de la chambre :room. Retirez-la de la note (rien n\'a été payé).',
+    'pos_unbill' => 'Retirer de la note de la chambre :room',
     'pos_drop' => 'Pas maintenant : vider le panier',
     'pos_no_pay_method' => 'Choisissez le paiement dans la fenêtre de paiement : le moyen de paiement E-Ride n\'est pas réglé pour cette boutique.',
     'pos_no_credit_button' => 'Laissez le montant à 0 et terminez : la vente reste due sur le compte E-Ride.',

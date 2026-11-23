@@ -114,6 +114,8 @@ class ChannelOrders
         $sale_id = (int) ($c['pos_sale_id'] ?? ($mine ? $mine->transaction_id : 0));
         $t = $sale_id ? Transaction::where('business_id', $link->business_id)->find($sale_id) : null;
 
+        $stay = $t ? HotelRoomCharge::stayOf($t->id) : null;
+
         return [
             'order_id' => (string) ($c['order_id'] ?? ''),
             'number' => (string) ($c['number'] ?? ($mine ? $mine->number : '')),
@@ -121,6 +123,8 @@ class ChannelOrders
             'sale_id' => $t ? $t->id : null,
             'invoice_no' => $t ? $t->invoice_no : null,
             'sale_deleted' => $sale_id && ! $t,
+            // on a room bill and nothing paid yet: it can simply come off the bill
+            'room' => $stay ? (string) optional($stay->room)->number : null,
         ];
     }
 
@@ -358,6 +362,40 @@ class ChannelOrders
             ChannelSync::queue($link, 'unrung', $row->order_id, 'orders/'.rawurlencode($row->order_id).'/unrung', ['pos_sale_id' => (int) $transaction_id, 'reason' => 'sale deleted']);
             Cache::forget('channel_pending_'.$link->id);
         }
+    }
+
+    /**
+     * A cancelled room-service order that was put on a room bill: the sale comes off the bill and is
+     * deleted (stock back), then E-Ride hears "seen". Only while nothing was paid on it.
+     *
+     * @return array{ok:bool, message:string}
+     */
+    public static function unbill(ChannelLink $link, $order_id, $user_id)
+    {
+        $row = ChannelOrder::where('order_id', $order_id)->where('link_id', $link->id)->first();
+        $t = $row && $row->transaction_id ? Transaction::where('business_id', $link->business_id)->find($row->transaction_id) : null;
+        $stay = $t ? HotelRoomCharge::stayOf($t->id) : null;
+        if (! $t || ! $stay) {
+            return ['ok' => false, 'message' => __('hotel.rc_unbill_none')];
+        }
+        $tu = new TransactionUtil();
+        if ((float) $tu->getTotalPaid($t->id) > 0.004) {
+            return ['ok' => false, 'message' => __('hotel.rc_unbill_paid', ['invoice' => $t->invoice_no])];
+        }
+        $room = (string) optional($stay->room)->number;
+        DB::transaction(function () use ($row, $t, $tu, $link, $user_id) {
+            $row->forceFill(['status' => 'cancelled'])->save(); // not "unrung": E-Ride cancelled it
+            \App\HotelFolioLine::where('transaction_id', $t->id)->whereNull('voided_at')->update([
+                'voided_at' => now(), 'voided_by' => $user_id, 'void_reason' => mb_substr(__('hotel.rc_unbill_reason', ['number' => $row->number]), 0, 191),
+            ]);
+            $out = $tu->deleteSale($link->business_id, $t->id);
+            if (isset($out['success']) && ! $out['success']) {
+                throw new \RuntimeException($out['msg'] ?? 'delete failed');
+            }
+        });
+        self::cancelSeen($link, $order_id, $row->number);
+
+        return ['ok' => true, 'message' => __('hotel.rc_unbill_ok', ['room' => $room, 'invoice' => $t->invoice_no])];
     }
 
     /** The salesperson saw that a rung-up order was cancelled. */
