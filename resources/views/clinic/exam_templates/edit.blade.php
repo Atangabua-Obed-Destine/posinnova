@@ -29,6 +29,7 @@
             'name_required' => __('clinic.ex_tpl_name_required'), 'error' => __('messages.something_went_wrong'),
             'delete_block' => __('clinic.ex_delete_block'), 'empty' => __('clinic.ex_builder_empty'), 'unit' => __('clinic.ex_unit'),
             'more' => __('clinic.ex_more_options'),
+            'place_top' => __('clinic.ex_place_top'), 'place_section' => __('clinic.ex_place_section'), 'place_after' => __('clinic.ex_place_after'),
         ],
     ];
 @endphp
@@ -84,6 +85,8 @@
         .tb-lib-item.tb-on { border-color:#4f46e5; background:#eef2ff; }
         .tb-lib-item:focus { outline:2px solid #6366f1; }
         @media (max-width:991px) { .tb-cols-3, .tb-cols-4 { width:50%; } }
+        /* phones: every card is narrow, so its whole title goes on its own line */
+        @media (max-width:767px) { .tb-block:not(.tb-type-heading) .tb-card-head { flex-wrap:wrap; } .tb-block:not(.tb-type-heading) .tb-card-head strong { white-space:normal; order:3; flex-basis:100%; } .tb-cols-6 .tb-wbadge { display:none; } .tb-block:not(.tb-type-heading) .tb-card-actions { margin-left:auto; } }
         /* the blocks stay in view while the form is scrolled (the column is as tall as the form) */
         .tb-sticky.tb-fixed { position:fixed; top:64px; z-index:20; max-height:calc(100vh - 74px); overflow:auto; }
         /* a finger on a block scrolls the page (jQuery UI's own style forbids it, for nothing: it only listens to the mouse).
@@ -95,6 +98,8 @@
             #tb_blocks .tb-card { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
             #tb_blocks .tb-card img { -webkit-user-drag:none; pointer-events:none; }
         }
+        .tb-block.tb-flash .tb-card { border-color:#16a34a; box-shadow:0 0 0 3px #bbf7d0; transition:box-shadow .3s, border-color .3s; }
+        #tb_f_place { font-size:16px; height:auto; }
         .tb-block.tb-held .tb-card { border-color:#4f46e5; box-shadow:0 6px 18px rgba(79,70,229,.25); transform:scale(1.02); transition:transform .12s; }
     </style>
 
@@ -175,6 +180,14 @@
                         <label for="tb_f_label">@lang('clinic.ex_f_label')</label>
                         <input type="text" class="form-control" id="tb_f_label" maxlength="191">
                     </div>
+                    <div class="form-group" id="tb_f_place_group">
+                        <label for="tb_f_place"><i class="fas fa-arrows-alt-v"></i> @lang('clinic.ex_f_place')</label>
+                        <select class="form-control" id="tb_f_place"></select>
+                        <p class="help-block" style="margin-bottom:0;font-size:12px;">
+                            <span class="tb-place-help">@lang('clinic.ex_f_place_help')</span>
+                            <span class="tb-place-help-section">@lang('clinic.ex_f_place_help_section')</span>
+                        </p>
+                    </div>
                     <div class="form-group tb-for tb-for-choice tb-for-multi">
                         <label>@lang('clinic.ex_f_answers')</label>
                         <div>
@@ -250,7 +263,7 @@
 $(function () {
     var C = @json($tb);
     var B = {}; // id => block
-    var dirty = false, editing = null;
+    var dirty = false, editing = null, fresh = false;
     var esc = function (s) { return $('<div>').text(s == null ? '' : String(s)).html(); };
     var $list = $('#tb_blocks');
 
@@ -340,10 +353,10 @@ $(function () {
         if (e.type === 'keydown' && e.which !== 13 && e.which !== 32) { return; }
         e.preventDefault();
         var b = newBlock($(this).data('type'));
-        var $c = card(b).appendTo($list);
+        card(b).appendTo($list);
         emptyState();
         setDirty();
-        $c[0].scrollIntoView({ block: 'center' });
+        fresh = true; // shown where it lands once its settings are closed
         openEditor(b.id);
     });
 
@@ -392,10 +405,11 @@ $(function () {
         $('#tb_f_sides').prop('checked', !!b.sides);
         $('#tb_f_help').val(b.help || '');
         $('#tb_f_lib').html(libHtml(b.image || ''));
+        placeList(id);
         $m.modal('show');
     }
     $('#tb_edit_modal').on('shown.bs.modal', function () { $('#tb_f_label').trigger('focus').select(); });
-    $('#tb_edit_modal').on('hidden.bs.modal', function () { $list.children().removeClass('tb-selected'); });
+    $('#tb_edit_modal').on('hidden.bs.modal', function () { $list.children().removeClass('tb-selected'); fresh = false; });
     $('#tb_f_lib').on('click keydown', '.tb-lib-item', function (e) {
         if (e.type === 'keydown' && e.which !== 13 && e.which !== 32) { return; }
         e.preventDefault();
@@ -419,6 +433,47 @@ $(function () {
             })
             .always(function () { input.value = ''; });
     });
+    /* ---- where a block goes: the block it comes after (a section title brings its blocks along) ---- */
+    function moving(id) {
+        var all = order(), i = all.indexOf(B[id]), ids = [id];
+        if (B[id].type === 'heading') {
+            for (var j = i + 1; j < all.length && all[j].type !== 'heading'; j++) { ids.push(all[j].id); }
+        }
+        return ids;
+    }
+    function placeList(id) {
+        var all = order(), own = moving(id), i = all.indexOf(B[id]);
+        var cur = i > 0 ? all[i - 1].id : '__top';
+        var pad = '\u00a0\u00a0\u00a0\u00a0', inSection = false, n = 0;
+        var $s = $('#tb_f_place').empty();
+        $s.append($('<option>').val('__top').text(C.t.place_top));
+        all.forEach(function (x) {
+            if (x.type === 'heading') { inSection = true; }
+            if (own.indexOf(x.id) >= 0) { return; }
+            var name = x.label || C.t.no_title;
+            var text = x.type === 'heading' ? '\u25B8 ' + C.t.place_section.replace(':name', name)
+                : (inSection ? pad : '') + '\u21B3 ' + C.t.place_after.replace(':name', name);
+            $s.append($('<option>').val(x.id).text(text));
+            n++;
+        });
+        $s.val(cur).data('was', cur);
+        $('#tb_f_place_group').toggle(n > 0);
+        $('.tb-place-help-section').toggle(B[id].type === 'heading');
+        $('.tb-place-help').toggle(B[id].type !== 'heading');
+    }
+    function place(id, after) {
+        var $els = $(moving(id).map(function (x) { return $list.children('[data-id="' + x + '"]')[0]; }));
+        if (after === '__top') { $list.prepend($els); } else { $list.children('[data-id="' + after + '"]').after($els); }
+        setDirty();
+    }
+    function showBlock(id) {
+        var $b = $list.children('[data-id="' + id + '"]');
+        if (!$b.length) { return; }
+        $b[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+        $b.addClass('tb-flash');
+        setTimeout(function () { $b.removeClass('tb-flash'); }, 1600);
+    }
+
     function apply() {
         var b = B[editing]; if (!b) { return; }
         b.label = $.trim($('#tb_f_label').val());
@@ -435,8 +490,12 @@ $(function () {
         if (b.type === 'number') { b.unit = $.trim($('#tb_f_unit').val()); }
         if (b.type === 'drawing') { b.image = $('#tb_f_lib .tb-lib-item.tb-on').data('path') || null; }
         rerender(editing);
+        var to = $('#tb_f_place').val(), moved = $('#tb_f_place_group').is(':visible') && to && to !== $('#tb_f_place').data('was');
+        if (moved) { place(editing, to); }
         setDirty();
-        $('#tb_edit_modal').modal('hide');
+        var id = editing;
+        var show = moved || fresh;
+        $('#tb_edit_modal').one('hidden.bs.modal', function () { if (show) { showBlock(id); } }).modal('hide');
     }
     $('#tb_f_apply').on('click', apply);
     $('#tb_f_label, #tb_f_unit, #tb_f_help').on('keydown', function (e) { if (e.which === 13) { e.preventDefault(); apply(); } });
