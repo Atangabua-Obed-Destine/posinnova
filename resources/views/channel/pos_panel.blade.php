@@ -9,7 +9,7 @@
         'btn', 'title', 'none', 'new_one', 'new_many', 'ring', 'paid_shop', 'paid_eride', 'unlinked', 'cancelled_t', 'cancelled_d',
         'cancelled_deleted', 'seen', 'open_sale', 'cart_busy', 'loading', 'banner', 'finish_shop', 'finish_eride', 'not_added',
         'total_diff', 'draft_hint', 'status_cancelled', 'status_rung', 'sent', 'queued', 'mismatch', 'offline', 'revoked',
-        'way_delivery', 'way_collect', 'way_eat_in', 'drop', 'cancel_toast', 'no_pay_method', 'no_credit_button', 'added', 'customer', 'paid_at',
+        'way_delivery', 'way_collect', 'way_eat_in', 'way_room', 'paid_room', 'finish_room', 'room_refused', 'drop', 'cancel_toast', 'no_pay_method', 'no_credit_button', 'added', 'customer', 'paid_at',
     ])->mapWithKeys(fn ($k) => [$k => __('channel.pos_'.$k)])->all();
 @endphp
 <style>
@@ -113,10 +113,10 @@
                 return '<li class="' + (l.linked ? '' : 'un') + '">' + esc(l.qty) + ' × ' + esc(l.name) + (l.unit && String(l.name).indexOf(l.unit) === -1 ? ' (' + esc(l.unit) + ')' : '') +
                     ' — ' + esc(money(l.total)) + (l.linked ? '' : ' · ' + esc(T.unlinked)) + '</li>';
             }).join('');
-            var way = o.way === 'delivery' ? T.way_delivery : (o.way === 'eat_in' ? T.way_eat_in : T.way_collect);
+            var way = o.way === 'delivery' ? T.way_delivery : (o.way === 'eat_in' ? T.way_eat_in : (o.way === 'room' ? T.way_room : T.way_collect));
             h += '<div class="ch-o" data-order="' + esc(o.order_id) + '"><div class="ch-o-h"><div><b>#' + esc(o.number) + '</b> · ' + esc(o.customer) +
                 (o.phone ? ' · ' + esc(o.phone) : '') + '<div class="text-muted small">' + esc(way) + (o.paid_at ? ' · ' + esc(T.paid_at) + ' ' + esc(moment(o.paid_at).format('LT')) : '') + '</div></div>' +
-                '<span class="ch-pill ' + (o.paid_to === 'eride' ? 'eride' : 'shop') + '">' + esc(o.paid_to === 'eride' ? T.paid_eride : T.paid_shop) + '</span></div>' +
+                '<span class="ch-pill ' + (o.paid_to === 'shop' ? 'shop' : 'eride') + '">' + esc(o.paid_to === 'eride' ? T.paid_eride : (o.paid_to === 'room_bill' ? T.paid_room : T.paid_shop)) + '</span></div>' +
                 '<ul>' + lines + '</ul>' + (o.note ? '<div class="text-muted">“' + esc(o.note) + '”</div>' : '') +
                 '<div class="ch-o-h" style="margin-top:6px;"><b>' + esc(money(o.total)) + '</b>' +
                 '<button type="button" class="btn btn-primary ch-btn-r ch-ring">' + esc(T.ring) + '</button></div></div>';
@@ -265,7 +265,12 @@
             }).join('; ') + '</div>';
         }
         h += '<div class="diff" id="ch_pos_diff" hidden></div><div class="small text-muted" style="margin-top:4px;">' + esc(T.draft_hint) + '</div><div class="acts">';
-        if (cart.paid_to === 'eride') {
+        if (cart.paid_to === 'room_bill' && cart.room_charge_error) {
+            h += '<div class="miss"><b>' + esc(T.room_refused) + '</b> ' + esc(cart.room_charge_error) + '</div>';
+        }
+        if (cart.paid_to === 'room_bill' && cart.room_charge) {
+            h += '<button type="button" class="btn btn-primary" id="ch_finish">' + esc(T.finish_room.replace(':room', cart.room_charge.room || '—')) + '</button>';
+        } else if (cart.paid_to === 'eride') {
             h += '<button type="button" class="btn btn-warning" id="ch_finish">' + esc(T.finish_eride) + '</button>';
         } else {
             h += '<button type="button" class="btn btn-success" id="ch_finish">' + esc(T.finish_shop.replace(':method', method_label || '—')) + '</button>';
@@ -290,6 +295,10 @@
     $(document).on('click', '#ch_finish', function () {
         var cart = state.current;
         if (!cart) { return; }
+        if (cart.paid_to === 'room_bill' && cart.room_charge && window.hotelRoomCharge) {
+            window.hotelRoomCharge.finish({ id: cart.room_charge.reservation_id, contact_id: cart.contact_id, room: cart.room_charge.room, guest: cart.room_charge.guest });
+            return;
+        }
         if (cart.paid_to === 'eride') {
             var $credit = $('button.pos-express-finalize[data-pay_method="credit_sale"]').first();
             if ($credit.length && !$credit.hasClass('hide')) { $credit.trigger('click'); return; }

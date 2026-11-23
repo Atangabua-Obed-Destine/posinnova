@@ -678,6 +678,19 @@ class SellPosController extends Controller
                 unset($input['payment']['change_return']);
             }
 
+            //PosInnova hotel: "Charge to room" - the stay must still be in the hotel, and the sale on its guest.
+            $room_charge_id = (int) $request->input('hotel_charge_reservation_id');
+            if ($room_charge_id) {
+                $rc_business = (int) $request->session()->get('user.business_id');
+                $why = \App\Utils\HotelRoomCharge::refusal($rc_business, $room_charge_id, $input['contact_id'] ?? null);
+                if ($why === null && ! $request->filled('channel_order_id') && ! \App\Utils\HotelRoomCharge::enabled($rc_business)) {
+                    $why = __('hotel.rc_err_off');
+                }
+                if ($why !== null) {
+                    return ['success' => 0, 'msg' => $why];
+                }
+            }
+
             //Check Customer credit limit
             $is_credit_limit_exeeded = $this->transactionUtil->isCustomerCreditLimitExeeded($input);
 
@@ -976,6 +989,9 @@ class SellPosController extends Controller
 
                 //PosInnova online channels: the salesperson rang an E-Ride order up on this sale.
                 //Recorded with the sale (one order, one sale); E-Ride is told after the commit.
+                //PosInnova hotel: a room charge goes on the stay's bill (before E-Ride hears "rung up").
+                $room_line = $room_charge_id ? \App\Utils\HotelRoomCharge::attach($transaction, $room_charge_id, auth()->id()) : null;
+
                 $channel_ring = null;
                 if ($request->filled('channel_order_id')) {
                     $channel_ring = \App\Utils\ChannelOrders::afterSale($transaction, $request->input('channel_order_id'));
@@ -1031,6 +1047,9 @@ class SellPosController extends Controller
                 $output = ['success' => 1, 'msg' => $msg, 'receipt' => $receipt];
                 //PosInnova: the customer display shows the receipt number on its thank-you screen
                 $output['invoice_no'] = $transaction->invoice_no;
+                if (! empty($room_line)) {
+                    $output['room_charge'] = __('hotel.rc_done', ['room' => optional(optional(\App\HotelReservation::find($room_line->reservation_id))->room)->number]);
+                }
 
                 //PosInnova online channels: tell E-Ride now; if the line is down the scheduler retries.
                 if (! empty($channel_ring['ok'])) {

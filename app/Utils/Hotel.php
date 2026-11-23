@@ -37,6 +37,8 @@ class Hotel
         'require_inspection' => 0,
         'pay_first' => 1,             // guests pay before they sleep: the screens show who is not paid up to tonight
         'eride_hold_time' => '18:00', // an E-Ride guest's room is kept until this time on the arrival day
+        'charge_to_room' => 1,        // staff can put bar / restaurant sales on a guest's bill (POS "Charge to room")
+        'eride_room_bill' => 0,       // E-Ride room service may go on the room bill (off until the hotel allows it)
     ];
 
     const SOURCES = ['walk_in', 'phone', 'whatsapp', 'booking_com', 'agency', 'company', 'eride', 'other'];
@@ -528,7 +530,7 @@ class Hotel
             $res->checked_in_by = $user_id;
             $res->keys_given = $keys !== null && $keys !== '' ? max(0, (int) $keys) : null;
             $res->save();
-            ChannelHotel::event($res, 'arrived');
+            ChannelHotel::event($res, 'arrived', ['room' => (string) optional(HotelRoom::find($res->room_id))->number]);
 
             if ($s['charge_mode'] === 'checkin') {
                 $folio = new HotelFolio();
@@ -601,6 +603,9 @@ class Hotel
             $res->save();
             $res->setRelation('room', $to);
             self::holdRoom($res, $today);
+            if ($res->status === 'checked_in') {
+                ChannelHotel::event($res, 'room_moved', ['room' => (string) $to->number]);
+            }
             if ($from_room) {
                 self::setHousekeeping(HotelRoom::find($from_room), 'dirty', $user_id);
             }

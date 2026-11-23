@@ -184,6 +184,15 @@
         $channel_locations = in_array('eride', (array) (session('business.enabled_modules') ?: []), true)
             ? \App\ChannelLink::where('business_id', session('user.business_id'))->shop()->live()->pluck('location_id')->all() : [];
     @endphp
+    @php
+        // PosInnova hotel: "Charge to room" (staff), and E-Ride room service on the room bill
+        $rc_biz = session('user.business_id');
+        $rc_button = \App\Utils\HotelRoomCharge::enabled($rc_biz);
+        $rc_any = $rc_button || \App\Utils\HotelRoomCharge::erideAllowed($rc_biz);
+    @endphp
+    @if ($rc_any && auth()->user()->can('sell.create'))
+        @include('hotel.partials.pos_room_charge')
+    @endif
     @if (! empty($channel_locations) && auth()->user()->can('sell.create'))
         @include('channel.pos_panel')
     @endif

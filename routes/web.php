@@ -428,6 +428,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::post('/eride/keep/{inquiry_id}', [$E, 'keep']);
         Route::post('/eride/decline/{inquiry_id}', [$E, 'decline']);
         Route::post('/eride/reply/{inquiry_id}', [$E, 'reply']);
+        Route::get('/room-charge/in-house', [\App\Http\Controllers\HotelRoomChargeController::class, 'inHouse']);
         Route::get('/board', [$H, 'board']);
         Route::get('/calendar', [$H, 'calendar']);
         Route::get('/housekeeping', [$H, 'housekeeping']);

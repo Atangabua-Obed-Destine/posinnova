@@ -36,7 +36,7 @@ class ChannelHotel
     // ------------------------------------------------------------ reservation events
 
     /** A reservation that came from E-Ride changed: tell E-Ride (queued; the scheduler and the hotel home send it). */
-    public static function event(HotelReservation $res, $event)
+    public static function event(HotelReservation $res, $event, array $extra = [])
     {
         if (empty($res->channel_ref)) {
             return;
@@ -48,7 +48,7 @@ class ChannelHotel
         $now = ChannelSync::now($link);
         ChannelSync::queue($link, 'hotel_event', $res->ref_no, 'inquiries/'.rawurlencode($res->channel_ref).'/event', [
             'event' => $event, 'pos_ref' => $res->ref_no, 'at' => $now->toIso8601String(),
-        ]);
+        ] + array_map(fn ($v) => mb_substr((string) $v, 0, 20), array_filter($extra, fn ($v) => $v !== null && $v !== '')));
     }
 
     // ------------------------------------------------------------ availability
@@ -108,7 +108,8 @@ class ChannelHotel
             }
             if (empty($link->last_heartbeat_at) || $link->last_heartbeat_at->lte(now()->subSeconds(280)) || ! empty($opt['heartbeat'])) {
                 $queue = ChannelOutbox::where('link_id', $link->id)->whereNull('done_at')->count();
-                $r = $client->post('heartbeat', ['queue' => $queue, 'pos_time' => $now->toIso8601String()]);
+                $r = $client->post('heartbeat', ['queue' => $queue, 'pos_time' => $now->toIso8601String(),
+                    'room_bill' => HotelRoomCharge::erideAllowed($link->business_id)]);
                 $f = ['last_heartbeat_at' => now()];
                 if (! empty($r['server_time'])) {
                     $f['clock_skew'] = Carbon::parse($r['server_time'])->getTimestamp() - time();

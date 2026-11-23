@@ -193,6 +193,8 @@ class HotelSetupController extends HotelBaseController
             'police_card' => $request->boolean('police_card') ? 1 : 0,
             'require_inspection' => $request->boolean('require_inspection') ? 1 : 0,
             'pay_first' => $request->boolean('pay_first') ? 1 : 0,
+            'charge_to_room' => $request->boolean('charge_to_room') ? 1 : 0,
+            'eride_room_bill' => $request->boolean('eride_room_bill') ? 1 : 0,
         ]), __('hotel.settings_saved'), redirect()->action([self::class, 'index'], ['tab' => 'settings']));
     }
 }

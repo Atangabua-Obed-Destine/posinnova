@@ -141,15 +141,19 @@ class ChannelOrders
         $o = (new ChannelClient($link))->get('orders/'.rawurlencode($order_id), [], 10);
         ChannelSync::ok($link);
         $status = (string) ($o['status'] ?? 'paid');
-        if ($status !== 'paid') {
+        if (! in_array($status, ['paid', 'confirmed'], true)) { // a room-bill order is confirmed, not paid
             Cache::forget('channel_pending_'.$link->id);
 
             return ['status' => $status];
         }
 
         $business_id = $link->business_id;
-        $paid_to = data_get($o, 'payment.paid_to') === 'eride' ? 'eride' : 'shop';
+        $paid_to = in_array(data_get($o, 'payment.paid_to'), ['eride', 'room_bill'], true) ? data_get($o, 'payment.paid_to') : 'shop';
         $name = trim((string) data_get($o, 'customer.name', ''));
+        $way = (string) ($o['way'] ?? '');
+        $room = (array) ($o['room'] ?? []);
+        $room_no = trim((string) ($room['number'] ?? ''));
+        $hotel = trim((string) ($room['hotel'] ?? ''));
         $phone = trim((string) data_get($o, 'customer.phone', ''));
         $address = trim((string) data_get($o, 'customer.address', ''));
         $number = (string) ($o['number'] ?? '');
@@ -160,6 +164,23 @@ class ChannelOrders
             $contact = self::erideContact($link, $user_id);
         } elseif ($phone !== '') {
             $contact = self::contactByPhone($business_id, $phone);
+        }
+        // Room service on the room bill: the stay must be in the hotel, in this business, and the hotel must allow it.
+        $room_charge = null;
+        $room_charge_error = null;
+        if ($paid_to === 'room_bill') {
+            $res = ! empty($room['hotel_pos_ref']) ? \App\HotelReservation::where('business_id', $business_id)->where('ref_no', (string) $room['hotel_pos_ref'])->first() : null;
+            if (! $res) {
+                $room_charge_error = __('hotel.rc_err_other_business');
+            } elseif (! HotelRoomCharge::erideAllowed($business_id)) {
+                $room_charge_error = __('hotel.rc_err_eride_off');
+            } elseif ($why = HotelRoomCharge::refusal($business_id, $res->id)) {
+                $room_charge_error = $why;
+            } else {
+                $res->loadMissing(['room', 'contact']);
+                $room_charge = ['reservation_id' => $res->id, 'room' => optional($res->room)->number ?: $room_no, 'guest' => optional($res->contact)->name];
+                $contact = $res->contact;
+            }
         }
         if (! $contact) {
             $contact = Contact::where('business_id', $business_id)->where('type', 'customer')->where('is_default', 1)->first();
@@ -194,8 +215,10 @@ class ChannelOrders
 
         $who = trim(implode(' · ', array_filter([$name, $phone])));
         $tag = 'E-Ride #'.$number;
-        $collected = $paid_to === 'shop' && ! empty($o['delivery_fee_collected_by_shop']);
-        $note = $tag.($who !== '' ? ' · '.$who : '');
+        $to_room = $way === 'room' && $room_no !== '';
+        $collected = $paid_to === 'shop' && ! $to_room && ! empty($o['delivery_fee_collected_by_shop']);
+        $room_text = $to_room ? trim(__('hotel.rc_room_n', ['room' => $room_no]).($hotel !== '' ? ' · '.$hotel : '')) : '';
+        $note = $tag.($to_room ? ' · '.__('hotel.rc_room_n', ['room' => $room_no]) : '').($who !== '' ? ' · '.$who : '');
         if ($address !== '') {
             $note .= "\n".$address;
         }
@@ -214,11 +237,13 @@ class ChannelOrders
             'discount' => (int) ($o['discount'] ?? 0),
             'shipping_charges' => $collected ? (int) ($o['delivery_fee'] ?? 0) : 0,
             'delivered_to' => $name,
-            'shipping_address' => trim($phone.($address !== '' ? "\n".$address : '')),
-            'shipping_details' => $tag,
+            'shipping_address' => $to_room ? $room_text : trim($phone.($address !== '' ? "\n".$address : '')),
+            'shipping_details' => $to_room ? $tag.' · '.__('hotel.rc_room_service') : $tag,
+            'room_charge' => $room_charge,
+            'room_charge_error' => $room_charge_error,
             'shipping_status' => 'ordered',
             'sale_note' => $note,
-            'pay_method' => $paid_to === 'shop' ? ($link->pay_method ?: null) : null,
+            'pay_method' => $paid_to === 'shop' || ($paid_to === 'room_bill' && ! $room_charge) ? ($link->pay_method ?: null) : null,
             'total' => (int) ($o['total'] ?? 0),
             // What the POS total should be with the lines put in the cart (lines not added are listed apart).
             'expected_total' => (int) array_sum(array_column($lines, 'total')) - (int) ($o['discount'] ?? 0) + ($collected ? (int) ($o['delivery_fee'] ?? 0) : 0),
@@ -282,7 +307,7 @@ class ChannelOrders
         $number = trim((string) request()->input('channel_order_number', ''));
         $row = ChannelOrder::updateOrCreate(['order_id' => $order_id], [
             'link_id' => $link->id, 'business_id' => $t->business_id, 'number' => $number !== '' ? Str::limit($number, 40, '') : ($row->number ?? null),
-            'transaction_id' => $t->id, 'status' => 'rung_up', 'paid_to' => request()->input('channel_paid_to') === 'eride' ? 'eride' : 'shop',
+            'transaction_id' => $t->id, 'status' => 'rung_up', 'paid_to' => in_array(request()->input('channel_paid_to'), ['eride', 'room_bill'], true) ? request()->input('channel_paid_to') : 'shop',
             'rung_up_at' => now(), 'matches' => null, 'cancel_seen_at' => null,
         ]);
         Cache::forget('channel_pending_'.$link->id);
@@ -376,7 +401,12 @@ class ChannelOrders
         $tz = DB::table('business')->where('id', $t->business_id)->value('time_zone') ?: config('app.timezone');
         $by = $t->sales_person ? trim((string) $t->sales_person->first_name) : '';
 
-        return [
+        $extra = [];
+        if (ChannelOrder::where('transaction_id', $t->id)->value('paid_to') === 'room_bill') {
+            $extra['charged_to_room'] = HotelRoomCharge::stayOf($t->id) !== null;
+        }
+
+        return $extra + [
             'pos_sale_id' => (int) $t->id,
             'invoice_no' => (string) $t->invoice_no,
             'rung_up_at' => Carbon::parse($t->created_at ?: now(), $tz)->toIso8601String(),

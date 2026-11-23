@@ -196,7 +196,14 @@
             </div>
             <label style="display:flex;gap:10px;align-items:center;font-weight:500;"><input type="checkbox" name="pay_first" value="1" @checked($settings['pay_first'])> {{ __('hotel.pay_first_setting') }}</label>
             <label style="display:flex;gap:10px;align-items:center;font-weight:500;"><input type="checkbox" name="police_card" value="1" @checked($settings['police_card'])> {{ __('hotel.police_card_setting') }}</label>
-            <label style="display:flex;gap:10px;align-items:center;font-weight:500;margin-bottom:14px;"><input type="checkbox" name="require_inspection" value="1" @checked($settings['require_inspection'])> {{ __('hotel.inspection_setting') }}</label>
+            <label style="display:flex;gap:10px;align-items:center;font-weight:500;"><input type="checkbox" name="require_inspection" value="1" @checked($settings['require_inspection'])> {{ __('hotel.inspection_setting') }}</label>
+            <label style="display:flex;gap:10px;align-items:flex-start;font-weight:500;"><input type="checkbox" name="charge_to_room" value="1" @checked($settings['charge_to_room']) style="margin-top:4px;"> <span>{{ __('hotel.rc_setting') }}<span class="ht-hint" style="display:block;font-weight:400;">{{ __('hotel.rc_setting_hint') }}</span></span></label>
+            @if (! empty($eride_on))
+                <label style="display:flex;gap:10px;align-items:flex-start;font-weight:500;"><input type="checkbox" name="eride_room_bill" value="1" @checked($settings['eride_room_bill']) style="margin-top:4px;"> <span>{{ __('hotel.rc_eride_setting') }}<span class="ht-hint" style="display:block;font-weight:400;">{{ __('hotel.rc_eride_hint') }}</span></span></label>
+            @else
+                <input type="hidden" name="eride_room_bill" value="{{ $settings['eride_room_bill'] ? 1 : 0 }}">
+            @endif
+            <div style="margin-bottom:14px;"></div>
             <button class="ht-btn pri">{{ __('hotel.save') }}</button>
         </form>
         @include('hotel.partials.eride_link')
