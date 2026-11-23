@@ -9,6 +9,8 @@
     $can_prescribe = auth()->user()->can('consultation.prescribe');
     // PosInnova: the same form continues a consultation saved as a draft ($consultation set)
     $c_edit = $consultation ?? null;
+    // PosInnova: the same form corrects a FINISHED consultation ($correcting): a reason is asked, the fee and the tests stay
+    $correcting = ! empty($correcting) && $c_edit;
     $fv = function ($field, $default = null) use ($c_edit) {
         if (old($field) !== null) {
             return old($field);
@@ -36,7 +38,9 @@
 @section('content')
 <section class="content-header">
     <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">
-        @if ($c_edit)
+        @if ($correcting)
+            @lang('clinic.corr_title') <small class="tw-text-gray-600">{{ $c_edit->ref_no }} · {{ (new \App\Utils\Util())->format_date($c_edit->created_at, true) }}</small>
+        @elseif ($c_edit)
             @lang('clinic.cons_continue_title') <small class="tw-text-gray-600">{{ $c_edit->ref_no }} · {{ __('clinic.cons_started_at', ['time' => (new \App\Utils\Util())->format_date($c_edit->created_at, true)]) }}</small>
         @else
             @lang('lang_v1.new_consultation')
@@ -152,7 +156,17 @@
         @endif
     </details>
 
-    @if ($c_edit)
+    @if ($correcting)
+        <div id="corr_banner" role="note" style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;padding:14px 16px;border-radius:12px;background:#fffaeb;border:1px solid #fec84b;border-left:5px solid #dc6803;color:#7a2e0e;line-height:1.5;">
+            <i class="fas fa-pen-square" aria-hidden="true" style="font-size:22px;margin-top:2px;"></i>
+            <div>
+                <strong style="font-size:15px;">@lang('clinic.corr_banner_t')</strong><br>
+                @lang('clinic.corr_banner')<br>
+                <span style="font-size:13px;">@lang('clinic.corr_banner_limits')</span>
+            </div>
+        </div>
+        {!! Form::open(['url' => action([\App\Http\Controllers\ConsultationController::class, 'saveCorrection'], [$c_edit->id]), 'method' => 'post', 'id' => 'consultation_form']) !!}
+    @elseif ($c_edit)
         {!! Form::open(['url' => action([\App\Http\Controllers\ConsultationController::class, 'update'], [$c_edit->id]), 'method' => 'post', 'id' => 'consultation_form']) !!}
     @else
         {!! Form::open(['url' => action([\App\Http\Controllers\ConsultationController::class, 'store']), 'method' => 'post', 'id' => 'consultation_form']) !!}
@@ -377,6 +391,7 @@
     @if($can_prescribe)
     <div class="cf-sec" id="cf_sec_rx" data-step="{{ __('clinic.cf_step_rx') }}">
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.prescription')])
+        <input type="hidden" name="rx_present" value="1">
         <p class="cf-hint">@lang('clinic.cf_hint_rx')</p>
         <div class="row">
             <div class="col-sm-8 col-sm-offset-2">
@@ -493,7 +508,7 @@
             <div class="col-sm-5">
                 <div class="form-group">
                     {!! Form::label('review_date', __('clinic.cons_review_date') . ':') !!}
-                    <input type="date" name="review_date" id="review_date" class="form-control" min="{{ date('Y-m-d') }}"
+                    <input type="date" name="review_date" id="review_date" class="form-control" @if (! $correcting) min="{{ date('Y-m-d') }}" @endif
                         value="{{ old('review_date', $c_edit && $c_edit->review_date ? $c_edit->review_date->format('Y-m-d') : '') }}">
                     <div class="review-quick" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;" id="review_quick">
                         @foreach ([3 => __('clinic.cons_review_in_days', ['n' => 3]), 7 => __('clinic.cons_review_in_week'), 14 => __('clinic.cons_review_in_weeks', ['n' => 2]), 30 => __('clinic.cons_review_in_month'), 90 => __('clinic.cons_review_in_months', ['n' => 3])] as $days => $lbl)
@@ -513,7 +528,7 @@
     {{-- Actions --}}
     <div class="cf-sec" id="cf_sec_end" data-step="{{ __('clinic.cf_step_end') }}">
     @component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.referral_and_actions')])
-        <p class="cf-hint">@lang('clinic.cf_hint_end')</p>
+        <p class="cf-hint">@lang($correcting ? 'clinic.corr_hint_end' : 'clinic.cf_hint_end')</p>
         <div class="row">
             <div class="col-sm-4">
                 <div class="form-group">
@@ -524,7 +539,9 @@
             <div class="col-sm-4">
                 <div class="form-group">
                     {!! Form::label('consultation_fee', __('lang_v1.consultation_fee') . ':') !!}
-                    @if (! empty($fee_billed))
+                    @if ($correcting)
+                        <p class="form-control-static" id="corr_fee"><strong>{{ $num($c_edit->consultation_fee) }}</strong><br><small class="text-muted"><i class="fas fa-lock"></i> @lang('clinic.corr_fee_fixed')</small></p>
+                    @elseif (! empty($fee_billed))
                         {{-- PosInnova clinic: billed at check-in, never twice --}}
                         <p class="form-control-static"><i class="fas fa-check-circle text-success"></i>
                             @if (! empty($visit->subscription_period_id))
@@ -552,6 +569,21 @@
         </div>
     @endcomponent
 
+    @if ($correcting)
+    <div id="corr_end" style="max-width:760px;margin:0 auto 20px;padding:16px;border-radius:12px;background:#fffaeb;border:1px solid #fec84b;">
+        <label for="correction_reason" style="font-size:15px;color:#7a2e0e;"><i class="fas fa-question-circle"></i> @lang('clinic.corr_reason') <span style="color:#b42318;">*</span></label>
+        <textarea name="correction_reason" id="correction_reason" class="form-control" rows="2" maxlength="2000" aria-describedby="correction_reason_err correction_reason_help"
+            placeholder="{{ __('clinic.corr_reason_ph') }}">{{ old('correction_reason') }}</textarea>
+        <div id="correction_reason_err" role="alert" hidden style="margin-top:6px;padding:8px 10px;border-radius:8px;background:#fef3f2;border:1px solid #fda29b;color:#b42318;font-weight:600;"><i class="fas fa-exclamation-circle"></i> @lang('clinic.corr_reason_required')</div>
+        <p class="help-block" id="correction_reason_help" style="margin-bottom:12px;">@lang('clinic.corr_reason_help')</p>
+        <div class="text-center">
+            <button type="submit" name="action" value="correct" id="corr_save" class="tw-dw-btn tw-text-white tw-border-none tw-font-bold" style="background:#dc6803;">
+                <i class="fas fa-check"></i> @lang('clinic.corr_save')
+            </button>
+            <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'show'], [$c_edit->id]) }}" class="tw-dw-btn tw-dw-btn-outline">@lang('messages.cancel')</a>
+        </div>
+    </div>
+    @else
     <div class="row">
         <div class="col-md-12 text-center" style="margin-bottom:20px;">
             <button type="submit" name="action" value="draft" class="tw-dw-btn tw-dw-btn-outline tw-font-bold" title="{{ __('clinic.cons_save_later_help') }}">
@@ -569,6 +601,7 @@
             @endcan
         </div>
     </div>
+    @endif
 
     </div>
 
@@ -961,5 +994,24 @@ $(document).ready(function () {
     __page_leave_confirmation('#consultation_form');
 });
 </script>
+@if ($correcting)
+<script>
+// a correction is not saved without its reason: said under the field at once, not in a browser bubble
+(function () {
+    var form = document.getElementById('consultation_form'), r = document.getElementById('correction_reason'), err = document.getElementById('correction_reason_err');
+    if (!form || !r) { return; }
+    function bad() { return r.value.replace(/\s+/g, ' ').trim().length < 3; }
+    form.addEventListener('submit', function (e) {
+        if (!bad()) { return; }
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); // (common.js would lock the Save button)
+        err.hidden = false;
+        r.style.borderColor = '#f04438';
+        r.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        r.focus({ preventScroll: true });
+    }, true);
+    r.addEventListener('input', function () { if (!bad()) { err.hidden = true; r.style.borderColor = ''; } });
+})();
+</script>
+@endif
 @include('consultation.partials.autosave_js')
 @endsection

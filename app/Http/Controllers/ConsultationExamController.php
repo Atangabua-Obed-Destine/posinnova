@@ -63,9 +63,10 @@ class ConsultationExamController extends Controller
      *   exam[v][block]     answers; [R] / [L] for a block asked for both sides; [] for several answers
      *   exam[o][block]     an answer typed for "other"
      *   exam[draw][block]  a PNG (data URL) of what was drawn, or "clear"
-     * Runs inside the consultation's transaction; replaced drawing files are deleted once it commits.
+     * Runs inside the consultation's transaction; replaced drawing files are deleted once it commits
+     * (unless $keep_files: a correction to a finished consultation keeps the earlier version readable).
      */
-    public static function save(Consultation $consultation, $input, $user_id)
+    public static function save(Consultation $consultation, $input, $user_id, $keep_files = false)
     {
         $input = is_array($input) ? $input : [];
         if (empty($input['present'])) {
@@ -79,7 +80,9 @@ class ConsultationExamController extends Controller
             if ($existing) {
                 $old_files = array_values($existing->values['_draw'] ?? []);
                 $existing->delete();
-                self::deleteAfterCommit($old_files);
+                if (! $keep_files) {
+                    self::deleteAfterCommit($old_files);
+                }
             }
 
             return;
@@ -191,7 +194,10 @@ class ConsultationExamController extends Controller
                 'updated_by' => $user_id,
             ]);
         }
-        self::deleteAfterCommit($old_files);
+        // $keep_files: a correction to a finished consultation; the version kept still shows its drawings
+        if (! $keep_files) {
+            self::deleteAfterCommit($old_files);
+        }
     }
 
     /** A PNG sent as a data URL, checked: a real PNG, of a sensible size. */

@@ -77,6 +77,10 @@
     </div>
 
     <div class="rp-title">{{ $title }}</div>
+    @if (! empty($corrections) && $corrections->isNotEmpty())
+        @php $last_corr = $corrections->last(); @endphp
+        <p id="rp_corrected" style="margin:-4px 0 10px;padding:5px 8px;border:1px solid #333;font-size:12px;white-space:pre-line;"><strong>{{ __('clinic.corr_notice', ['time' => $u->format_date($last_corr->created_at, true), 'name' => trim(optional($last_corr->correctedBy)->user_full_name) ?: '-']) }}.</strong> @lang('clinic.corr_reason_lbl'): {{ $last_corr->reason }}@if ($corrections->count() > 1) {{ __('clinic.corr_print_more', ['n' => $corrections->count()]) }}@endif</p>
+    @endif
 
     <div class="rp-grid">
         <div><strong>@lang('lang_v1.date'):</strong> {{ $u->format_date($c->created_at, true) }}</div>

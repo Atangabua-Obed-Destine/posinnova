@@ -524,6 +524,11 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('consultations/{id}', [\App\Http\Controllers\ConsultationController::class, 'show'])->whereNumber('id');
     Route::get('consultations/{id}/edit', [\App\Http\Controllers\ConsultationController::class, 'edit'])->whereNumber('id');
     Route::post('consultations/{id}/update', [\App\Http\Controllers\ConsultationController::class, 'update'])->whereNumber('id');
+    // PosInnova: correcting a finished consultation, with a trace
+    Route::get('consultations/{id}/correct', [\App\Http\Controllers\ConsultationController::class, 'correct'])->whereNumber('id');
+    Route::post('consultations/{id}/correct', [\App\Http\Controllers\ConsultationController::class, 'saveCorrection'])->whereNumber('id');
+    Route::get('consultations/{id}/corrections/{correction}', [\App\Http\Controllers\ConsultationController::class, 'correction'])->whereNumber('id')->whereNumber('correction');
+    Route::get('consultations/corrections/{correction}/drawing/{block}', [\App\Http\Controllers\ConsultationController::class, 'correctionDrawing'])->whereNumber('correction')->where('block', '[a-z0-9_]+');
     Route::get('consultations/{id}/results', [\App\Http\Controllers\ConsultationController::class, 'results'])->whereNumber('id');
     Route::post('consultations/{id}/finalize', [\App\Http\Controllers\ConsultationController::class, 'finalize']);
     Route::get('consultations/{id}/prescription', [\App\Http\Controllers\ConsultationController::class, 'prescription']);

@@ -100,10 +100,10 @@ class ConsultationController extends Controller
     /**
      * The consultation form, empty (new) or filled in (continuing a draft).
      */
-    private function formView($visit, $consultation)
+    private function formView($visit, $consultation, $correcting = false)
     {
         $business_id = $visit->business_id;
-        if ($visit->status == 'open' && $visit->queue_status == 'waiting') {
+        if (! $correcting && $visit->status == 'open' && $visit->queue_status == 'waiting') {
             $visit->queue_status = 'with_doctor';
             $visit->called_at = now();
             $visit->save();
@@ -124,6 +124,11 @@ class ConsultationController extends Controller
         $imaging_catalogue = auth()->user()->can('imaging_request.create')
             ? \App\ImagingCatalogue::forBusiness($business_id)->active()->orderBy('name')->get()
             : collect();
+        if ($correcting) {
+            // a correction asks for no new test (those are requested from the consultation's page)
+            $lab_tests = collect();
+            $imaging_catalogue = collect();
+        }
 
         //PosInnova: the patient's history beside the form - last consultations and lab results.
         $history = Consultation::forBusiness($business_id)->where('contact_id', $visit->contact_id)
@@ -149,7 +154,152 @@ class ConsultationController extends Controller
 
         return view('consultation.create')
             ->with(compact('visit', 'departments', 'default_fee', 'lab_tests', 'imaging_catalogue', 'fee_billed', 'history', 'history_labs',
-                'consultation', 'doctor_lists', 'rx_rows', 'lab_requests', 'imaging_requests', 'exam_templates', 'exam', 'attach_token'));
+                'consultation', 'doctor_lists', 'rx_rows', 'lab_requests', 'imaging_requests', 'exam_templates', 'exam', 'attach_token', 'correcting'));
+    }
+
+    /**
+     * PosInnova: who may correct a FINISHED consultation: the doctor who wrote it (or someone who sees
+     * every consultation), allowed to consult and to finish. See App\Utils\ConsultationCorrections.
+     */
+    private function mayCorrect(Consultation $consultation)
+    {
+        $u = auth()->user();
+
+        return $consultation->status == 'final' && $u->can('consultation.create') && $u->can('consultation.finalize') && $this->mayContinue($consultation);
+    }
+
+    /** The form of a finished consultation, to correct it (the reason is asked before saving). */
+    public function correct($id)
+    {
+        $this->checkHospitalEnabled();
+        $business_id = request()->session()->get('user.business_id');
+        $consultation = Consultation::forBusiness($business_id)->findOrFail($id);
+        if ($consultation->status == 'draft' && $this->mayContinue($consultation) && auth()->user()->can('consultation.create')) {
+            return redirect()->action([self::class, 'edit'], [$consultation->id]); // not finished yet: simply continued
+        }
+        if (! $this->mayCorrect($consultation)) {
+            return redirect()->action([self::class, 'show'], [$consultation->id])
+                ->with('status', ['success' => false, 'msg' => __('clinic.corr_not_allowed')]);
+        }
+        $visit = Visit::forBusiness($business_id)->with(['patient.patientDetails', 'package'])->findOrFail($consultation->visit_id);
+
+        return $this->formView($visit, $consultation, true);
+    }
+
+    /**
+     * Saves a correction: the notes, vitals, examination form and the prescription lines not yet
+     * given take what was sent; the consultation as it was is kept with the reason, who and when.
+     * The fee, the status and the tests already asked for are not touched. Nothing changed: nothing recorded.
+     */
+    public function saveCorrection(Request $request, $id)
+    {
+        $this->checkHospitalEnabled();
+        $request->validate(['consultation_type' => 'required|in:general,specialist']);
+        $business_id = $request->session()->get('user.business_id');
+        $consultation = Consultation::forBusiness($business_id)->findOrFail($id);
+        $show = redirect()->action([self::class, 'show'], [$consultation->id]);
+        if (! $this->mayCorrect($consultation)) {
+            return $show->with('status', ['success' => false, 'msg' => __('clinic.corr_not_allowed')]);
+        }
+        $reason = trim(str_replace(["\r\n", "\r"], "\n", (string) $request->input('correction_reason')));
+        if (mb_strlen($reason) < 3) {
+            return redirect()->back()->withInput()->with('status', ['success' => false, 'msg' => __('clinic.corr_reason_required')]);
+        }
+
+        try {
+            $visit = Visit::forBusiness($business_id)->findOrFail($consultation->visit_id);
+
+            DB::beginTransaction();
+            $consultation = Consultation::where('id', $consultation->id)->lockForUpdate()->first();
+            if ($consultation->status != 'final') {
+                DB::rollBack();
+
+                return $show->with('status', ['success' => false, 'msg' => __('clinic.corr_not_allowed')]);
+            }
+            $before = \App\Utils\ConsultationCorrections::snapshot($consultation);
+
+            $fields = $this->consultationFields($request, $visit);
+            unset($fields['consultation_fee']); // billed when it was finished: a correction never changes money
+            $consultation->fill($fields)->save();
+            if ($request->filled('rx_present') && auth()->user()->can('consultation.prescribe')) {
+                $this->savePrescriptions($request, $consultation, true);
+            }
+            // drawings replaced keep their files: the earlier version still shows them
+            ConsultationExamController::save($consultation, $request->input('exam'), auth()->id(), true);
+
+            $changed = \App\Utils\ConsultationCorrections::diff($before, \App\Utils\ConsultationCorrections::snapshot($consultation));
+            if (empty($changed)) {
+                DB::rollBack();
+
+                return $show->with('status', ['success' => false, 'msg' => __('clinic.corr_nothing')]);
+            }
+            \App\ConsultationCorrection::create([
+                'business_id' => $business_id,
+                'consultation_id' => $consultation->id,
+                'corrected_by' => auth()->id(),
+                'reason' => mb_substr($reason, 0, 2000),
+                'changed' => $changed,
+                'before' => $before,
+            ]);
+            DB::commit();
+
+            return $show->with('status', ['success' => true, 'msg' => __('clinic.corr_saved')]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
+
+            return redirect()->back()->withInput()->with('status', ['success' => false, 'msg' => __('messages.something_went_wrong')]);
+        }
+    }
+
+    /** A consultation's corrections, for whoever may read the consultation. */
+    private function readableConsultation($id)
+    {
+        $this->checkHospitalEnabled();
+        $u = auth()->user();
+        if (! $u->can('consultation.view_own') && ! $u->can('consultation.view_all')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $consultation = Consultation::forBusiness(request()->session()->get('user.business_id'))
+            ->with(['visit', 'patient.patientDetails', 'consultedBy'])->findOrFail($id);
+        if (! $u->can('consultation.view_all') && $consultation->consulted_by != $u->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        return $consultation;
+    }
+
+    /**
+     * PosInnova: one correction: what was changed (before / after) and the consultation as it was before it.
+     */
+    public function correction($id, $correction_id)
+    {
+        $consultation = $this->readableConsultation($id);
+        $all = \App\Utils\ConsultationCorrections::of($consultation->id);
+        $correction = $all->firstWhere('id', (int) $correction_id);
+        abort_unless($correction, 404);
+        // what it became: the picture kept by the next correction, or the consultation as it is now
+        $next = $all->first(fn ($x) => $x->id > $correction->id);
+        $after = $next ? $next->before : \App\Utils\ConsultationCorrections::snapshot($consultation);
+
+        return view('consultation.correction')->with(['consultation' => $consultation, 'correction' => $correction, 'before' => $correction->before,
+            'after' => $after, 'exam_before' => $correction->examBefore(), 'total' => $all->count()]);
+    }
+
+    /** What was drawn on a picture of the examination form, as it was before a correction. */
+    public function correctionDrawing($correction_id, $block)
+    {
+        $correction = \App\ConsultationCorrection::where('business_id', request()->session()->get('user.business_id'))->findOrFail($correction_id);
+        $this->readableConsultation($correction->consultation_id);
+        $exam = $correction->examBefore();
+        $f = $exam ? $exam->drawing($block) : null;
+        abort_unless($f, 404);
+
+        return response()->file(\App\ConsultationExam::drawingDir().DIRECTORY_SEPARATOR.$f, [
+            'Content-Type' => 'image/png',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=86400',
+        ]);
     }
 
     /** Lab and imaging requests made from a consultation, with results and files. */
@@ -412,7 +562,8 @@ class ConsultationController extends Controller
             ->join('contacts as c', 'c.id', '=', 'consultations.contact_id')
             ->leftJoin('patient_details as pd', 'pd.contact_id', '=', 'consultations.contact_id')
             ->with('consultedBy')
-            ->select('consultations.*', 'c.name as patient_name', 'pd.file_number');
+            ->select('consultations.*', 'c.name as patient_name', 'pd.file_number',
+                DB::raw('(SELECT COUNT(*) FROM consultation_corrections cc WHERE cc.consultation_id = consultations.id) as corrections_count'));
         if (! auth()->user()->can('consultation.view_all')) {
             $query->where('consultations.consulted_by', auth()->user()->id);
         }
@@ -451,8 +602,10 @@ class ConsultationController extends Controller
 
         [$lab_requests, $imaging_requests] = $this->requestsOf($consultation);
         $can_continue = $consultation->status == 'draft' && auth()->user()->can('consultation.create') && $this->mayContinue($consultation);
+        $can_correct = $this->mayCorrect($consultation);
+        $corrections = \App\Utils\ConsultationCorrections::of($consultation->id);
 
-        return view('consultation.show')->with(compact('consultation', 'lab_requests', 'imaging_requests', 'can_continue'));
+        return view('consultation.show')->with(compact('consultation', 'lab_requests', 'imaging_requests', 'can_continue', 'can_correct', 'corrections'));
     }
 
     public function finalize($id)
@@ -528,8 +681,9 @@ class ConsultationController extends Controller
         }
         [$lab_requests, $imaging_requests] = $this->requestsOf($consultation);
         $business = \App\Business::find($business_id);
+        $corrections = \App\Utils\ConsultationCorrections::of($consultation->id);
 
-        return view('consultation.report_print')->with(compact('consultation', 'business', 'lab_requests', 'imaging_requests'));
+        return view('consultation.report_print')->with(compact('consultation', 'business', 'lab_requests', 'imaging_requests', 'corrections'));
     }
 
     /**

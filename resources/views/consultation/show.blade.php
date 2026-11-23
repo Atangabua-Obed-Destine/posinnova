@@ -20,7 +20,8 @@
                 <p class="tw-text-sm tw-text-gray-500 tw-mb-0">
                     <span class="label label-info">{{ $c->ref_no }}</span>
                     {{ __('lang_v1.consultation_type_' . $c->consultation_type) }}{{ $c->specialty ? ' · ' . $c->specialty : '' }} ·
-                    <span class="label {{ $c->status == 'final' ? 'label-success' : 'label-warning' }}">{{ __('lang_v1.consultation_status_' . $c->status) }}</span> ·
+                    <span class="label {{ $c->status == 'final' ? 'label-success' : 'label-warning' }}">{{ __('lang_v1.consultation_status_' . $c->status) }}</span>
+                    @if ($corrections->isNotEmpty())<a href="#consult_corrections" class="label label-warning" id="corr_tag"><i class="fas fa-pen"></i> @lang('clinic.corr_tag')</a>@endif ·
                     {{ @format_datetime($c->created_at) }}
                 </p>
             </div>
@@ -28,6 +29,12 @@
                 @if(! empty($can_continue))
                     <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'edit'], [$c->id]) }}" class="tw-dw-btn tw-dw-btn-sm" style="background:#d97706;color:#fff;border:none;" id="continue_consultation">
                         <i class="fas fa-pen"></i> @lang('clinic.cons_continue')
+                    </a>
+                @endif
+                @if (! empty($can_correct))
+                    <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'correct'], [$c->id]) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline" id="correct_consultation"
+                        style="border-color:#dc6803;color:#b54708;" title="{{ __('clinic.corr_btn_help') }}">
+                        <i class="fas fa-pen"></i> @lang('clinic.corr_btn')
                     </a>
                 @endif
                 @if($c->status == 'draft')
@@ -75,6 +82,25 @@
             </div>
         </div>
     </div>
+
+    {{-- PosInnova: corrections made after it was finished (the earlier versions stay readable) --}}
+    @if ($corrections->isNotEmpty())
+        <div id="consult_corrections" style="margin-bottom:16px;padding:12px 16px;border-radius:12px;background:#fffaeb;border:1px solid #fec84b;border-left:5px solid #dc6803;color:#7a2e0e;scroll-margin-top:80px;">
+            <strong><i class="fas fa-pen"></i> @lang('clinic.corr_list_title')</strong>
+            @foreach ($corrections->reverse() as $corr)
+                <div class="corr-row" style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:flex-start;padding:8px 0;{{ $loop->first ? '' : 'border-top:1px solid #fedf89;' }}">
+                    <div style="flex:1 1 280px;min-width:0;line-height:1.5;">
+                        <strong>{{ __('clinic.corr_notice', ['time' => (new \App\Utils\Util())->format_date($corr->created_at, true), 'name' => trim(optional($corr->correctedBy)->user_full_name) ?: '-']) }}</strong><br>
+                        <span>@lang('clinic.corr_changed'): {{ \App\Utils\ConsultationCorrections::labels($corr->changed) }}</span><br>
+                        <span style="white-space:pre-line;">@lang('clinic.corr_reason_lbl'): {{ $corr->reason }}</span>
+                    </div>
+                    <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'correction'], [$c->id, $corr->id]) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline corr-see" style="border-color:#dc6803;color:#b54708;background:#fff;">
+                        <i class="fas fa-history"></i> @lang('clinic.corr_see_before')
+                    </a>
+                </div>
+            @endforeach
+        </div>
+    @endif
 
     <div class="row">
         <div class="col-md-6">
@@ -183,6 +209,6 @@
 @include('consultation.exam.assets')
 @if (session('status.success'))
     {{-- just saved: the copy kept on this device in case the page was closed is no longer needed --}}
-    <script>try { window.localStorage.removeItem('pi_consult_v{{ (int) $c->visit_id }}_u{{ (int) auth()->id() }}'); } catch (e) { /* private mode */ }</script>
+    <script>try { window.localStorage.removeItem('pi_consult_v{{ (int) $c->visit_id }}_u{{ (int) auth()->id() }}'); window.localStorage.removeItem('pi_consult_v{{ (int) $c->visit_id }}_u{{ (int) auth()->id() }}_fix{{ (int) $c->id }}'); } catch (e) { /* private mode */ }</script>
 @endif
 @endsection

@@ -14,7 +14,8 @@ $(function () {
     try { store = window.localStorage; store.getItem('x'); } catch (e) { store = null; }
     if (!store) { return; }
 
-    var KEY = 'pi_consult_v{{ (int) $visit->id }}_u{{ (int) auth()->id() }}';
+    // (a correction to a finished consultation is kept apart: "_fix")
+    var KEY = 'pi_consult_v{{ (int) $visit->id }}_u{{ (int) auth()->id() }}{{ ! empty($correcting) ? '_fix' . (int) $c_edit->id : '' }}';
     var SERVER_AT = {{ $c_edit && $c_edit->updated_at ? $c_edit->updated_at->getTimestamp() * 1000 : 0 }};
     var SKIP = { _token: 1, _method: 1, visit_id: 1, attach_token: 1, search_prescription_product: 1, bmi_display: 1, action: 1, 'exam[present]': 1, 'exam[template_id]': 1 };
     var exBody = document.getElementById('exam_form_body'), rxBody = document.getElementById('prescription_rows');

@@ -18,6 +18,9 @@ class ConsultationExam extends Model
         'values' => 'array',
     ];
 
+    /** Set on the form as it was before a correction (ConsultationCorrection::examBefore): its drawings are served from there. */
+    public $correction_id = null;
+
     public function consultation()
     {
         return $this->belongsTo(Consultation::class, 'consultation_id');
@@ -40,7 +43,14 @@ class ConsultationExam extends Model
     {
         $f = $this->drawing($block_id);
 
-        return $f ? action([\App\Http\Controllers\ConsultationExamController::class, 'drawing'], [$this->id, $block_id]).'?v='.substr(md5($f), 0, 8) : null;
+        if (! $f) {
+            return null;
+        }
+        $url = $this->correction_id
+            ? action([\App\Http\Controllers\ConsultationController::class, 'correctionDrawing'], [$this->correction_id, $block_id])
+            : action([\App\Http\Controllers\ConsultationExamController::class, 'drawing'], [$this->id, $block_id]);
+
+        return $url.'?v='.substr(md5($f), 0, 8);
     }
 
     /** Answers only (no drawings). */

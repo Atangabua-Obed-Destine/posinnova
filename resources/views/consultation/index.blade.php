@@ -37,7 +37,8 @@
                                 <td>{{ $c->file_number }}</td>
                                 <td>{{ \Illuminate\Support\Str::limit((string) $c->diagnosis, 70) ?: '-' }}</td>
                                 <td>{{ trim(optional($c->consultedBy)->user_full_name) }}</td>
-                                <td><span class="label {{ $c->status == 'final' ? 'label-success' : 'label-warning' }}">{{ __('lang_v1.consultation_status_' . $c->status) }}</span></td>
+                                <td><span class="label {{ $c->status == 'final' ? 'label-success' : 'label-warning' }}">{{ __('lang_v1.consultation_status_' . $c->status) }}</span>
+                                    @if ($c->corrections_count > 0) <span class="label label-warning corr-tag" title="{{ __('clinic.corr_list_title') }}"><i class="fas fa-pen"></i> @lang('clinic.corr_tag')</span>@endif</td>
                             </tr>
                         @endforeach
                     </tbody>
