@@ -58,7 +58,7 @@
     <h3>4. Ajouter, déplacer, modifier et retirer des blocs</h3>
     <ol class="gd-steps">
         <li><strong>Ajouter un bloc :</strong> glissez-le depuis la gauche dans la fiche, à l'endroit voulu. Ou <strong>cliquez</strong> simplement dessus : il est ajouté à la fin de la fiche. Ses réglages s'ouvrent tout de suite.</li>
-        <li><strong>Déplacer un bloc :</strong> tenez-le avec la souris et glissez-le à sa nouvelle place. Les autres se décalent.</li>
+        <li><strong>Déplacer un bloc :</strong> tenez-le avec la souris et glissez-le à sa nouvelle place. Les autres se décalent. Sur un téléphone ou une tablette, gardez le doigt sur le bloc un instant (il se soulève légèrement), puis glissez-le ; un simple glissement fait défiler la page.</li>
         <li><strong>Modifier un bloc :</strong> double-cliquez dessus, ou cliquez sur son crayon <i class="fas fa-pen"></i>.</li>
         <li><strong>Copier un bloc :</strong> cliquez sur <i class="fas fa-copy"></i>. La copie apparaît juste après (pratique pour « Droite » puis « Gauche »).</li>
         <li><strong>Retirer un bloc :</strong> cliquez sur <i class="fas fa-trash"></i> et confirmez.</li>

@@ -1686,6 +1686,7 @@ return [
     'ex_back' => 'All forms',
     'ex_builder_lead' => 'Drag blocks to build the form the doctor fills in',
     'ex_builder_hint' => 'Drag the blocks to change the order. Double-click a block to change it.',
+    'ex_builder_hint_touch' => 'Swipe to scroll. To move a block, hold it a moment, then drag it. Tap its pencil to change it.',
     'ex_builder_empty' => 'Drag blocks here from the list on the left',
     'ex_the_form' => 'The form',
     'ex_preview' => 'Preview',

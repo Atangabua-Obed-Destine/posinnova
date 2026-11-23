@@ -1687,6 +1687,7 @@ return [
     'ex_back' => 'Toutes les fiches',
     'ex_builder_lead' => 'Glissez des blocs pour construire la fiche que remplit le médecin',
     'ex_builder_hint' => 'Glissez les blocs pour changer l\'ordre. Double-cliquez sur un bloc pour le modifier.',
+    'ex_builder_hint_touch' => 'Glissez pour faire défiler. Pour déplacer un bloc, gardez le doigt dessus un instant, puis glissez-le. Touchez son crayon pour le modifier.',
     'ex_builder_empty' => 'Glissez ici des blocs depuis la liste de gauche',
     'ex_the_form' => 'La fiche',
     'ex_preview' => 'Aperçu',

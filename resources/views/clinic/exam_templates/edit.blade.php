@@ -86,6 +86,16 @@
         @media (max-width:991px) { .tb-cols-3, .tb-cols-4 { width:50%; } }
         /* the blocks stay in view while the form is scrolled (the column is as tall as the form) */
         .tb-sticky.tb-fixed { position:fixed; top:64px; z-index:20; max-height:calc(100vh - 74px); overflow:auto; }
+        /* a finger on a block scrolls the page (jQuery UI's own style forbids it, for nothing: it only listens to the mouse).
+           On a phone a block is moved by holding it a moment, then dragging (see below). */
+        #tb_blocks .tb-block, #tb_palette .tb-palette-item { touch-action:auto; }
+        .tb-hint-touch { display:none; }
+        @media (hover:none) and (pointer:coarse) {
+            .tb-hint-mouse { display:none; } .tb-hint-touch { display:inline; }
+            #tb_blocks .tb-card { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+            #tb_blocks .tb-card img { -webkit-user-drag:none; pointer-events:none; }
+        }
+        .tb-block.tb-held .tb-card { border-color:#4f46e5; box-shadow:0 6px 18px rgba(79,70,229,.25); transform:scale(1.02); transition:transform .12s; }
     </style>
 
     <div class="row tb-row">
@@ -137,7 +147,7 @@
             <div class="box box-solid">
                 <div class="box-header with-border" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                     <h3 class="box-title"><i class="fas fa-clipboard-list"></i> @lang('clinic.ex_the_form')</h3>
-                    <span class="text-muted" style="font-size:12px;">@lang('clinic.ex_builder_hint')</span>
+                    <span class="text-muted" style="font-size:12px;"><span class="tb-hint-mouse">@lang('clinic.ex_builder_hint')</span><span class="tb-hint-touch">@lang('clinic.ex_builder_hint_touch')</span></span>
                     <div style="margin-left:auto;display:flex;gap:6px;">
                         <a href="{{ action([\App\Http\Controllers\ClinicExamTemplateController::class, 'guide']) }}#gd_setup" target="_blank" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-book-open"></i> @lang('clinic.ex_guide_btn')</a>
                         <a href="{{ action([\App\Http\Controllers\ClinicExamTemplateController::class, 'index']) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline"><i class="fas fa-arrow-left"></i> @lang('clinic.ex_back')</a>
@@ -474,6 +484,55 @@ $(function () {
         }).always(function () { $btn.prop('disabled', false); });
     });
     window.onbeforeunload = function () { if (dirty) { return LANG.sure; } };
+
+    /* ---- phones: a finger swipe scrolls; holding a block a moment, then moving the finger, drags it.
+       jQuery UI only knows the mouse, so the held finger is handed to it as a mouse. ---- */
+    (function () {
+        var HOLD = 350, SLOP = 8, timer = null, from = null, held = null, dragging = false, touchy = false;
+        function mouse(type, x, y, el) {
+            var ev = new MouseEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0, buttons: type === 'mouseup' ? 0 : 1 });
+            (el || document).dispatchEvent(ev);
+        }
+        function wait() { clearTimeout(timer); timer = null; from = null; }
+        $list[0].addEventListener('touchstart', function (e) {
+            wait(); touchy = true;
+            if (e.touches.length !== 1 || dragging) { return; }
+            var blk = e.target.closest('.tb-block');
+            if (!blk || e.target.closest('button, a, input, select, textarea')) { return; }
+            var t = e.touches[0], el = e.target;
+            from = { x: t.clientX, y: t.clientY };
+            timer = setTimeout(function () {
+                timer = null;
+                dragging = true; held = blk;
+                blk.classList.add('tb-held');
+                mouse('mousedown', from.x, from.y, el);
+            }, HOLD);
+        }, { passive: true });
+        document.addEventListener('touchmove', function (e) {
+            if (timer) {
+                var t = e.touches[0];
+                if (Math.abs(t.clientX - from.x) > SLOP || Math.abs(t.clientY - from.y) > SLOP) { wait(); } // a swipe: the page scrolls
+                return;
+            }
+            if (!dragging) { return; }
+            if (e.cancelable) { e.preventDefault(); }
+            mouse('mousemove', e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+        function end(e) {
+            wait();
+            if (!dragging) { return; }
+            dragging = false;
+            if (held) { held.classList.remove('tb-held'); held = null; }
+            if (e.cancelable) { e.preventDefault(); } // no click after a drag
+            var t = e.changedTouches[0];
+            mouse('mouseup', t.clientX, t.clientY);
+            $list.children('.tb-held').removeClass('tb-held');
+        }
+        document.addEventListener('touchend', end, { passive: false });
+        document.addEventListener('touchcancel', end, { passive: false });
+        // a long press must not open the phone's own menu (copy, save image…)
+        $list[0].addEventListener('contextmenu', function (e) { if (dragging || (touchy && e.target.closest('.tb-block'))) { e.preventDefault(); } });
+    })();
 
     // the blocks stay in view while a long form is scrolled (the page scrolls inside the layout, so sticky CSS cannot do it)
     var $pal = $('.tb-sticky'), $col = $pal.parent(), raf = null;

@@ -56,7 +56,7 @@
     <h3>4. Adding, moving, changing and removing blocks</h3>
     <ol class="gd-steps">
         <li><strong>Add a block:</strong> drag it from the left into the form, where you want it. Or simply <strong>click</strong> it: it is added at the end of the form. Its settings open straight away.</li>
-        <li><strong>Move a block:</strong> hold it with the mouse and drag it to its new place. The others make room.</li>
+        <li><strong>Move a block:</strong> hold it with the mouse and drag it to its new place. The others make room. On a phone or tablet, keep your finger on the block a moment (it lifts slightly), then drag it; a quick swipe just scrolls the page.</li>
         <li><strong>Change a block:</strong> double-click it, or click its <i class="fas fa-pen"></i> pencil.</li>
         <li><strong>Copy a block:</strong> click <i class="fas fa-copy"></i>. The copy appears just after it (handy for "Right" then "Left").</li>
         <li><strong>Remove a block:</strong> click <i class="fas fa-trash"></i> and confirm.</li>
