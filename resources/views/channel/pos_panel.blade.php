@@ -9,7 +9,7 @@
         'btn', 'title', 'none', 'new_one', 'new_many', 'ring', 'paid_shop', 'paid_eride', 'unlinked', 'cancelled_t', 'cancelled_d',
         'cancelled_deleted', 'seen', 'open_sale', 'cart_busy', 'loading', 'banner', 'finish_shop', 'finish_eride', 'not_added',
         'total_diff', 'draft_hint', 'status_cancelled', 'status_rung', 'sent', 'queued', 'mismatch', 'offline', 'revoked',
-        'way_delivery', 'way_collect', 'way_eat_in', 'drop', 'no_pay_method', 'no_credit_button', 'added', 'customer', 'paid_at',
+        'way_delivery', 'way_collect', 'way_eat_in', 'drop', 'cancel_toast', 'no_pay_method', 'no_credit_button', 'added', 'customer', 'paid_at',
     ])->mapWithKeys(fn ($k) => [$k => __('channel.pos_'.$k)])->all();
 @endphp
 <style>
@@ -110,7 +110,7 @@
         }
         state.orders.forEach(function (o) {
             var lines = o.lines.map(function (l) {
-                return '<li class="' + (l.linked ? '' : 'un') + '">' + esc(l.qty) + ' × ' + esc(l.name) + (l.unit ? ' (' + esc(l.unit) + ')' : '') +
+                return '<li class="' + (l.linked ? '' : 'un') + '">' + esc(l.qty) + ' × ' + esc(l.name) + (l.unit && String(l.name).indexOf(l.unit) === -1 ? ' (' + esc(l.unit) + ')' : '') +
                     ' — ' + esc(money(l.total)) + (l.linked ? '' : ' · ' + esc(T.unlinked)) + '</li>';
             }).join('');
             var way = o.way === 'delivery' ? T.way_delivery : (o.way === 'eat_in' ? T.way_eat_in : T.way_collect);
@@ -131,17 +131,23 @@
             state.error = r.error;
             state.orders = r.orders || [];
             state.cancelled = r.cancelled || [];
-            var fresh = false;
-            state.orders.concat(state.cancelled).forEach(function (o) {
+            var fresh = false, freshCancel = false;
+            state.orders.forEach(function (o) {
                 if (!state.known[o.order_id]) { state.known[o.order_id] = 1; fresh = true; }
+            });
+            state.cancelled.forEach(function (o) {
+                if (state.known[o.order_id] !== 'c') { state.known[o.order_id] = 'c'; freshCancel = true; }
             });
             var n = state.orders.length + state.cancelled.length;
             var now = Date.now();
-            if (n > 0 && (fresh || now - state.lastBeep > 60000)) {
+            if (n > 0 && (fresh || freshCancel || now - state.lastBeep > 60000)) {
                 state.lastBeep = now;
                 beep();
                 if (fresh && typeof toastr !== 'undefined') {
-                    toastr.info(n === 1 ? T.new_one : T.new_many.replace(':n', n));
+                    toastr.info(state.orders.length === 1 ? T.new_one : T.new_many.replace(':n', state.orders.length));
+                }
+                if (freshCancel && typeof toastr !== 'undefined') {
+                    toastr.warning(T.cancel_toast);
                 }
             }
             paint();

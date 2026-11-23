@@ -158,6 +158,7 @@ return [
     'pos_way_delivery' => 'Delivery by E-Ride',
     'pos_way_collect' => 'Customer collects',
     'pos_way_eat_in' => 'Eats here',
+    'pos_cancel_toast' => 'An E-Ride order you rang up was cancelled: open E-Ride orders.',
     'pos_drop' => 'Not now: empty the cart',
     'pos_no_pay_method' => 'Choose the payment in the payment window: the E-Ride payment method is not set for this shop.',
     'pos_no_credit_button' => 'Leave the amount at 0 and finish: the sale stays due on the E-Ride account.',

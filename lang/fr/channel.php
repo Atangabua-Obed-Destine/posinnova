@@ -155,6 +155,7 @@ return [
     'pos_way_delivery' => 'Livraison par E-Ride',
     'pos_way_collect' => 'Le client passe la prendre',
     'pos_way_eat_in' => 'Sur place',
+    'pos_cancel_toast' => 'Une commande E-Ride déjà encaissée a été annulée : ouvrez Commandes E-Ride.',
     'pos_drop' => 'Pas maintenant : vider le panier',
     'pos_no_pay_method' => 'Choisissez le paiement dans la fenêtre de paiement : le moyen de paiement E-Ride n\'est pas réglé pour cette boutique.',
     'pos_no_credit_button' => 'Laissez le montant à 0 et terminez : la vente reste due sur le compte E-Ride.',
