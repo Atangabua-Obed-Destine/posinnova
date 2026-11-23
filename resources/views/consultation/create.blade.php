@@ -1013,5 +1013,84 @@ $(document).ready(function () {
 })();
 </script>
 @endif
+@if (! $correcting)
+<script>
+// "Finalize Consultation": first the whole consultation on one page, to read again (the app's check window).
+// "Save for later" goes straight through.
+(function () {
+    var form = document.getElementById('consultation_form');
+    if (!form) { return; }
+    var K = {!! json_encode([
+        'title' => __('clinic.cfin_title'), 'intro' => __('clinic.cfin_intro'), 'check' => __('clinic.cfin_check'), 'yes' => __('clinic.cfin_yes'),
+        'patient' => __('clinic.cfin_patient'), 'patient_v' => trim($patient->name . (optional($pd)->file_number ? ' · ' . $pd->file_number : '')),
+        'type' => __('lang_v1.consultation_type'), 'complaint' => __('lang_v1.chief_complaint'), 'vitals' => __('clinic.cfin_vitals'),
+        'exam' => __('clinic.cfin_exam'), 'exam_notes' => __('lang_v1.examination_notes'), 'diagnosis' => __('lang_v1.diagnosis'),
+        'differential' => __('clinic.cons_differential_diagnosis'), 'rx' => __('clinic.cfin_rx'), 'lab' => __('clinic.cfin_lab'), 'img' => __('clinic.cfin_img'),
+        'plan' => __('clinic.cons_management_plan'), 'review' => __('clinic.cfin_review'), 'referral' => __('clinic.cfin_referral'),
+        'none' => __('clinic.cfin_none'), 'outside' => __('clinic.cfin_outside'), 'no_diag' => __('clinic.cfin_no_diag'),
+        'fee' => __('clinic.cfin_fee'), 'covered' => __('clinic.cfin_covered'),
+    ]) !!};
+    var go = false;
+    var val = function (n) { var f = form.querySelector('[name="' + n + '"]'); if (!f) { return ''; } if (f.tagName === 'SELECT') { var o = f.selectedOptions[0]; return f.value !== '' && o ? o.textContent.trim() : ''; } return (f.value || '').trim(); };
+    var names = function (sel) { return [].map.call(form.querySelectorAll(sel + ':checked'), function (c) { var l = c.closest('label'); return l ? l.textContent.replace(/\s+/g, ' ').trim() : ''; }).filter(Boolean); };
+    function vitals() {
+        var v = [], bp = val('vitals_bp_systolic') && val('vitals_bp_diastolic') ? val('vitals_bp_systolic') + '/' + val('vitals_bp_diastolic') : '';
+        if (bp) { v.push('BP ' + bp); }
+        if (val('vitals_temperature')) { v.push(val('vitals_temperature') + ' °C'); }
+        if (val('vitals_pulse')) { v.push('Pulse ' + val('vitals_pulse')); }
+        if (val('vitals_resp_rate')) { v.push('RR ' + val('vitals_resp_rate')); }
+        if (val('vitals_spo2')) { v.push('SpO2 ' + val('vitals_spo2') + '%'); }
+        if (val('vitals_weight')) { v.push(val('vitals_weight') + ' kg'); }
+        if (val('vitals_height')) { v.push(val('vitals_height') + ' cm'); }
+        return v.join(' · ');
+    }
+    function rx() {
+        return [].map.call(document.querySelectorAll('#prescription_rows tr'), function (tr) {
+            var f = function (n) { var e = tr.querySelector('[name$="[' + n + ']"]'); return e ? e.value.trim() : ''; };
+            var name = tr.querySelector('.rx_drug_name') ? tr.querySelector('.rx_drug_name').value.trim() : ((tr.querySelector('td strong') || {}).textContent || '').trim();
+            if (tr.getAttribute('data-locked')) { var tds = tr.querySelectorAll('td'); return name + ' · ' + [tds[3], tds[4], tds[5]].map(function (t) { return t ? t.textContent.trim() : ''; }).filter(function (x) { return x && x !== '-'; }).join(', '); }
+            var how = [f('strength'), f('dosage'), f('frequency'), f('duration')].filter(Boolean).join(', ');
+            var out = tr.querySelector('.rx_outside') && tr.querySelector('.rx_outside').checked;
+            return '• ' + name + (how ? ' · ' + how : '') + (f('quantity') ? ' · ×' + f('quantity') : '') + (out ? ' (' + K.outside + ')' : '');
+        }).filter(function (x) { return x.replace(/[•\s·]/g, ''); }).join('\n');
+    }
+    form.addEventListener('submit', function (e) {
+        var by = e.submitter;
+        if (!by || by.value !== 'final' || !window.PosConfirm || !PosConfirm.enabled('consultation_final')) { return; } // (record-confirm.js loads after this page's scripts)
+        if (go) { go = false; return; }
+        e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation(); // (common.js would lock the buttons)
+        setTimeout(function () { form.querySelectorAll('button[type=submit]').forEach(function (b) { b.disabled = false; }); }, 0);
+        var tpl = document.getElementById('exam_template'), fee = form.querySelector('[name="consultation_fee"]');
+        var feeV = fee ? (window.__number_uf ? __number_uf(fee.value) : parseFloat(fee.value)) || 0 : null;
+        var exam = tpl && tpl.value ? tpl.selectedOptions[0].textContent.trim() : '';
+        var d = {
+            kind: 'consultation_final', title: K.title, intro: K.intro, check: K.check, yes: K.yes,
+            rows: [
+                [K.patient, K.patient_v],
+                [K.type, [val('consultation_type'), val('specialty')].filter(Boolean).join(' · ')],
+                [K.complaint, val('chief_complaint')],
+                [K.vitals, vitals()],
+                [K.exam, exam],
+                [K.exam_notes, val('examination_notes')],
+                [K.diagnosis, val('diagnosis') || K.no_diag, val('diagnosis') ? 'strong' : 'warn'],
+                [K.differential, val('differential_diagnosis')],
+                [K.rx, rx() || K.none],
+                [K.lab, names('input[name="lab_test_ids[]"]').join('\n')],
+                [K.img, names('input[name="imaging_catalogue_ids[]"]').join('\n')],
+                [K.plan, val('management_plan')],
+                [K.review, val('review_date') ? val('review_date').split('-').reverse().join('/') + (val('review_notes') ? ' · ' + val('review_notes') : '') : ''],
+                [K.referral, val('referral_to')],
+                fee ? null : [K.fee, K.covered],
+            ].filter(function (r) { return r && r[1] != null && String(r[1]).trim() !== ''; }),
+        };
+        if (fee) { d.amount = feeV; d.amountLabel = K.fee; }
+        PosConfirm.ask(d, function () {
+            go = true;
+            form.requestSubmit ? form.requestSubmit(by) : $(by).trigger('click');
+        });
+    }, true);
+})();
+</script>
+@endif
 @include('consultation.partials.autosave_js')
 @endsection

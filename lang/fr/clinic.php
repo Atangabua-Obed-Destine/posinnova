@@ -1812,4 +1812,23 @@ return [
     'corr_part_plan' => 'Conduite à tenir',
     'corr_part_review' => 'Contrôle',
     'corr_part_referral' => 'Orientation / hospitalisation',
+
+    // check before finishing a consultation
+    'cfin_title' => 'Vérifiez la consultation avant de la terminer',
+    'cfin_intro' => 'Une fois terminée elle est verrouillée (seule une correction, avec un motif, peut la changer) ; les frais vont sur la facture du patient et l\'ordonnance et les demandes sont transmises.',
+    'cfin_check' => 'Je l\'ai relue, et elle est juste.',
+    'cfin_yes' => 'Oui, terminer la consultation',
+    'cfin_patient' => 'Patient',
+    'cfin_vitals' => 'Signes vitaux',
+    'cfin_exam' => 'Fiche d\'examen',
+    'cfin_rx' => 'Ordonnance',
+    'cfin_lab' => 'Examens de laboratoire demandés',
+    'cfin_img' => 'Imagerie demandée',
+    'cfin_review' => 'Contrôle le',
+    'cfin_referral' => 'Orienté vers',
+    'cfin_none' => 'Aucun',
+    'cfin_outside' => 'acheté ailleurs',
+    'cfin_no_diag' => 'Aucun diagnostic n\'est écrit.',
+    'cfin_fee' => 'Frais de consultation',
+    'cfin_covered' => 'Pas de frais ici (payés à l\'accueil ou couverts par un forfait)',
 ];

@@ -70,9 +70,18 @@
 @endsection
 
 @section('javascript')
+@include('hotel.partials.confirm')
 <script>
 (function () {
     var due = document.getElementById('ht_co_due'), amt = document.getElementById('ht_co_amount');
+    var K = {!! json_encode([
+        'title' => __('hotel.cf_title_checkout'), 'intro' => __('hotel.cf_intro_checkout'),
+        'room' => optional($res->room)->number . ' · ' . optional($res->roomType)->name, 'guest' => optional($res->contact)->name,
+        'stay_l' => __('hotel.stay'), 'stay' => $res->arrival->format('d/m/Y') . ' → ' . $res->departure->format('d/m/Y'),
+        'charges_l' => __('hotel.charges'), 'charges' => (float) $statement['charges'], 'payments_l' => __('hotel.payments'), 'payments' => (float) $statement['payments'],
+        'due_l' => __('hotel.to_pay_now'), 'received' => __('hotel.amount_received'), 'waived' => __('hotel.waive_fee'),
+        'room_l' => __('hotel.room'), 'credit_left' => $balance < -0.004 ? __('hotel.credit_left_note', ['amount' => $fmt(-$balance)]) : '',
+    ]) !!};
     var base = parseFloat(due.getAttribute('data-balance')) || 0;
     document.querySelectorAll('#ht_late input[name=late]').forEach(function (r) {
         r.addEventListener('change', function () {
@@ -82,6 +91,28 @@
         });
     });
     document.getElementById('ht_checkout_form').addEventListener('submit', function () { var b = document.getElementById('ht_co_submit'); setTimeout(function () { b.disabled = true; }, 0); });
+
+    // before it is saved: the bill and the money, to check with the guest
+    var C = HtConfirm, X = C.t;
+    C.attach(document.getElementById('ht_checkout_form'), function () {
+        var late = document.querySelector('#ht_late input[name=late]:checked'), fee = late ? parseFloat(late.getAttribute('data-fee')) || 0 : 0;
+        var owe = base + fee, got = C.num(amt.value), leave = document.querySelector('input[name=leave_balance]');
+        var short = owe - got, notes = [];
+        if (short > 0.004) notes.push((leave && leave.checked ? X.short_leave : X.short).replace(':amount', C.money(short)));
+        if (short < -0.004) notes.push(X.credit.replace(':amount', C.money(-short)));
+        if (K.credit_left) notes.push(K.credit_left);
+        return { title: K.title, intro: K.intro, amount: got, amountLabel: K.received,
+            rows: [
+                [K.room_l, K.room], [X.guest, K.guest], [K.stay_l, K.stay],
+                [K.charges_l, C.money(K.charges)], [K.payments_l, C.money(K.payments)],
+                late ? [X.late, fee > 0 ? C.money(fee) : K.waived] : null,
+                [K.due_l, C.money(owe), 'strong'],
+                [K.received, got > 0 ? C.money(got) + ' · ' + C.shown(document.getElementById('ht_co_method')) : X.nothing_now],
+                [X.still, C.money(Math.max(0, short)), short > 0.004 ? 'warn' : 'strong'],
+            ],
+            note: notes.join(' '),
+        };
+    });
 })();
 </script>
 @endsection

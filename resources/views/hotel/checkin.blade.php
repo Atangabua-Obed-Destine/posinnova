@@ -129,9 +129,18 @@
 @endsection
 
 @section('javascript')
+@include('hotel.partials.confirm')
 <script>
 (function () {
     var form = document.getElementById('ht_checkin_form');
+    var K = {!! json_encode([
+        'title' => __('hotel.cf_title_checkin'), 'intro' => __('hotel.cf_intro_checkin'),
+        'room' => __('hotel.room'), 'type' => optional($res->roomType)->name, 'stay' => __('hotel.stay'),
+        'stay_v' => $res->arrival->max(\App\Utils\Hotel::today())->format('d/m/Y') . ' → ' . $res->departure->format('d/m/Y') . ' · ' . trans_choice('hotel.n_nights', $nights, ['n' => $nights]),
+        'main' => __('hotel.main_guest'), 'phone' => __('hotel.f_phone'), 'total' => __('hotel.total_stay'), 'paid' => __('hotel.paid_already'),
+        'keys' => __('hotel.keys_given'), 'dirty' => __('hotel.dirty_warn'),
+        'total_v' => (float) $res->rate * $nights, 'credit' => max(0, - (float) $balance),
+    ]) !!};
     function roomSync() {
         var on = form.querySelector('input[name=room_id]:checked');
         form.querySelectorAll('.ht-roomopt').forEach(function (l) { l.classList.toggle('on', l.contains(on)); });
@@ -160,6 +169,35 @@
     });
     box.addEventListener('click', function (e) { if (e.target.classList.contains('ht-remove')) e.target.closest('.ht-card-g').remove(); });
     form.addEventListener('submit', function () { var b = document.getElementById('ht_ci_submit'); setTimeout(function () { b.disabled = true; }, 0); });
+
+    // before it is saved: room, card and money on one page, to check with the guest
+    var C = HtConfirm, X = C.t;
+    C.attach(form, function () {
+        var on = form.querySelector('input[name=room_id]:checked');
+        var v = function (n) { return C.shown(form.querySelector('[name="guests[0][' + n + ']"]')); };
+        var now = C.num(document.getElementById('ht_ci_amount').value), owed = Math.max(0, K.total_v - K.credit);
+        var dirty = on && on.getAttribute('data-clean') !== '1';
+        var others = [].slice.call(box.querySelectorAll('.ht-card-g')).slice(1).map(function (c) {
+            var g = function (n) { var f = c.querySelector('[name$="[' + n + ']"]'); return f ? f.value.trim() : ''; };
+            return (g('surname') + ' ' + g('first_names')).trim();
+        }).filter(Boolean);
+        return { title: K.title, intro: K.intro, amount: now, amountLabel: X.paid_now,
+            rows: [
+                [K.room, on ? on.getAttribute('data-no') + ' · ' + K.type : '', dirty ? 'warn' : ''],
+                [K.stay, K.stay_v],
+                [K.main, (v('surname') + ' ' + v('first_names')).trim()],
+                [X.id, v('id_number') ? v('id_type') + ' ' + v('id_number') : ''],
+                [K.phone, v('phone')],
+                [X.others, others.join('\n')],
+                [K.total, C.money(K.total_v)],
+                K.credit > 0 ? [K.paid, '− ' + C.money(K.credit), 'minus'] : null,
+                [X.paid_now, now > 0 ? C.money(now) + ' · ' + C.shown(document.getElementById('ht_ci_method')) : X.nothing_now],
+                [X.still, C.money(Math.max(0, owed - now)), 'strong'],
+                [K.keys, document.getElementById('ht_ci_keys').value],
+            ],
+            note: [dirty ? K.dirty : '', now > owed + 0.004 ? X.credit.replace(':amount', C.money(now - owed)) : ''].filter(Boolean).join(' '),
+        };
+    });
 })();
 </script>
 @endsection

@@ -117,13 +117,18 @@
 @endsection
 
 @section('javascript')
+@include('hotel.partials.confirm')
 <script>
 (function () {
     var T = {!! json_encode([
+        'cf_title' => $walk_in ? __('hotel.cf_title_walkin') : __('hotel.cf_title_res'), 'cf_intro' => $walk_in ? __('hotel.cf_intro_walkin') : __('hotel.cf_intro_res'),
+        'l_stay' => __('hotel.stay'), 'l_type' => __('hotel.room_type'), 'l_room' => __('hotel.room'), 'l_plan' => __('hotel.rate_plan'), 'l_rate' => __('hotel.rate'),
+        'l_total' => __('hotel.total_stay'), 'l_deposit' => $walk_in ? __('hotel.pay_now') : __('hotel.deposit_now'), 'l_method' => __('hotel.paid_by'),
+        'l_source' => __('hotel.booked_through'), 'l_status' => __('hotel.status'), 'l_hold' => __('hotel.hold_until'), 'l_notes' => __('hotel.notes'), 'l_phone' => __('hotel.phone'),
         'availability' => action([$H, 'availability']),
         'search' => action([$H, 'guestSearch']),
         'free' => __('hotel.js_free'), 'full' => __('hotel.js_full'), 'per_night' => __('hotel.js_per_night'),
-        'for_n' => __('hotel.js_for_n'), 'nights' => __('hotel.js_nights'), 'any' => __('hotel.any_free_room'),
+        'for_n' => __('hotel.js_for_n'), 'for_1' => __('hotel.js_for_1'), 'nights' => __('hotel.js_nights'), 'night' => __('hotel.js_night'), 'any' => __('hotel.any_free_room'),
         'not_clean' => __('hotel.js_not_clean'), 'stays' => __('hotel.js_stays'), 'new_guest' => __('hotel.js_new_guest'),
         'tax' => __('hotel.js_tax'), 'none' => __('hotel.no_room_types'),
     ]) !!};
@@ -141,10 +146,11 @@
                 data = x.j; render();
             });
     }
+    function nn(n) { return n + ' ' + (n == 1 ? T.night : T.nights); }
     function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
     function render() {
         var box = $('ht_types'); box.innerHTML = '';
-        $('ht_nights_text').textContent = data.nights + ' ' + T.nights;
+        $('ht_nights_text').textContent = nn(data.nights);
         if (!data.types.length) { box.appendChild(el('p', 'ht-muted', T.none)); return; }
         if (!data.types.some(function (t) { return String(t.id) === String(typeId) && t.free > 0; })) {
             var first = data.types.find(function (t) { return t.free > 0; }); typeId = first ? String(first.id) : '';
@@ -157,7 +163,7 @@
             var nm = el('div', 'nm'); nm.appendChild(el('div', null, t.name)).style.fontWeight = '700'; if (t.description) nm.appendChild(el('div', 'ht-muted ht-small', t.description));
             var fr = el('div', 'fr', t.free > 0 ? T.free.replace(':n', t.free).replace(':m', t.rooms) : T.full); fr.style.color = t.free > 0 ? '#067647' : '#b42318';
             var pr = el('div', 'pr'); var pr1 = el('div', null, p.rate_f + ' ' + T.per_night); pr1.style.fontWeight = '700'; pr.appendChild(pr1);
-            pr.appendChild(el('div', 'ht-muted ht-small', T.for_n.replace(':amount', p.total_f).replace(':n', data.nights)));
+            pr.appendChild(el('div', 'ht-muted ht-small', (data.nights == 1 ? T.for_1 : T.for_n).replace(':amount', p.total_f).replace(':n', data.nights)));
             b.appendChild(nm); b.appendChild(fr); b.appendChild(pr);
             b.addEventListener('click', function () { typeId = String(t.id); render(); });
             box.appendChild(b);
@@ -178,7 +184,7 @@
     function current() { return data ? data.types.find(function (t) { return String(t.id) === String(typeId); }) : null; }
     function summary() {
         var t = current();
-        $('ht_sum_stay').textContent = data ? ($('ht_arrival').value.split('-').reverse().slice(0, 2).join('/') + ' → ' + $('ht_departure').value.split('-').reverse().slice(0, 2).join('/') + ' · ' + data.nights + ' ' + T.nights) : '—';
+        $('ht_sum_stay').textContent = data ? ($('ht_arrival').value.split('-').reverse().slice(0, 2).join('/') + ' → ' + $('ht_departure').value.split('-').reverse().slice(0, 2).join('/') + ' · ' + nn(data.nights)) : '—';
         if (!t) { $('ht_sum_room').textContent = $('ht_sum_rate').textContent = $('ht_sum_total').textContent = '—'; return; }
         var p = t.plans[plan] || t.plans.room_only, room = $('ht_room').selectedOptions[0];
         $('ht_sum_room').textContent = t.name + ' · ' + (room && room.value ? room.textContent : T.any);
@@ -216,6 +222,37 @@
     });
     $('ht_guest_clear').addEventListener('click', function () { pick(null); q.focus(); });
     $('ht_res_create').addEventListener('submit', function () { var b = $('ht_res_submit'); setTimeout(function () { b.disabled = true; }, 0); });
+
+    // before it is saved: everything on one page, to check with the guest
+    var C = HtConfirm, X = C.t;
+    C.attach($('ht_res_create'), function () {
+        var t = current(), p = t ? (t.plans[plan] || t.plans.room_only) : null, n = data ? data.nights : 0;
+        var over = $('ht_rate') ? C.num($('ht_rate').value) : 0, rate = over > 0 ? over : (p ? p.rate : 0);
+        var total = rate * n, tax = t ? t.tax * n : 0, dep = C.num($('ht_deposit').value), room = $('ht_room').selectedOptions[0];
+        var guest = $('ht_contact_id').value ? $('ht_guest_name').textContent : ($('ht_name').value.trim() ? X.new_guest.replace(':name', $('ht_name').value.trim()) : '');
+        var phone = $('ht_contact_id').value ? $('ht_guest_meta').textContent : $('ht_mobile').value.trim();
+        var rows = [
+            [X.guest, guest || X.no_guest, guest ? '' : 'warn'],
+            [T.l_phone, phone],
+            [T.l_stay, C.date($('ht_arrival').value) + ' → ' + C.date($('ht_departure').value) + (n ? ' · ' + nn(n) : '')],
+            [X.people, X.people_v.replace(':a', $('ht_adults').value || 0).replace(':c', $('ht_children').value || 0)],
+            [T.l_type, t ? t.name : ''],
+            [T.l_room, room && room.value ? room.textContent : T.any],
+            [T.l_plan, p ? p.label : ''],
+            [T.l_rate, over > 0 ? X.special.replace(':amount', C.money(over)) : C.money(rate), over > 0 ? 'warn' : ''],
+            tax > 0 ? [X.tax + ' (' + C.money(t.tax) + ' × ' + n + ')', C.money(tax)] : null,
+            [T.l_deposit, dep > 0 ? C.money(dep) : X.nothing_now],
+            dep > 0 ? [T.l_method, C.shown($('ht_method'))] : null,
+            [X.still, C.money(Math.max(0, total + tax - dep)), 'strong'],
+        ];
+        if ($('ht_source')) {
+            rows.push([T.l_source, C.shown($('ht_source'))], [T.l_status, C.shown($('ht_status'))]);
+            if ($('ht_status').value === 'tentative') rows.push([T.l_hold, C.date($('ht_hold').value)]);
+        }
+        rows.push([T.l_notes, $('ht_notes').value.trim()]);
+        return { title: T.cf_title, intro: T.cf_intro, rows: rows, amount: total, amountLabel: T.l_total,
+            note: dep > total + tax + 0.004 ? X.credit.replace(':amount', C.money(dep - total - tax)) : '' };
+    });
     load();
 })();
 </script>

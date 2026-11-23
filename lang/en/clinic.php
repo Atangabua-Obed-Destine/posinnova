@@ -1811,4 +1811,23 @@ return [
     'corr_part_plan' => 'Management plan',
     'corr_part_review' => 'Review',
     'corr_part_referral' => 'Referral / admission',
+
+    // check before finishing a consultation
+    'cfin_title' => 'Check the consultation before finishing it',
+    'cfin_intro' => 'Once finished it is locked (only a correction, with a reason, can change it); the fee goes on the patient\'s bill and the prescription and requests are sent on.',
+    'cfin_check' => 'I have read it again, and it is right.',
+    'cfin_yes' => 'Yes, finish the consultation',
+    'cfin_patient' => 'Patient',
+    'cfin_vitals' => 'Vital signs',
+    'cfin_exam' => 'Examination form',
+    'cfin_rx' => 'Prescription',
+    'cfin_lab' => 'Lab tests asked',
+    'cfin_img' => 'Imaging asked',
+    'cfin_review' => 'Review on',
+    'cfin_referral' => 'Referred to',
+    'cfin_none' => 'None',
+    'cfin_outside' => 'bought elsewhere',
+    'cfin_no_diag' => 'No diagnosis is written.',
+    'cfin_fee' => 'Consultation fee',
+    'cfin_covered' => 'No fee here (paid at check-in or covered by a plan)',
 ];

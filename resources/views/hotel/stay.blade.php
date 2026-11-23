@@ -163,7 +163,7 @@ details.ht-panel-d > summary { font-weight: 700; }
             @if ($in && $can['desk'])
                 <details class="ht-card" id="ht_d_move" style="display:block;">
                     <summary style="cursor:pointer;font-weight:700;">{{ __('hotel.move_room') }}</summary>
-                    <form method="POST" action="{{ action([$R, 'move'], [$res->id]) }}" style="margin-top:10px;">@csrf
+                    <form method="POST" action="{{ action([$R, 'move'], [$res->id]) }}" style="margin-top:10px;" id="ht_move_form">@csrf
                         <div class="ht-f"><label for="ht_m_room">{{ __('hotel.to_room') }}</label>
                             <select class="ht-in" name="room_id" id="ht_m_room" required><option value="">—</option>
                                 @foreach ($move_rooms as $mr)<option value="{{ $mr->id }}">{{ $mr->number }} · {{ optional($mr->type)->name }}{{ \App\Utils\Hotel::sellable($mr) ? '' : ' · ' . __('hotel.hk_dirty') }}</option>@endforeach</select></div>
@@ -177,7 +177,7 @@ details.ht-panel-d > summary { font-weight: 700; }
             @if (($open && ($can['res'] || $can['desk'])) || ($in && $can['desk']))
                 <details class="ht-card" id="ht_d_edit" style="display:block;">
                     <summary style="cursor:pointer;font-weight:700;">{{ $in ? __('hotel.extend_shorten') : __('hotel.change_booking') }}</summary>
-                    <form method="POST" action="{{ action([$R, 'update'], [$res->id]) }}" style="margin-top:10px;">@csrf
+                    <form method="POST" action="{{ action([$R, 'update'], [$res->id]) }}" style="margin-top:10px;" id="ht_edit_form">@csrf
                         @if (! $in)<div class="ht-f"><label for="ht_e_arr">{{ __('hotel.arrival') }}</label><input class="ht-in" type="date" name="arrival" id="ht_e_arr" value="{{ $res->arrival->toDateString() }}"></div>@endif
                         @if ($in)
                             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;" id="ht_e_quick">
@@ -212,7 +212,7 @@ details.ht-panel-d > summary { font-weight: 700; }
             @if ($open && ($can['res'] || $can['desk']))
                 <details class="ht-card" id="ht_d_cancel" style="display:block;">
                     <summary style="cursor:pointer;font-weight:700;color:#b42318;">{{ __('hotel.cancel_booking') }}</summary>
-                    <form method="POST" action="{{ action([$R, 'cancel'], [$res->id]) }}" style="margin-top:10px;">@csrf
+                    <form method="POST" action="{{ action([$R, 'cancel'], [$res->id]) }}" style="margin-top:10px;" id="ht_cancel_form">@csrf
                         <div class="ht-f"><label for="ht_x_reason">{{ __('hotel.reason') }}</label><input class="ht-in" name="reason" id="ht_x_reason" maxlength="150" required></div>
                         <label style="display:flex;gap:8px;align-items:center;font-weight:500;margin-bottom:10px;"><input type="checkbox" name="as" value="no_show"> {{ __('hotel.mark_no_show') }}</label>
                         <button class="ht-btn danger" style="width:100%;">{{ __('hotel.cancel_booking') }}</button>
@@ -232,6 +232,38 @@ details.ht-panel-d > summary { font-weight: 700; }
 @endsection
 
 @section('javascript')
+@include('hotel.partials.confirm')
+<script>
+// before it is saved: what the form will do, to check with the guest
+(function () {
+    var C = HtConfirm, X = C.t, $ = function (id) { return document.getElementById(id); };
+    var K = {!! json_encode([
+        'guest' => optional($res->contact)->name . ' · ' . $res->ref_no . ($res->room ? ' · ' . __('hotel.room') . ' ' . $res->room->number : ''),
+        'payment' => __('hotel.cf_title_payment'), 'charge' => __('hotel.cf_title_charge'), 'move' => __('hotel.cf_title_move'),
+        'dates' => __('hotel.cf_title_dates'), 'cancel' => __('hotel.cf_title_cancel'), 'amount' => __('hotel.amount'),
+        'cancel_credit' => (float) $res->credit > 0 ? __('hotel.cancel_credit_help', ['amount' => $fmt($res->credit)]) : '',
+    ]) !!};
+    var simple = function (title, amountField, extra) {
+        return function (form) {
+            var rows = [[X.guest, K.guest]].concat(C.auto(form));
+            var a = amountField ? C.num(amountField.value) : null;
+            var d = { title: title, rows: rows, note: '' };
+            if (a !== null) { d.amount = a; d.amountLabel = K.amount; }
+            if (extra) extra(d, form);
+            return d;
+        };
+    };
+    C.attach($('ht_pay_form'), simple(K.payment, $('ht_p_amount')));
+    C.attach($('ht_charge_form'), simple(K.charge, $('ht_c_amount')));
+    C.attach($('ht_move_form'), simple(K.move));
+    C.attach($('ht_edit_form'), simple(K.dates, null, function (d) {
+        var calc = $('ht_e_calc'), amt = $('ht_e_amount');
+        if (calc && !calc.hidden && calc.textContent.trim()) d.rows.splice(1, 0, [X.change, calc.textContent.trim(), 'strong']);
+        if (amt && !$('ht_e_money').hidden) { d.amount = C.num(amt.value); d.amountLabel = X.paid_now; }
+    }));
+    C.attach($('ht_cancel_form'), simple(K.cancel, null, function (d) { d.danger = true; d.note = K.cancel_credit; }));
+})();
+</script>
 <script>
 (function () {
     var cover = document.getElementById('ht_cover_pay'), pay = document.getElementById('ht_d_pay');
