@@ -26,5 +26,6 @@
         <button type="button" class="ex-act" data-act="full" title="{{ __('clinic.ex_full') }}" aria-label="{{ __('clinic.ex_full') }}"><i class="fas fa-expand"></i></button>
         <button type="button" class="ex-act ex-done-btn" data-act="lock"><i class="fas fa-check"></i> {{ __('clinic.ex_done') }}</button>
     </div>
+    <p class="ex-draw-hint"><i class="fas fa-font" aria-hidden="true"></i> {{ __('clinic.ex_text_hint') }}</p>
     <input type="hidden" name="exam[draw][{{ $b['id'] }}]" class="ex-draw-data" value="">
 </div>

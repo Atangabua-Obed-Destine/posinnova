@@ -5,6 +5,7 @@
 @php
     $ex_js_t = [
         'text_prompt' => __('clinic.ex_text_prompt'),
+        'text_ph' => __('clinic.ex_text_ph'),
         'clear_confirm' => __('clinic.ex_clear_confirm'),
         'done' => __('clinic.ex_done'),
     ];
@@ -51,11 +52,25 @@
         .ex-draw-tools button { width:38px; height:38px; font-size:15px; line-height:36px; }
         .ex-draw-tools .ex-dot { width:16px; height:16px; }
     }
+    /* words written on a picture: typed in place, and movable until the consultation is saved (then part of the drawing) */
+    .ex-txt { position:absolute; transform:translateY(-50%); font:bold 15px/1 Arial, sans-serif; white-space:pre; cursor:move; user-select:none; -webkit-user-select:none;
+        touch-action:manipulation; border-radius:3px; outline:1px dashed transparent; outline-offset:3px; }
+    .ex-txt:hover, .ex-draw.ex-live .ex-txt { outline-color:rgba(79,70,229,.6); }
+    .ex-draw.ex-live .ex-txt { touch-action:none; }
+    .ex-txt.ex-drag { outline:2px solid #4f46e5; background:rgba(238,242,255,.75); }
+    .ex-draw[data-tool="eraser"] .ex-txt { cursor:cell; }
+    .ex-txt-edit { position:absolute; transform:translateY(-50%); z-index:3; height:36px; width:190px; max-width:92%; padding:2px 8px; border:2px solid #4f46e5; border-radius:6px; background:#fff; color:#111827;
+        font:bold 16px Arial, sans-serif; box-shadow:0 2px 10px rgba(0,0,0,.2); }
+    .ex-draw-hint { display:none; margin:5px 0 0; font-size:12px; line-height:1.4; color:#4338ca; }
+    .ex-draw[data-tool="text"] .ex-draw-hint { display:block; }
+    /* full screen: its room is kept even when hidden, so the picture does not jump when "A" is switched on or off */
+    .ex-draw.ex-full .ex-draw-hint { display:block; visibility:hidden; font-size:13px; text-align:center; max-width:96vw; }
+    .ex-draw.ex-full[data-tool="text"] .ex-draw-hint { visibility:visible; }
     .ex-draw[data-tool="eraser"] .ex-draw-canvas { cursor:cell; }
     .ex-draw[data-tool="text"] .ex-draw-canvas { cursor:text; }
     .ex-draw-tools { display:flex; flex-wrap:wrap; gap:3px; margin-top:4px; }
     .ex-draw-tools button { width:28px; height:28px; padding:0; border:1px solid #e5e7eb; background:#fff; border-radius:6px; color:#374151; font-size:12px; line-height:26px; }
-    .ex-draw-tools button:hover { border-color:#6366f1; }
+    @media (hover:hover) { .ex-draw-tools button:hover { border-color:#6366f1; } } /* (a finger leaves no "hover" behind: only the tool in use is outlined) */
     .ex-draw-tools button.ex-on, .ex-draw-tools button[aria-pressed="true"] { border-color:#4f46e5; background:#eef2ff; color:#3730a3; box-shadow:inset 0 0 0 1px #4f46e5; }
     .ex-dot { display:inline-block; width:12px; height:12px; border-radius:50%; vertical-align:middle; }
     .ex-draw.ex-drawn .ex-label::after { content:" \270E"; color:#4f46e5; }
@@ -91,7 +106,7 @@ window.ExamForm = (function ($) {
         if (el.__exd) { return; }
         var stage = el.querySelector('.ex-draw-stage'), base = el.querySelector('.ex-draw-base');
         var cv = el.querySelector('.ex-draw-canvas'), data = el.querySelector('.ex-draw-data');
-        var st = el.__exd = { tool: 'pen', color: '#dc2626', thick: false, undo: [], had: !!el.getAttribute('data-prev'), down: false, ctx: null };
+        var st = el.__exd = { tool: 'pen', color: '#dc2626', thick: false, undo: [], had: !!el.getAttribute('data-prev'), down: false, ctx: null, labels: [], editing: null };
         el.setAttribute('data-tool', 'pen');
 
         function setup(nw, nh) {
@@ -126,18 +141,139 @@ window.ExamForm = (function ($) {
             c.strokeStyle = st.color; c.lineWidth = width(ev); c.lineCap = 'round'; c.lineJoin = 'round';
             c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
         }
-        function snapshot() { st.undo.push(st.ctx.getImageData(0, 0, cv.width, cv.height)); if (st.undo.length > 30) { st.undo.shift(); } }
-        function blank() { var d = st.ctx.getImageData(0, 0, cv.width, cv.height).data; for (var i = 3; i < d.length; i += 4) { if (d[i]) { return false; } } return true; }
+        // one step back: the strokes (not copied when only a word changed) and the words
+        function snapshot(wordsOnly) {
+            st.undo.push({ img: wordsOnly ? null : st.ctx.getImageData(0, 0, cv.width, cv.height), labels: JSON.parse(JSON.stringify(st.labels)) });
+            if (st.undo.length > 30) { st.undo.shift(); }
+        }
+        function inkless() { var d = st.ctx.getImageData(0, 0, cv.width, cv.height).data; for (var i = 3; i < d.length; i += 4) { if (d[i]) { return false; } } return true; }
+        function blank() { return !st.labels.length && inkless(); }
+        function font(l) { return 'bold ' + l.s + 'px Arial, sans-serif'; }
+        /** What is saved: the strokes with the words written over them. */
+        function image() {
+            if (!st.labels.length) { return cv.toDataURL('image/png'); }
+            var off = document.createElement('canvas'), c = off.getContext('2d');
+            off.width = cv.width; off.height = cv.height;
+            c.drawImage(cv, 0, 0);
+            st.labels.forEach(function (l) { c.fillStyle = l.c; c.font = font(l); c.textBaseline = 'middle'; c.fillText(l.t, l.x, l.y); });
+            return off.toDataURL('image/png');
+        }
         function changed() {
             var empty = blank();
-            data.value = empty ? (st.had ? 'clear' : '') : cv.toDataURL('image/png');
+            data.value = empty ? (st.had ? 'clear' : '') : image();
             el.classList.toggle('ex-drawn', !empty);
             $(data).trigger('change');
         }
 
+        /* ---- words: typed where the picture is touched, dragged to move, touched again to change ---- */
+        function place(node, l) {
+            node.style.left = (l.x / cv.width * 100) + '%';
+            node.style.top = (l.y / cv.height * 100) + '%';
+        }
+        function layout() { // the words keep their size next to the strokes when the picture grows (full screen) or shrinks
+            var k = scale();
+            [].forEach.call(stage.querySelectorAll('.ex-txt'), function (n) { n.style.fontSize = (n.__l.s / k) + 'px'; });
+        }
+        function render() {
+            [].forEach.call(stage.querySelectorAll('.ex-txt'), function (n) { n.parentNode.removeChild(n); });
+            st.labels.forEach(function (l) {
+                var n = document.createElement('span');
+                n.className = 'ex-txt'; n.textContent = l.t; n.style.color = l.c; n.__l = l;
+                place(n, l);
+                stage.appendChild(n);
+                grip(n, l);
+            });
+            layout();
+        }
+        function grip(n, l) {
+            var d = null;
+            n.addEventListener('pointerdown', function (e) {
+                if (e.pointerType === 'mouse' && e.button !== 0) { return; }
+                if (e.pointerType !== 'mouse' && !el.classList.contains('ex-live')) { return; } // the picture is tapped first
+                e.preventDefault();
+                if (st.editing) { commit(); return; }
+                if (st.tool === 'eraser') { snapshot(true); st.labels.splice(st.labels.indexOf(l), 1); render(); changed(); return; }
+                try { n.setPointerCapture(e.pointerId); } catch (x) { /* older browsers */ }
+                d = { id: e.pointerId, x: e.clientX, y: e.clientY, ox: l.x, oy: l.y, moved: false };
+            });
+            n.addEventListener('pointermove', function (e) {
+                if (!d || d.id !== e.pointerId) { return; }
+                e.preventDefault();
+                var dx = e.clientX - d.x, dy = e.clientY - d.y;
+                if (!d.moved) {
+                    if (Math.abs(dx) < 5 && Math.abs(dy) < 5) { return; }
+                    d.moved = true; snapshot(true); n.classList.add('ex-drag');
+                }
+                var k = scale();
+                l.x = Math.max(0, Math.min(cv.width - 30, d.ox + dx * k));
+                l.y = Math.max(l.s / 2, Math.min(cv.height - l.s / 2, d.oy + dy * k));
+                place(n, l);
+            });
+            function end(e) {
+                if (!d || (e && e.pointerId !== undefined && d.id !== e.pointerId)) { return; }
+                var moved = d.moved;
+                d = null;
+                n.classList.remove('ex-drag');
+                if (moved) { changed(); } else if (e && e.type === 'pointerup') { edit(l, null); } // touched without moving: its text is changed
+            }
+            ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { n.addEventListener(ev, end); });
+        }
+        /** The box to type in: at the point touched (p), or over the word being changed (l). */
+        function edit(l, p) {
+            if (st.editing) { commit(); }
+            var at = l || p, inp = document.createElement('input'), r = cv.getBoundingClientRect();
+            inp.type = 'text'; inp.className = 'ex-txt-edit'; inp.maxLength = 60; inp.value = l ? l.t : '';
+            inp.placeholder = T.text_ph; inp.setAttribute('aria-label', T.text_prompt); inp.setAttribute('autocomplete', 'off'); inp.setAttribute('enterkeyhint', 'done');
+            inp.style.color = l ? l.c : st.color;
+            stage.appendChild(inp);
+            // where it was touched, but never out of the picture
+            inp.style.left = Math.max(2, Math.min(at.x / cv.width * r.width, r.width - inp.offsetWidth - 2)) + 'px';
+            inp.style.top = Math.max(20, Math.min(at.y / cv.height * r.height, r.height - 20)) + 'px';
+            st.editing = { inp: inp, l: l, p: p };
+            if (l) { [].forEach.call(stage.querySelectorAll('.ex-txt'), function (n) { if (n.__l === l) { n.style.visibility = 'hidden'; } }); }
+            inp.addEventListener('keydown', function (e) {
+                if (e.which === 13) { e.preventDefault(); e.stopPropagation(); commit(); } // (Enter must not send the consultation form)
+                if (e.which === 27) { e.preventDefault(); e.stopPropagation(); commit(true); }
+            });
+            inp.addEventListener('blur', function () { setTimeout(function () { if (st.editing && st.editing.inp === inp) { commit(); } }, 0); });
+            ['pointerdown', 'click'].forEach(function (ev) { inp.addEventListener(ev, function (e) { e.stopPropagation(); }); });
+            inp.focus();
+            if (l) { inp.select(); }
+        }
+        /** Ends the typing: the word is written (or changed; emptied: removed). cancel: left as it was. */
+        function commit(cancel) {
+            var ed = st.editing;
+            if (!ed) { return; }
+            st.editing = null;
+            var t = $.trim(ed.inp.value.replace(/\s+/g, ' '));
+            if (ed.inp.parentNode) { ed.inp.parentNode.removeChild(ed.inp); }
+            if (!cancel && ed.l && t !== ed.l.t) {
+                snapshot(true);
+                if (t) { ed.l.t = t; } else { st.labels.splice(st.labels.indexOf(ed.l), 1); }
+            } else if (!cancel && !ed.l && t) {
+                snapshot(true);
+                st.labels.push({ x: Math.min(ed.p.x, cv.width - 30), y: ed.p.y, t: t, c: st.color, s: st.thick ? 56 : 42 });
+            } else {
+                render();
+                return;
+            }
+            render();
+            changed();
+        }
+        st.commit = commit;
+        st.render = render;
+        if (window.ResizeObserver) { new ResizeObserver(layout).observe(stage); } else { $(window).on('resize', layout); }
+        $(el).closest('form').on('submit', function () { commit(); }); // a word still being typed is not lost
+
         // touch and pen: the picture is tapped first, then it takes the strokes (until "Done" or a touch elsewhere)
-        st.live = function (on) { el.classList.toggle('ex-live', !!on); if (!on) { st.tap = null; } };
-        cv.addEventListener('pointerup', function (e) {
+        st.live = function (on) { el.classList.toggle('ex-live', !!on); if (!on) { st.tap = null; commit(); } };
+        // (listened for on the whole picture: the tap may land on a word written on it)
+        stage.addEventListener('pointerdown', function (e) {
+            if (st.ctx && e.pointerType !== 'mouse' && !el.classList.contains('ex-live')) {
+                st.tap = { id: e.pointerId, x: e.clientX, y: e.clientY, at: Date.now() };
+            }
+        });
+        stage.addEventListener('pointerup', function (e) {
             var t = st.tap;
             if (!t || t.id !== e.pointerId) { return; }
             st.tap = null;
@@ -146,28 +282,19 @@ window.ExamForm = (function ($) {
                 if (window.innerWidth < 768) { st.full(true); } // a phone: the picture takes the whole screen
             }
         });
-        cv.addEventListener('pointercancel', function () { st.tap = null; }); // the page scrolled: not a tap
+        stage.addEventListener('pointercancel', function () { st.tap = null; }); // the page scrolled: not a tap
 
         cv.addEventListener('pointerdown', function (e) {
             if (!st.ctx || (e.pointerType === 'mouse' && e.button !== 0)) { return; }
             if (e.pointerType !== 'mouse' && !el.classList.contains('ex-live')) {
-                st.tap = { id: e.pointerId, x: e.clientX, y: e.clientY, at: Date.now() };
                 return; // not ours yet: the browser scrolls the page
             }
             e.preventDefault();
             var p = pt(e);
+            if (st.editing) { commit(); return; } // a word was being typed: touching the picture ends it, nothing more
             if (st.tool === 'text') {
-                var t = window.prompt(T.text_prompt);
-                if (t && $.trim(t)) {
-                    snapshot();
-                    var c = st.ctx;
-                    c.globalCompositeOperation = 'source-over';
-                    c.fillStyle = st.color;
-                    c.font = 'bold ' + Math.round((st.thick ? 20 : 15) * scale()) + 'px Arial, sans-serif';
-                    c.textBaseline = 'middle';
-                    c.fillText($.trim(t), p.x, p.y);
-                    changed();
-                }
+                // no browser pop-up: the word is typed on the picture itself, once the finger (or the mouse) is lifted there
+                st.word = { id: e.pointerId, x: e.clientX, y: e.clientY, p: p };
                 return;
             }
             snapshot();
@@ -185,10 +312,17 @@ window.ExamForm = (function ($) {
         ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (n) {
             cv.addEventListener(n, function () { if (st.down) { st.down = false; changed(); } });
         });
+        cv.addEventListener('pointerup', function (e) {
+            var w = st.word;
+            st.word = null;
+            if (w && w.id === e.pointerId && st.tool === 'text' && Math.abs(e.clientX - w.x) < 14 && Math.abs(e.clientY - w.y) < 14) { edit(null, w.p); }
+        });
+        cv.addEventListener('pointercancel', function () { st.word = null; });
 
         // full screen (finger / pen on a tablet or touch screen)
         function fit() {
-            var tools = el.querySelector('.ex-draw-tools').offsetHeight + el.querySelector('.ex-label').offsetHeight + 50;
+            var hint = el.querySelector('.ex-draw-hint');
+            var tools = el.querySelector('.ex-draw-tools').offsetHeight + el.querySelector('.ex-label').offsetHeight + (hint ? hint.offsetHeight : 0) + 50;
             var ratio = cv.width / Math.max(1, cv.height);
             stage.style.width = Math.floor(Math.min(window.innerWidth * 0.96, (window.innerHeight - tools) * ratio)) + 'px';
         }
@@ -198,14 +332,19 @@ window.ExamForm = (function ($) {
             var $b = $(el).find('[data-act="full"]');
             $b.find('i').toggleClass('fa-expand', !on).toggleClass('fa-compress', on);
             $b.attr('title', on ? T.done : $b.attr('aria-label'));
-            if (on) { fit(); $(window).on('resize.exd', fit); } else { stage.style.width = ''; $(window).off('resize.exd'); }
+            if (on) { fit(); $(window).on('resize.exd', fit); } else { commit(); stage.style.width = ''; $(window).off('resize.exd'); }
             st.live(on); // full screen is for drawing; leaving it gives the picture back to scrolling
+            layout();
         };
 
         $(el).on('click', '.ex-tool', function () {
             var $t = $(this);
+            commit();
+            // the "A" pressed again turns the writing off: back to the pen used before
+            if ($t.data('tool') === 'text' && st.tool === 'text') { $t = $(st.pen || el.querySelector('.ex-tool[data-tool="pen"]')); }
             st.tool = $t.data('tool');
             if ($t.data('color')) { st.color = $t.data('color'); }
+            if (st.tool === 'pen') { st.pen = $t[0]; }
             $(el).find('.ex-tool').removeClass('ex-on');
             $t.addClass('ex-on');
             el.setAttribute('data-tool', st.tool);
@@ -213,10 +352,15 @@ window.ExamForm = (function ($) {
         $(el).on('click', '.ex-act', function () {
             var act = $(this).data('act');
             if (!st.ctx) { return; }
+            commit();
             if (act === 'size') { st.thick = !st.thick; $(this).attr('aria-pressed', st.thick ? 'true' : 'false'); }
-            if (act === 'undo' && st.undo.length) { st.ctx.putImageData(st.undo.pop(), 0, 0); changed(); }
+            if (act === 'undo' && st.undo.length) {
+                var u = st.undo.pop();
+                if (u.img) { st.ctx.putImageData(u.img, 0, 0); }
+                st.labels = u.labels; render(); changed();
+            }
             if (act === 'clear' && !blank()) {
-                if (window.confirm(T.clear_confirm)) { snapshot(); st.ctx.clearRect(0, 0, cv.width, cv.height); changed(); }
+                if (window.confirm(T.clear_confirm)) { snapshot(); st.ctx.clearRect(0, 0, cv.width, cv.height); st.labels = []; render(); changed(); }
             }
             if (act === 'full') { st.full(!el.classList.contains('ex-full')); }
             if (act === 'lock') { if (el.classList.contains('ex-full')) { st.full(false); } else { st.live(false); } }
@@ -268,6 +412,7 @@ window.ExamForm = (function ($) {
         (function wait(n) {
             if (!st.ctx) { if (n < 80) { setTimeout(function () { wait(n + 1); }, 100); } return; }
             var cv = el.querySelector('.ex-draw-canvas'), data = el.querySelector('.ex-draw-data');
+            st.labels = []; st.render(); // (the words of the page before are in the image brought back)
             if (url === 'clear') { st.ctx.clearRect(0, 0, cv.width, cv.height); data.value = 'clear'; el.classList.remove('ex-drawn'); return; }
             var im = new Image();
             im.onload = function () { st.ctx.clearRect(0, 0, cv.width, cv.height); st.ctx.drawImage(im, 0, 0, cv.width, cv.height); data.value = url; el.classList.add('ex-drawn'); };
