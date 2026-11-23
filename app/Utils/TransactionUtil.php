@@ -5278,6 +5278,9 @@ class TransactionUtil extends Util
             }
         }
 
+        //PosInnova online channels: a sale that rang an E-Ride order up is gone, so the order is waiting again.
+        \App\Utils\ChannelOrders::afterDelete($business_id, $transaction_id);
+
         $output = [
             'success' => true,
             'msg' => __('lang_v1.sale_delete_success'),

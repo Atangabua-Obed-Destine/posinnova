@@ -179,6 +179,14 @@
     <script src="{{ asset('js/product.js?v=' . $asset_v) }}"></script>
     <script src="{{ asset('js/opening_stock.js?v=' . $asset_v) }}"></script>
     @include('sale_pos.partials.keyboard_shortcuts')
+    @php
+        // PosInnova online channels: E-Ride orders waiting for this till's location.
+        $channel_locations = in_array('eride', (array) (session('business.enabled_modules') ?: []), true)
+            ? \App\ChannelLink::where('business_id', session('user.business_id'))->live()->pluck('location_id')->all() : [];
+    @endphp
+    @if (! empty($channel_locations) && auth()->user()->can('sell.create'))
+        @include('channel.pos_panel')
+    @endif
 
     <!-- Call restaurant module if defined -->
     @if (in_array('tables', $enabled_modules) ||

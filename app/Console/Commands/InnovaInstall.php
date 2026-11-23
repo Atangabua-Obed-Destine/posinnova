@@ -91,6 +91,9 @@ class InnovaInstall extends Command
         $this->callSilent('view:clear');
         $this->callSilent('cache:clear');
 
+        // Not fatal: the shop works without it, but nothing automatic runs (E-Ride stock, reminders, backups).
+        $this->step('Starting the automatic task (every minute)', fn () => $this->scheduleTask() || true);
+
         $link = $url.'/setup/'.InnovaSetup::issueToken();
 
         $this->newLine();
@@ -315,6 +318,45 @@ class InnovaInstall extends Command
         }
 
         return $this->callSilent('db:seed', ['--force' => true]) === 0;
+    }
+
+    /**
+     * The Laravel scheduler, every minute. On Windows: a task in Task Scheduler, as SYSTEM when
+     * the installer runs as administrator (runs even when nobody is logged in), else for this
+     * user, started hidden through a small .vbs so no window flashes every minute.
+     * Elsewhere: the cron line to add is printed.
+     */
+    private function scheduleTask(): bool
+    {
+        $php = PHP_BINARY;
+        $base = base_path();
+        if (PHP_OS_FAMILY !== 'Windows') {
+            $this->newLine();
+            $this->line('  Add this line with "crontab -e" (as the web server user):');
+            $this->line('  * * * * * cd '.$base.' && '.$php.' artisan schedule:run >> /dev/null 2>&1');
+
+            return true;
+        }
+        $vbs = storage_path('app/innova-schedule.vbs');
+        File::put($vbs, "Set s = CreateObject(\"WScript.Shell\")\r\ns.CurrentDirectory = \"".$base."\"\r\ns.Run \"\"\"".$php."\"\" artisan schedule:run\", 0, False\r\n");
+        $tr = 'wscript.exe "'.$vbs.'"';
+        $tr_arg = '"wscript.exe \\"'.$vbs.'\\""'; // schtasks wants the inner quotes as \" (escapeshellarg drops them on Windows)
+        $name = 'I-NNOVA POS';
+        $out = [];
+        $code = 1;
+        exec('schtasks /Create /F /SC MINUTE /MO 1 /TN "'.$name.'" /RU SYSTEM /TR '.$tr_arg.' 2>&1', $out, $code);
+        if ($code !== 0) {
+            $out = [];
+            exec('schtasks /Create /F /SC MINUTE /MO 1 /TN "'.$name.'" /TR '.$tr_arg.' 2>&1', $out, $code);
+        }
+        if ($code !== 0) {
+            $this->line('  <fg=yellow>Could not add the task: '.trim(implode(' ', $out)).'</>');
+            $this->line('  <fg=yellow>Add it by hand in Task Scheduler: every minute, run '.$tr.'</>');
+
+            return false;
+        }
+
+        return true;
     }
 
     private function prepareFolders(): bool

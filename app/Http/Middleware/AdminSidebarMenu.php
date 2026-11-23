@@ -703,6 +703,20 @@ class AdminSidebarMenu
                 }
             }
 
+            // PosInnova online channels: E-Ride linking and the products sent to it
+            if (in_array('eride', $enabled_modules) && auth()->user()->can('business_settings.access')) {
+                $menu->dropdown(
+                    __('channel.menu'),
+                    function ($sub) {
+                        $C = \App\Http\Controllers\ChannelController::class;
+                        $on = request()->segment(1) == 'eride';
+                        $sub->url(action([$C, 'index']), __('channel.menu_link'), ['icon' => '', 'active' => $on && request()->segment(2) == null]);
+                        $sub->url(action([$C, 'products']), __('channel.menu_products'), ['icon' => '', 'active' => $on && request()->segment(2) == 'products']);
+                    },
+                    ['icon' => '<svg aria-hidden="true" class="tw-size-5 tw-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M5 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M7 17h8"></path><path d="M3 9l1.5 -4h9l3 4"></path><path d="M3 9h18v6h-2"></path></svg>']
+                )->order(84);
+            }
+
             //Expense dropdown
             if (in_array('expenses', $enabled_modules) && (auth()->user()->can('all_expense.access') || auth()->user()->can('view_own_expense'))) {
                 $menu->dropdown(

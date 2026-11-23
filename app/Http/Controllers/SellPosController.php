@@ -974,6 +974,13 @@ class SellPosController extends Controller
                     }
                 }
 
+                //PosInnova online channels: the salesperson rang an E-Ride order up on this sale.
+                //Recorded with the sale (one order, one sale); E-Ride is told after the commit.
+                $channel_ring = null;
+                if ($request->filled('channel_order_id')) {
+                    $channel_ring = \App\Utils\ChannelOrders::afterSale($transaction, $request->input('channel_order_id'));
+                }
+
                 $this->moduleUtil->getModuleData('after_sale_saved', ['transaction' => $transaction, 'input' => $input]);
 
                 Media::uploadMedia($business_id, $transaction, $request, 'documents');
@@ -1024,6 +1031,17 @@ class SellPosController extends Controller
                 $output = ['success' => 1, 'msg' => $msg, 'receipt' => $receipt];
                 //PosInnova: the customer display shows the receipt number on its thank-you screen
                 $output['invoice_no'] = $transaction->invoice_no;
+
+                //PosInnova online channels: tell E-Ride now; if the line is down the scheduler retries.
+                if (! empty($channel_ring['ok'])) {
+                    $sent = \App\Utils\ChannelOrders::sendNow($channel_ring['link'], $channel_ring['outbox_id']);
+                    $output['channel'] = ['rung_up' => true, 'delivered' => $sent['delivered'], 'matches' => $sent['matches']];
+                    if ($sent['cancelled']) {
+                        $output['channel']['warning'] = __('channel.pos_cancelled_meanwhile', ['invoice' => $transaction->invoice_no]);
+                    }
+                } elseif (! empty($channel_ring['message'])) {
+                    $output['channel'] = ['rung_up' => false, 'warning' => $channel_ring['message']];
+                }
 
                 if (!empty($whatsapp_link)) {
                     $output['whatsapp_link'] = $whatsapp_link;
@@ -2037,6 +2055,9 @@ class SellPosController extends Controller
                 }
 
                 SellCreatedOrModified::dispatch($transaction);
+
+                //PosInnova online channels: an edited sale that rang up an E-Ride order sends the new figures.
+                \App\Utils\ChannelOrders::afterUpdate($transaction);
 
                 DB::commit();
 

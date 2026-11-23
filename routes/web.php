@@ -392,6 +392,24 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('/stock-adjustments/get_product_row', [StockAdjustmentController::class, 'getProductRow']);
     Route::resource('stock-adjustments', StockAdjustmentController::class);
 
+    // PosInnova online channels: E-Ride (Settings › Modules › E-Ride). POS only calls out.
+    Route::prefix('eride')->group(function () {
+        $C = \App\Http\Controllers\ChannelController::class;
+        Route::get('/', [$C, 'index']);
+        Route::post('/link/{location_id}', [$C, 'save']);
+        Route::post('/link/{location_id}/test', [$C, 'test']);
+        Route::post('/link/{location_id}/resend', [$C, 'resend']);
+        Route::post('/link/{location_id}/toggle', [$C, 'toggle']);
+        Route::post('/link/{location_id}/remove', [$C, 'remove']);
+        Route::get('/products', [$C, 'products']);
+        Route::post('/products/bulk', [$C, 'bulk']);
+        Route::post('/products/categories', [$C, 'categories']);
+        Route::post('/products/{product_id}', [$C, 'saveProduct']);
+        Route::get('/pos/pending', [$C, 'posPending']);
+        Route::get('/pos/order/{order_id}', [$C, 'posOrder']);
+        Route::post('/pos/cancel-seen', [$C, 'posCancelSeen']);
+    });
+
     // PosInnova hotel module (Settings › Modules › Hotel)
     Route::prefix('hotel')->group(function () {
         $H = \App\Http\Controllers\HotelController::class;
