@@ -11,7 +11,7 @@ return [
     // Linking
     'setup_lead' => 'Link each shop to its E-Ride branch. POS then sends the products you choose, with their prices and stock, and shows paid E-Ride orders on the POS screen. Nothing is sold automatically: staff ring each order up themselves.',
     'step1_t' => 'Get the key from E-Ride',
-    'step1_d' => 'In the E-Ride partner portal: Settings › POS Innova › Link a POS, for the right branch. Copy the key (it starts with erk_).',
+    'step1_d' => 'In the E-Ride partner portal: Store tab › "POS Innova" card (Set up) › Link a POS, for the right branch. Copy the key (it starts with erk_).',
     'step2_t' => 'Paste it here, for the same shop',
     'step2_d' => 'Also paste the E-Ride address, and choose what customers see and the payment to propose.',
     'step3_t' => 'Choose the products',

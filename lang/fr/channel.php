@@ -10,7 +10,7 @@ return [
 
     'setup_lead' => 'Reliez chaque boutique à sa succursale E-Ride. La caisse envoie alors les produits choisis, avec leurs prix et leur stock, et affiche les commandes E-Ride payées sur l\'écran de caisse. Rien n\'est vendu automatiquement : le personnel encaisse chaque commande lui-même.',
     'step1_t' => 'Obtenir la clé auprès d\'E-Ride',
-    'step1_d' => 'Dans le portail partenaire E-Ride : Paramètres › POS Innova › Lier une caisse, pour la bonne succursale. Copiez la clé (elle commence par erk_).',
+    'step1_d' => 'Dans le portail partenaire E-Ride : onglet Boutique › carte « POS Innova » (Configurer) › Link a POS, pour la bonne succursale. Copiez la clé (elle commence par erk_).',
     'step2_t' => 'La coller ici, pour la même boutique',
     'step2_d' => 'Collez aussi l\'adresse E-Ride, et choisissez ce que voient les clients et le paiement à proposer.',
     'step3_t' => 'Choisir les produits',
