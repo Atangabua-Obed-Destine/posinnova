@@ -25,6 +25,17 @@ class HotelReservation extends Model
         return $this->belongsTo(Contact::class);
     }
 
+    public function group()
+    {
+        return $this->belongsTo(HotelGroup::class, 'group_id');
+    }
+
+    /** Who sleeps there: the name given for the room, else the guest (payer). */
+    public function sleeperName()
+    {
+        return $this->occupant ?: optional($this->contact)->name;
+    }
+
     public function roomType()
     {
         return $this->belongsTo(HotelRoomType::class, 'room_type_id');

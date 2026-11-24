@@ -5,10 +5,10 @@
 @include('hotel.partials.styles')
 @php
     $R = \App\Http\Controllers\HotelReservationController::class;
-    $name = optional($res->contact)->name;
+    $name = $res->sleeperName();
     $parts = preg_split('/\s+/', trim((string) $name), 2);
     $card0 = $last ? collect(\App\HotelGuest::FIELDS)->mapWithKeys(fn ($f) => [$f => $last->{$f} instanceof \Carbon\Carbon ? $last->{$f}->toDateString() : $last->{$f}])->all()
-        : ['surname' => mb_strtoupper($parts[1] ?? $parts[0] ?? ''), 'first_names' => isset($parts[1]) ? $parts[0] : '', 'phone' => optional($res->contact)->mobile];
+        : ['surname' => mb_strtoupper($parts[1] ?? $parts[0] ?? ''), 'first_names' => isset($parts[1]) ? $parts[0] : '', 'phone' => $res->occupant ? '' : optional($res->contact)->mobile];
     $cards = old('guests', [$card0]);
     $want_room = old('room_id', $res->room_id ?: optional($rooms->first(fn ($r) => $sellable($r)))->id);
 @endphp

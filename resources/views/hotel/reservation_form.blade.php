@@ -25,6 +25,7 @@
             <a class="ht-link" href="{{ action([$R, 'index']) }}">‹ {{ __('hotel.menu_reservations') }}</a>
             <h1 style="margin-top:6px;">{{ $walk_in ? __('hotel.walk_in') : __('hotel.new_reservation') }}</h1>
             @if ($walk_in)<p>{{ __('hotel.walk_in_lead') }}</p>@endif
+            <p class="ht-small" style="margin:4px 0 0;">{{ __('hotel.grp_hint') }} <a class="ht-link" href="{{ action([\App\Http\Controllers\HotelGroupController::class, 'create']) }}" id="ht_to_group">{{ __('hotel.grp_new') }}</a></p>
         </div>
     </div>
 

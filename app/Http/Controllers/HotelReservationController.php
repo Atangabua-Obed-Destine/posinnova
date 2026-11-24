@@ -9,6 +9,7 @@ use App\HotelRoomType;
 use App\Utils\Hotel;
 use App\Utils\HotelException;
 use App\Utils\HotelFolio;
+use App\Utils\HotelGroups;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -21,7 +22,7 @@ class HotelReservationController extends HotelBaseController
         $biz = $this->biz();
         $status = $request->input('status', 'upcoming');
         $q = trim((string) $request->input('q'));
-        $query = HotelReservation::where('business_id', $biz)->with(['contact', 'roomType', 'room']);
+        $query = HotelReservation::where('business_id', $biz)->with(['contact', 'roomType', 'room', 'group']);
         if ($status === 'upcoming') {
             $query->whereIn('status', ['tentative', 'confirmed'])->orderBy('arrival');
         } elseif ($status === 'in_house') {
@@ -32,7 +33,9 @@ class HotelReservationController extends HotelBaseController
             $query->orderByDesc('id');
         }
         if ($q !== '') {
-            $query->where(fn ($w) => $w->where('ref_no', 'like', '%'.$q.'%')->orWhereHas('contact', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('mobile', 'like', '%'.$q.'%')));
+            $query->where(fn ($w) => $w->where('ref_no', 'like', '%'.$q.'%')->orWhere('occupant', 'like', '%'.$q.'%')
+                ->orWhereHas('group', fn ($g) => $g->where('ref_no', 'like', '%'.$q.'%'))
+                ->orWhereHas('contact', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('mobile', 'like', '%'.$q.'%')));
         }
 
         return view('hotel.reservations', ['list' => $query->paginate(30)->withQueryString(), 'status' => $status, 'q' => $q, 'folio' => new HotelFolio(), 'fmt' => fn ($v) => $this->money($v)]);
@@ -218,7 +221,8 @@ class HotelReservationController extends HotelBaseController
         if ($res->room && ! $rooms->contains('id', $res->room_id)) {
             $rooms->prepend($res->room);
         }
-        $last = HotelGuest::where('business_id', $biz)->where('contact_id', $res->contact_id)->where('is_primary', 1)->orderByDesc('id')->first();
+        // a group room: the payer's last card is someone else's (the person sleeping there is named on the room)
+        $last = $res->group_id ? null : HotelGuest::where('business_id', $biz)->where('contact_id', $res->contact_id)->where('is_primary', 1)->orderByDesc('id')->first();
         $folio = new HotelFolio();
 
         return view('hotel.checkin', [
@@ -332,8 +336,16 @@ class HotelReservationController extends HotelBaseController
             \Log::error('Hotel catch-up: '.$e->getMessage());
         }
         $res = $this->reservation($id);
+        $group = $res->group_id ? \App\HotelGroup::with('contact')->find($res->group_id) : null;
+        $gmode = null;
+        if ($group) {
+            // owing: may leave, what it owes stays on the group | last: settles the group | each: an ordinary stay
+            $gmode = HotelGroups::leavesOwing($res) ? 'owing' : (HotelGroups::settlesGroup($res) ? 'last' : 'each');
+        }
 
         return view('hotel.checkout', [
+            'group' => $group, 'gmode' => $gmode,
+            'gsum' => $gmode === 'last' ? HotelGroups::summary($group) : null, 'gdue' => $gmode === 'last' ? HotelGroups::due($group) : 0,
             'res' => $res, 'statement' => $folio->statement($res), 'balance' => $folio->balance($res),
             'late_fee' => Hotel::lateCheckoutFee($res), 'late_posted' => $res->folioLines()->where('kind', 'late_checkout')->whereNull('voided_at')->exists(),
             'early' => $res->departure->gt(Hotel::today()), 'payment_types' => $this->tu->payment_types(null, false, $this->biz()),
@@ -355,14 +367,25 @@ class HotelReservationController extends HotelBaseController
                 }
             }
             $pay = $request->filled('amount') ? (float) $this->tu->num_uf($request->input('amount')) : 0;
+            $last_of_group = HotelGroups::settlesGroup($res);
             if ($pay > 0) {
-                $folio->receive($res->fresh(), $pay, $request->input('method', 'cash'), null, auth()->id());
+                if ($last_of_group) {
+                    // the last room of the group: the money settles what every room still owes
+                    HotelGroups::receive(\App\HotelGroup::find($res->group_id), $pay, $request->input('method', 'cash'), null, auth()->id());
+                } else {
+                    $folio->receive($res->fresh(), $pay, $request->input('method', 'cash'), null, auth()->id());
+                }
             }
             $leave = $request->input('leave_balance') && self::can('hotel.manager');
+            $owing = HotelGroups::leavesOwing($res);
             $res = Hotel::checkOut($res->fresh(), auth()->id(), $leave);
-            $msg = __('hotel.checked_out', ['name' => optional($res->contact)->name, 'room' => optional($res->room)->number]);
+            $msg = __('hotel.checked_out', ['name' => $res->sleeperName(), 'room' => optional($res->room)->number]);
             $balance = $folio->balance($res);
-            if ($balance > 0.004) {
+            if ($balance > 0.004 && $owing) {
+                $msg .= ' '.__('hotel.grp_left_on_group', ['amount' => $this->money($balance), 'ref' => optional($res->group)->ref_no]);
+            } elseif ($last_of_group && ($gdue = HotelGroups::due($res->group)) > 0.004) {
+                $msg .= ' '.__('hotel.left_on_account', ['amount' => $this->money($gdue)]);
+            } elseif ($balance > 0.004) {
                 $msg .= ' '.__('hotel.left_on_account', ['amount' => $this->money($balance)]);
             } elseif ((float) $res->credit > 0.004) {
                 $msg .= ' '.__('hotel.credit_kept', ['amount' => $this->money($res->credit)]);

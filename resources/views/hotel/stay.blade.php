@@ -23,7 +23,7 @@ details.ht-panel-d > summary { font-weight: 700; }
     <div class="ht-head">
         <div>
             <a class="ht-link" href="{{ action([$R, 'index'], ['status' => $in ? 'in_house' : 'upcoming']) }}">‹ {{ __('hotel.menu_reservations') }}</a>
-            <h1 style="margin-top:6px;">{{ $res->room ? __('hotel.room') . ' ' . $res->room->number . ' · ' : '' }}{{ optional($res->contact)->name }}
+            <h1 style="margin-top:6px;">{{ $res->room ? __('hotel.room') . ' ' . $res->room->number . ' · ' : '' }}{{ $res->sleeperName() }}
                 <span class="ht-pill ht-p-{{ $res->status }}" style="vertical-align:4px;" id="ht_status_pill">{{ __('hotel.st_' . $res->status) }}</span></h1>
             <p>{{ $res->ref_no }} · {{ optional($res->roomType)->name }}, {{ __('hotel.plan_' . $res->rate_plan) }} · {{ $res->arrival->format('d/m/Y') }} → {{ $res->departure->format('d/m/Y') }},
                 {{ trans_choice('hotel.n_nights', $res->nights(), ['n' => $res->nights()]) }} · {{ trans_choice('hotel.n_adults', $res->adults, ['n' => $res->adults]) }}@if ($res->children), {{ trans_choice('hotel.n_children', $res->children, ['n' => $res->children]) }}@endif</p>
@@ -38,6 +38,14 @@ details.ht-panel-d > summary { font-weight: 700; }
         </div>
     </div>
 
+    @if ($res->group_id && $res->group)
+        @php $grp = $res->group; @endphp
+        <div class="ht-note blue" id="ht_stay_group">{!! __('hotel.grp_stay_note', [
+            'group' => '<a class="ht-link" href="' . e(action([\App\Http\Controllers\HotelGroupController::class, 'show'], [$grp->id])) . '">' . e($grp->ref_no) . '</a>',
+            'payer' => '<strong>' . e(optional($res->contact)->name) . '</strong>',
+            'how' => e($grp->pays === 'each' ? __('hotel.grp_pays_each') : __('hotel.grp_pays_payer')),
+        ]) !!}</div>
+    @endif
     @if ($res->notes)<div class="ht-note blue">{{ $res->notes }}</div>@endif
     @if ($cover)
         @if ($cover['to_collect'] > 0.004)

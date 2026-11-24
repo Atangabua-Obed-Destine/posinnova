@@ -6,12 +6,18 @@
 @php
     $R = \App\Http\Controllers\HotelReservationController::class;
     $s = \App\Utils\Hotel::settings($res->business_id);
+    $gmode = $gmode ?? null;
+    $late_due = $late_fee > 0 && ! $late_posted ? $late_fee : 0;
+    // what is to pay here: the room's bill, or for the last room of a "payer settles everything" group, the whole group's
+    $due0 = $gmode === 'last' ? max(0, $gdue) : max(0, $balance);
+    // a room that may leave owing: nothing is proposed, what it owes stays on the group
+    $propose = $gmode === 'owing' ? 0 : $due0 + $late_due;
 @endphp
 <section class="content ht" id="ht_checkout">
     <div class="ht-head">
         <div>
             <a class="ht-link" href="{{ action([$R, 'show'], [$res->id]) }}">‹ {{ $res->ref_no }}</a>
-            <h1 style="margin-top:6px;">{{ __('hotel.check_out') }} · {{ __('hotel.room') }} {{ optional($res->room)->number }} · {{ optional($res->contact)->name }}</h1>
+            <h1 style="margin-top:6px;">{{ __('hotel.check_out') }} · {{ __('hotel.room') }} {{ optional($res->room)->number }} · {{ $res->sleeperName() }}</h1>
             <p>{{ optional($res->roomType)->name }}, {{ __('hotel.plan_' . $res->rate_plan) }} · {{ $res->arrival->format('d/m') }} → {{ $res->departure->format('d/m/Y') }}</p>
         </div>
     </div>
@@ -26,6 +32,23 @@
                     <label style="font-weight:600;margin:0;"><input type="radio" name="late" value="waive" data-fee="0"> {{ __('hotel.waive_fee') }}</label>
                 </span>
             </div>
+        @endif
+        @if ($group)
+            @php $glink = '<a class="ht-link" href="' . e(action([\App\Http\Controllers\HotelGroupController::class, 'show'], [$group->id])) . '">' . e($group->ref_no . ' · ' . optional($group->contact)->name) . '</a>'; @endphp
+            @if ($gmode === 'owing')
+                <div class="ht-note blue" id="ht_co_group" data-mode="owing">{!! __('hotel.grp_co_owing', ['group' => $glink]) !!}</div>
+            @elseif ($gmode === 'last')
+                <div class="ht-note amber" id="ht_co_group" data-mode="last">{!! __('hotel.grp_co_last', ['group' => $glink]) !!}
+                    <div style="margin-top:8px;">
+                    @foreach ($gsum['rows'] as $gr)
+                        @continue($gr['balance'] <= 0.004 || in_array($gr['res']->status, ['cancelled', 'no_show']))
+                        <div style="display:flex;justify-content:space-between;gap:12px;"><span>{{ __('hotel.room') }} {{ optional($gr['res']->room)->number ?: '—' }} · {{ $gr['res']->sleeperName() }}@if ($gr['res']->id !== $res->id) <span class="ht-muted">({{ __('hotel.st_' . $gr['res']->status) }})</span>@endif</span><strong>{{ $fmt($gr['balance']) }}</strong></div>
+                    @endforeach
+                    </div>
+                </div>
+            @else
+                <div class="ht-note blue" id="ht_co_group" data-mode="each">{!! __('hotel.grp_co_each', ['group' => $glink]) !!}</div>
+            @endif
         @endif
         @if ($early)
             <div class="ht-note blue">{{ __('hotel.early_note', ['date' => $res->departure->format('d/m')]) }}</div>
@@ -51,11 +74,12 @@
             </div>
 
             <aside class="ht-card" style="flex:1 1 320px;max-width:420px;min-width:280px;border-top:4px solid #1849a9;">
-                <h2>{{ __('hotel.to_pay_now') }}</h2>
-                <div style="font-size:28px;font-weight:700;margin-bottom:12px;" id="ht_co_due" data-balance="{{ max(0, $balance) }}">{{ $fmt(max(0, $balance) + ($late_fee > 0 && ! $late_posted ? $late_fee : 0)) }}</div>
+                <h2>{{ $gmode === 'last' ? __('hotel.grp_co_group_due') : ($gmode === 'owing' ? __('hotel.grp_co_room_owes') : __('hotel.to_pay_now')) }}</h2>
+                <div style="font-size:28px;font-weight:700;margin-bottom:12px;" id="ht_co_due" data-balance="{{ $due0 }}">{{ $fmt($due0 + $late_due) }}</div>
+                @if ($gmode === 'owing' && $due0 + $late_due > 0.004)<div class="ht-note blue" style="margin-top:-4px;">{{ __('hotel.grp_co_stays', ['amount' => $fmt($due0 + $late_due)]) }}</div>@endif
                 @if ($balance < -0.004)<div class="ht-note green">{{ __('hotel.credit_left_note', ['amount' => $fmt(-$balance)]) }}</div>@endif
                 <div class="ht-f"><label for="ht_co_amount">{{ __('hotel.amount_received') }}</label>
-                    <input class="ht-in" name="amount" id="ht_co_amount" inputmode="decimal" value="{{ $num(max(0, $balance) + ($late_fee > 0 && ! $late_posted ? $late_fee : 0)) }}"></div>
+                    <input class="ht-in" name="amount" id="ht_co_amount" inputmode="decimal" value="{{ $propose > 0.004 ? $num($propose) : '' }}" data-owing="{{ $gmode === 'owing' ? 1 : 0 }}"></div>
                 <div class="ht-f"><label for="ht_co_method">{{ __('hotel.paid_by') }}</label>
                     <select class="ht-in" name="method" id="ht_co_method">@foreach ($payment_types as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></div>
                 @if ($can_leave_balance)
@@ -80,14 +104,14 @@
         'stay_l' => __('hotel.stay'), 'stay' => $res->arrival->format('d/m/Y') . ' → ' . $res->departure->format('d/m/Y'),
         'charges_l' => __('hotel.charges'), 'charges' => (float) $statement['charges'], 'payments_l' => __('hotel.payments'), 'payments' => (float) $statement['payments'],
         'due_l' => __('hotel.to_pay_now'), 'received' => __('hotel.amount_received'), 'waived' => __('hotel.waive_fee'),
-        'room_l' => __('hotel.room'), 'credit_left' => $balance < -0.004 ? __('hotel.credit_left_note', ['amount' => $fmt(-$balance)]) : '',
+        'room_l' => __('hotel.room'), 'owing' => $gmode === 'owing' ? __('hotel.grp_cf_stays') : '', 'credit_left' => $balance < -0.004 ? __('hotel.credit_left_note', ['amount' => $fmt(-$balance)]) : '',
     ]) !!};
     var base = parseFloat(due.getAttribute('data-balance')) || 0;
     document.querySelectorAll('#ht_late input[name=late]').forEach(function (r) {
         r.addEventListener('change', function () {
             var v = base + (parseFloat(this.getAttribute('data-fee')) || 0);
             due.textContent = window.__currency_trans_from_en ? __currency_trans_from_en(v, true) : v;
-            amt.value = window.__currency_trans_from_en ? __currency_trans_from_en(v, false) : v;
+            if (amt.getAttribute('data-owing') !== '1') amt.value = window.__currency_trans_from_en ? __currency_trans_from_en(v, false) : v;
         });
     });
     document.getElementById('ht_checkout_form').addEventListener('submit', function () { var b = document.getElementById('ht_co_submit'); setTimeout(function () { b.disabled = true; }, 0); });
@@ -98,7 +122,7 @@
         var late = document.querySelector('#ht_late input[name=late]:checked'), fee = late ? parseFloat(late.getAttribute('data-fee')) || 0 : 0;
         var owe = base + fee, got = C.num(amt.value), leave = document.querySelector('input[name=leave_balance]');
         var short = owe - got, notes = [];
-        if (short > 0.004) notes.push((leave && leave.checked ? X.short_leave : X.short).replace(':amount', C.money(short)));
+        if (short > 0.004) notes.push((K.owing ? K.owing : (leave && leave.checked ? X.short_leave : X.short)).replace(':amount', C.money(short)));
         if (short < -0.004) notes.push(X.credit.replace(':amount', C.money(-short)));
         if (K.credit_left) notes.push(K.credit_left);
         return { title: K.title, intro: K.intro, amount: got, amountLabel: K.received,
@@ -108,7 +132,7 @@
                 late ? [X.late, fee > 0 ? C.money(fee) : K.waived] : null,
                 [K.due_l, C.money(owe), 'strong'],
                 [K.received, got > 0 ? C.money(got) + ' · ' + C.shown(document.getElementById('ht_co_method')) : X.nothing_now],
-                [X.still, C.money(Math.max(0, short)), short > 0.004 ? 'warn' : 'strong'],
+                [X.still, C.money(Math.max(0, short)), short > 0.004 && !K.owing ? 'warn' : 'strong'],
             ],
             note: notes.join(' '),
         };

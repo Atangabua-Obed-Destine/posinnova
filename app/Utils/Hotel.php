@@ -655,8 +655,16 @@ class Hotel
             $folio->releaseNightsFrom($res, $first_not_slept, $user_id);
             $res->refresh(); // the bill work above changed the stay's credit in the database
             $balance = $folio->balance($res);
-            if ($balance > 0.004 && ! $allow_balance) {
+            // a room of a "payer settles everything" group may leave owing: it stays on the group
+            if ($balance > 0.004 && ! $allow_balance && ! HotelGroups::leavesOwing($res)) {
                 throw new HotelException(__('hotel.err_balance', ['amount' => (new Util())->num_f($balance)]));
+            }
+            // its last room settles the whole group
+            if (! $allow_balance && HotelGroups::settlesGroup($res)) {
+                $due = HotelGroups::due(\App\HotelGroup::find($res->group_id));
+                if ($due > 0.004) {
+                    throw new HotelException(__('hotel.grp_err_due', ['amount' => (new Util())->num_f($due)]));
+                }
             }
             $res->departure = $today > $res->arrival->toDateString() ? $today : $res->arrival->copy()->addDay()->toDateString();
             $res->status = 'checked_out';

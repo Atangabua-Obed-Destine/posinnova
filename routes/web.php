@@ -436,6 +436,13 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::post('/rooms/{id}/housekeeping', [$H, 'markRoom'])->whereNumber('id');
         Route::get('/guests/search', [$H, 'guestSearch']);
         Route::get('/availability', [$H, 'availability']);
+        $G = \App\Http\Controllers\HotelGroupController::class;
+        Route::get('/groups/create', [$G, 'create']);
+        Route::post('/groups', [$G, 'store']);
+        Route::get('/groups/{id}', [$G, 'show'])->whereNumber('id');
+        Route::post('/groups/{id}/payment', [$G, 'payment'])->whereNumber('id');
+        Route::post('/groups/{id}/rooms', [$G, 'addRoom'])->whereNumber('id');
+        Route::get('/groups/{id}/print', [$G, 'printBill'])->whereNumber('id');
         Route::get('/reservations', [$R, 'index']);
         Route::get('/reservations/create', [$R, 'create']);
         Route::post('/reservations', [$R, 'store']);

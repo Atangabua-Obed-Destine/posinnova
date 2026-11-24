@@ -18,7 +18,10 @@
                 <input class="ht-in" type="search" name="q" value="{{ $q }}" placeholder="{{ __('hotel.search_res') }}" aria-label="{{ __('hotel.search_res') }}" style="min-width:240px;">
                 <button class="ht-btn">{{ __('hotel.search') }}</button>
             </form>
-            @if ($u->can('hotel.reservations') || $u->can('hotel.front_desk'))<a class="ht-btn pri" href="{{ action([$R, 'create']) }}">+ {{ __('hotel.new_reservation') }}</a>@endif
+            @if ($u->can('hotel.reservations') || $u->can('hotel.front_desk'))
+                <a class="ht-btn" href="{{ action([\App\Http\Controllers\HotelGroupController::class, 'create']) }}" id="ht_btn_group">+ {{ __('hotel.grp_new') }}</a>
+                <a class="ht-btn pri" href="{{ action([$R, 'create']) }}">+ {{ __('hotel.new_reservation') }}</a>
+            @endif
         </div>
     </div>
     <nav class="ht-tabs" aria-label="{{ __('hotel.status') }}">
@@ -35,7 +38,9 @@
                     @php $bal = $folio->balance($r); @endphp
                     <tr>
                         <td><a class="ht-link" href="{{ action([$R, 'show'], [$r->id]) }}">{{ $r->ref_no }}</a><div class="ht-muted ht-small">{{ __('hotel.source_' . $r->source) }}</div></td>
-                        <td><strong>{{ optional($r->contact)->name }}</strong><div class="ht-muted ht-small">{{ optional($r->contact)->mobile }}</div></td>
+                        <td><strong>{{ $r->sleeperName() }}</strong>
+                            @if ($r->group_id)<div class="ht-small"><a class="ht-link" href="{{ action([\App\Http\Controllers\HotelGroupController::class, 'show'], [$r->group_id]) }}">{{ optional($r->group)->ref_no }}</a> · {{ optional($r->contact)->name }}</div>
+                            @else<div class="ht-muted ht-small">{{ optional($r->contact)->mobile }}</div>@endif</td>
                         <td>{{ optional($r->roomType)->name }} · {{ optional($r->room)->number ?: '—' }}</td>
                         <td style="white-space:nowrap;">{{ $r->arrival->format('d/m/Y') }} → {{ $r->departure->format('d/m') }}<div class="ht-muted ht-small">{{ trans_choice('hotel.n_nights', $r->nights(), ['n' => $r->nights()]) }}</div></td>
                         <td><span class="ht-pill ht-p-{{ $r->status }}">{{ __('hotel.st_' . $r->status) }}</span></td>
