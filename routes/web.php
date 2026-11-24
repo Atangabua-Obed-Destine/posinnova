@@ -411,6 +411,9 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::post('/pos/unbill', [$C, 'posUnbill']);
     });
 
+    // PosInnova accounting (Settings › Modules › Accounting): the paxhitestbed ledger
+    require __DIR__.'/ledger.php';
+
     // PosInnova hotel module (Settings › Modules › Hotel)
     Route::prefix('hotel')->group(function () {
         $H = \App\Http\Controllers\HotelController::class;

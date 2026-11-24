@@ -795,6 +795,39 @@ class AdminSidebarMenu
                 )->order(50);
             }
 
+            // PosInnova accounting (the paxhitestbed ledger): same items, same order as paxhitestbed's
+            // Accounting menu (its Reports and Transaction Mappings sub-groups listed in place).
+            if (in_array('accounting', $enabled_modules) && \App\Ledger\Permissions::can(...\App\Ledger\Permissions::all())) {
+                $menu->dropdown(
+                    __('ledger.menu_accounting'),
+                    function ($sub) {
+                        $s2 = request()->segment(2);
+                        $P = fn (...$p) => \App\Ledger\Permissions::can(...$p);
+                        $items = [
+                            ['ledger.chart-of-accounts.index', 'menu_chart_of_accounts', ['chart-of-accounts-view'], $s2 == 'chart-of-accounts'],
+                            ['ledger.fiscal-years.index', 'menu_fiscal_years', ['accounting-period-view'], $s2 == 'fiscal-years'],
+                            ['ledger.journal-entries.index', 'menu_journal_entries', ['journal-entry-view'], in_array($s2, ['journal-entries', 'journal-entries-trash'])],
+                            ['ledger.ledger-health', 'menu_ledger_health', ['transaction-mapping-view', 'general-ledger-view'], $s2 == 'ledger-health'],
+                            ['ledger.general-ledger.index', 'menu_general_ledger', ['general-ledger-view'], $s2 == 'general-ledger' && request()->segment(3) != 'trial-balance'],
+                            ['ledger.general-ledger.trial-balance', 'menu_trial_balance', ['trial-balance-view'], $s2 == 'general-ledger' && request()->segment(3) == 'trial-balance'],
+                            ['ledger.mappings.settings', 'menu_mapping_settings', ['transaction-mapping-settings'], $s2 == 'mappings' && request()->segment(3) == 'settings'],
+                            ['ledger.cash-accounts', 'menu_cash_accounts', ['transaction-mapping-settings'], $s2 == 'cash-accounts'],
+                            ['ledger.mappings.transactions', 'menu_view_transactions', ['transaction-mapping-view'], $s2 == 'mappings' && request()->segment(3) == 'transactions'],
+                        ];
+                        foreach ($items as [$route, $label, $perms, $active]) {
+                            if ($P(...$perms)) {
+                                $sub->url(route($route), __('ledger.'.$label), ['icon' => '', 'active' => request()->segment(1) == 'accounting' && $active]);
+                            }
+                        }
+                    },
+                    ['icon' => '<svg aria-hidden="true" class="tw-size-5 tw-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-14a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1z"></path>
+                    <path d="M4 9h16"></path><path d="M10 4v16"></path><path d="M13 13h4"></path><path d="M13 16h4"></path>
+                  </svg>']
+                )->order(50.5);
+            }
+
             //Reports dropdown
             if (auth()->user()->can('purchase_n_sell_report.view') || auth()->user()->can('contacts_report.view')
                 || auth()->user()->can('stock_report.view') || auth()->user()->can('tax_report.view')

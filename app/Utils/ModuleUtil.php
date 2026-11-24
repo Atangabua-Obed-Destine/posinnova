@@ -580,6 +580,10 @@ class ModuleUtil extends Util
             'hotel' => ['name' => __('hotel.module'),
                 'tooltip' => __('hotel.module_tooltip'),
             ],
+            // PosInnova: accounting (the paxhitestbed ledger, SYSCOHADA): sales, purchases, payments and expenses post themselves
+            'accounting' => ['name' => __('ledger.module'),
+                'tooltip' => __('ledger.module_tooltip'),
+            ],
             // PosInnova: online orders from E-Ride (products and stock sent out, orders rung up on the POS)
             'eride' => ['name' => __('channel.module'),
                 'tooltip' => __('channel.module_tooltip'),

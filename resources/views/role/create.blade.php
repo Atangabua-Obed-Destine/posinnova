@@ -1794,6 +1794,7 @@
         
         @include('role.partials.hospital_permissions')
         @include('role.partials.hotel_permissions')
+        @include('role.partials.ledger_permissions')
         @include('role.partials.module_permissions')
         <div class="row">
         <div class="col-md-12 text-center">
