@@ -1356,7 +1356,8 @@ class SellPosController extends Controller
         if (!(auth()->user()->can('superadmin') || auth()->user()->can('sell.update')
             || auth()->user()->can('edit_pos_payment')
             || ($this->moduleUtil->hasThePermissionInSubscription($business_id, 'repair_module') &&
-                auth()->user()->can('repair.update')))) {
+                auth()->user()->can('repair.update'))
+            || $this->canEditAsDraft($id))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1691,11 +1692,35 @@ class SellPosController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
+    /**
+     * PosInnova: the drafts list offers Edit to users with "Edit draft" (draft.update); they
+     * may open and save a draft (not a quotation) - only their own unless they see all drafts.
+     */
+    private function canEditAsDraft($id): bool
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->can('draft.update')) {
+            return false;
+        }
+        $t = Transaction::where('business_id', request()->session()->get('user.business_id'))
+            ->where('id', $id)->where('type', 'sell')->first(['status', 'sub_status', 'created_by']);
+        if (! $t || $t->status !== 'draft' || $t->sub_status === 'quotation') {
+            return false;
+        }
+
+        return $user->can('draft.view_all') || (int) $t->created_by === (int) $user->id;
+    }
+
     public function update(Request $request, $id)
     {
         if (!auth()->user()->can('sell.update') && !auth()->user()->can('direct_sell.access') &&
             !auth()->user()->can('so.update') && !auth()->user()->can('edit_pos_payment')) {
-            abort(403, 'Unauthorized action.');
+            // PosInnova: "Edit draft" is enough to save a draft; making it a finished sale
+            // needs the right to make sales, as on the POS
+            if (! $this->canEditAsDraft($id)
+                || ($request->input('status') === 'final' && ! auth()->user()->can('sell.create'))) {
+                abort(403, 'Unauthorized action.');
+            }
         }
 
         try {
