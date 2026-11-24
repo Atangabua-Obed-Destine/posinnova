@@ -42,6 +42,8 @@
                     <div class="ht-fields">
                         <div class="ht-f"><label for="ht_arrival">{{ __('hotel.arrival') }}</label>
                             <input class="ht-in" type="date" name="arrival" id="ht_arrival" value="{{ old('arrival', $arrival) }}" @if ($walk_in) readonly @endif required></div>
+                        <div class="ht-f"><label for="ht_nights_in">{{ __('hotel.nights') }}</label>
+                            <input class="ht-in" type="number" min="1" max="365" step="1" id="ht_nights_in" inputmode="numeric" @if ($walk_in) autofocus @endif></div>
                         <div class="ht-f"><label for="ht_departure">{{ __('hotel.departure') }}</label>
                             <input class="ht-in" type="date" name="departure" id="ht_departure" value="{{ old('departure', $departure) }}" required></div>
                         <div class="ht-f"><label for="ht_adults">{{ __('hotel.adults') }}</label><input class="ht-in" type="number" min="1" max="20" name="adults" id="ht_adults" value="{{ old('adults', 1) }}"></div>
@@ -57,7 +59,8 @@
                     </div>
                     <div id="ht_types"><p class="ht-muted">{{ __('hotel.loading') }}</p></div>
                     <div style="margin:6px 0 12px;">
-                        <div id="ht_room_lbl" style="font-size:13px;font-weight:600;color:#344054;margin-bottom:5px;">{{ __('hotel.room_optional') }}</div>
+                        <div id="ht_room_lbl" style="font-size:13px;font-weight:600;color:#344054;margin-bottom:2px;">{{ __('hotel.room_optional') }}</div>
+                        <p class="ht-muted ht-small" style="margin:0 0 6px;">{{ __('hotel.room_unpick_hint') }}</p>
                         <div class="ht-rooms" id="ht_rooms_pick" role="radiogroup" aria-labelledby="ht_room_lbl" data-want="{{ old('room_id', $room_id) }}"></div>
                         @if ($walk_in)<div class="ht-note amber" id="ht_dirty_warn" hidden style="margin-top:12px;">{{ __('hotel.dirty_warn') }}</div>@endif
                     </div>
@@ -135,7 +138,7 @@
         'for_n' => __('hotel.js_for_n'), 'for_1' => __('hotel.js_for_1'), 'nights' => __('hotel.js_nights'), 'night' => __('hotel.js_night'), 'any' => __('hotel.any_free_room'),
         'not_clean' => __('hotel.js_not_clean'), 'stays' => __('hotel.js_stays'), 'new_guest' => __('hotel.js_new_guest'),
         'tax' => __('hotel.js_tax'), 'none' => __('hotel.no_room_types'),
-        'tile' => __('hotel.tile_per_night'), 'ready' => __('hotel.ready'), 'to_clean' => __('hotel.to_clean'), 'any_hint' => __('hotel.any_room_hint'),
+        'tile' => __('hotel.tile_per_night'), 'ready' => __('hotel.ready'), 'to_clean' => __('hotel.to_clean'),
     ]) !!};
     var $ = function (id) { return document.getElementById(id); };
     var data = null, typeId = $('ht_type_id').value, plan = $('ht_plan').value || 'room_only';
@@ -183,32 +186,29 @@
         $('ht_type_id').value = typeId; $('ht_plan').value = plan;
         summary();
     }
-    // the free rooms of the chosen type, as cards; "any free room" first
+    // the free rooms of the chosen type, as cards. None picked = any free room (chosen at check-in);
+    // a picked card tapped again is unpicked.
     function rooms(t) {
         var box = $('ht_rooms_pick'), on = picked(), want = box.getAttribute('data-want') || (on ? on.value : '');
         box.innerHTML = ''; box.setAttribute('data-want', '');
         if (!t) return;
-        var p = t.plans[plan] || t.plans.room_only, list = [{ id: '', any: true }].concat(t.free_rooms);
-        if (!t.free_rooms.some(function (r) { return String(r.id) === String(want); })) want = '';
-        list.forEach(function (r) {
+        var p = t.plans[plan] || t.plans.room_only;
+        t.free_rooms.forEach(function (r) {
             var lab = el('label', 'ht-roomopt'), inp = el('input'), inn = el('span', 'in'), top = el('span', 'top');
             inp.type = 'radio'; inp.name = 'room_id'; inp.value = r.id;
-            if (!r.any) { inp.setAttribute('data-no', r.number); inp.setAttribute('data-clean', r.clean ? 1 : 0); }
-            if (String(r.id) === String(want)) { inp.checked = true; lab.classList.add('on'); }
+            inp.setAttribute('data-no', r.number); inp.setAttribute('data-clean', r.clean ? 1 : 0);
+            if (String(r.id) === String(want)) { inp.checked = true; }
             var tick = el('span', 'tick', '✓'); tick.setAttribute('aria-hidden', 'true');
-            top.appendChild(el('span', 'no', r.any ? T.any : r.number)); top.appendChild(tick);
-            if (r.any) top.firstChild.style.fontSize = '17px';
+            top.appendChild(el('span', 'no', r.number)); top.appendChild(tick);
             inn.appendChild(top);
-            if (r.any) { inn.appendChild(el('span', 'sub', T.any_hint)); }
-            else {
-                inn.appendChild(el('span', 'ty', t.name));
-                var sub = [r.floor, t.sleeps].filter(Boolean).join(' · ');
-                if (sub) inn.appendChild(el('span', 'sub', sub));
-            }
+            inn.appendChild(el('span', 'ty', t.name));
+            var sub = [r.floor, t.sleeps].filter(Boolean).join(' · ');
+            if (sub) inn.appendChild(el('span', 'sub', sub));
             inn.appendChild(el('span', 'pr', T.tile.replace(':amount', p.rate_f)));
             lab.appendChild(inp); lab.appendChild(inn);
-            lab.appendChild(el('span', 'bar ' + (r.any ? 'any' : (r.clean ? 'ok' : 'no')), r.any ? T.free.replace(':n', t.free).replace(':m', t.rooms) : (r.clean ? T.ready : T.to_clean)));
+            lab.appendChild(el('span', 'bar ' + (r.clean ? 'ok' : 'no'), r.clean ? T.ready : T.to_clean));
             inp.addEventListener('change', roomPicked);
+            inp.addEventListener('click', function () { if (inp.getAttribute('data-was') === '1') { inp.checked = false; roomPicked(); } });
             box.appendChild(lab);
         });
         roomPicked();
@@ -216,7 +216,8 @@
     function picked() { return document.querySelector('#ht_rooms_pick input[name=room_id]:checked'); }
     function roomPicked() {
         var on = picked();
-        document.querySelectorAll('#ht_rooms_pick .ht-roomopt').forEach(function (l) { l.classList.toggle('on', l.contains(on)); });
+        document.querySelectorAll('#ht_rooms_pick input[name=room_id]').forEach(function (i) { i.setAttribute('data-was', i.checked ? '1' : '0'); });
+        document.querySelectorAll('#ht_rooms_pick .ht-roomopt').forEach(function (l) { l.classList.toggle('on', !!on && l.contains(on)); });
         if ($('ht_dirty_warn')) $('ht_dirty_warn').hidden = !(on && on.value && on.getAttribute('data-clean') === '0');
         summary();
     }
@@ -240,9 +241,27 @@
     }
     $('ht_deposit').addEventListener('input', function () { this.dataset.touched = '1'; });
     $('ht_plan_pick').addEventListener('change', function () { plan = this.value; render(); });
-    ['ht_arrival', 'ht_departure'].forEach(function (id) { $(id).addEventListener('change', function () {
-        if ($('ht_departure').value <= $('ht_arrival').value) { var d = new Date($('ht_arrival').value); d.setDate(d.getDate() + 1); $('ht_departure').value = d.toISOString().slice(0, 10); }
-        load(); }); });
+    // arrival + nights = departure, both ways: typing the nights sets the departure, picking a departure sets the nights
+    function addDays(iso, n) { var d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+    function daysBetween(a, b) { return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000); }
+    function nightsTyped() { var n = parseInt($('ht_nights_in').value, 10); return n >= 1 ? Math.min(n, 365) : 0; }
+    function nightsFromDates() { var a = $('ht_arrival').value, d = $('ht_departure').value; if (a && d) $('ht_nights_in').value = Math.max(1, daysBetween(a, d)); }
+    var ntimer;
+    $('ht_nights_in').addEventListener('input', function () {
+        var n = nightsTyped(); if (!n || !$('ht_arrival').value) return;
+        $('ht_departure').value = addDays($('ht_arrival').value, n);
+        clearTimeout(ntimer); ntimer = setTimeout(load, 300);
+    });
+    $('ht_nights_in').addEventListener('change', function () { if (!nightsTyped()) nightsFromDates(); });
+    $('ht_arrival').addEventListener('change', function () {
+        if (!this.value) return;
+        $('ht_departure').value = addDays(this.value, nightsTyped() || 1); nightsFromDates(); load();
+    });
+    $('ht_departure').addEventListener('change', function () {
+        if (!this.value || this.value <= $('ht_arrival').value) this.value = addDays($('ht_arrival').value, 1);
+        nightsFromDates(); load();
+    });
+    nightsFromDates();
     if ($('ht_status')) { var hs = function () { $('ht_hold_wrap').hidden = $('ht_status').value !== 'tentative'; }; $('ht_status').addEventListener('change', hs); hs(); }
 
     // guests

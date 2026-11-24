@@ -82,7 +82,6 @@ details.ht-more > summary::-webkit-details-marker { display: none; }
 .ht-roomopt .bk { font-size: 12px; font-weight: 700; color: #d9d6fe; }
 .ht-roomopt .bar { display: block; padding: 8px 10px; text-align: center; font-size: 13.5px; font-weight: 700; background: #32d583; color: #053321; }
 .ht-roomopt .bar.no { background: #fdb022; color: #3d2400; }
-.ht-roomopt .bar.any { background: #475467; color: #fff; }
 .ht-roomopt.on { border-color: #fff; box-shadow: 0 0 0 3px #4f46e5; }
 .ht-roomopt.on .tick { display: inline-flex; }
 .ht-roomopt:focus-within { outline: 2px solid #84adff; outline-offset: 3px; }

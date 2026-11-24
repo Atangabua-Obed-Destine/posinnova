@@ -317,7 +317,7 @@ return [
     'loading' => 'Chargement…',
     'room_optional' => 'Chambre (facultatif : si le client en demande une)',
     'any_free_room' => 'N\'importe quelle chambre libre',
-    'any_room_hint' => 'La réception en choisit une prête à l\'arrivée',
+    'room_unpick_hint' => 'Aucune choisie : la réception donne une chambre prête à l\'arrivée. Touchez à nouveau une chambre choisie pour la retirer.',
     'rate_override' => 'Prix spécial par nuit (responsable)',
     'rate_override_ph' => 'Vide : le prix de la formule',
     'find_guest' => 'Chercher un client (nom, téléphone ou numéro de pièce)',
