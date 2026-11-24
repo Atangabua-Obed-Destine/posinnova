@@ -67,21 +67,16 @@ $(document).ready(function () {
     toastr.options.closeEasing = 'swing';
 
     //Play notification sound on success, error and warning
+    //PosInnova: a page that opens with a message (after a redirect) has had no click yet, and the
+    //browser refuses sound until the user interacts: that refusal is expected, not an error.
     toastr.options.onShown = function () {
-        if ($(this).hasClass('toast-success')) {
-            var audio = $('#success-audio')[0];
-            if (audio !== undefined) {
-                audio.play();
-            }
-        } else if ($(this).hasClass('toast-error')) {
-            var audio = $('#error-audio')[0];
-            if (audio !== undefined) {
-                audio.play();
-            }
-        } else if ($(this).hasClass('toast-warning')) {
-            var audio = $('#warning-audio')[0];
-            if (audio !== undefined) {
-                audio.play();
+        var id = $(this).hasClass('toast-success') ? '#success-audio'
+            : ($(this).hasClass('toast-error') ? '#error-audio' : ($(this).hasClass('toast-warning') ? '#warning-audio' : null));
+        var audio = id ? $(id)[0] : undefined;
+        if (audio !== undefined) {
+            var played = audio.play();
+            if (played && typeof played.catch === 'function') {
+                played.catch(function () {});
             }
         }
     };

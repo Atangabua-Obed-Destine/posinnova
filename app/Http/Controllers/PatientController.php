@@ -181,6 +181,9 @@ class PatientController extends Controller
         if ($age_error = $this->ageError($request)) {
             return $age_error;
         }
+        if ($missing = $this->requiredError($request)) {
+            return $missing;
+        }
 
         try {
             $business_id = $request->session()->get('user.business_id');
@@ -433,6 +436,9 @@ class PatientController extends Controller
         if ($age_error = $this->ageError($request)) {
             return $age_error;
         }
+        if ($missing = $this->requiredError($request)) {
+            return $missing;
+        }
 
         try {
             $business_id = $request->session()->get('user.business_id');
@@ -642,6 +648,26 @@ class PatientController extends Controller
         });
 
         return response()->json(['results' => $results]);
+    }
+
+    /**
+     * PosInnova: first name and mobile are required on the form; the server checks them too, so a
+     * request without them gets a message instead of a database error (contacts.mobile is NOT NULL).
+     */
+    private function requiredError(Request $request)
+    {
+        foreach (['first_name' => __('business.first_name'), 'mobile' => __('contact.mobile')] as $field => $label) {
+            if (trim((string) $request->input($field)) === '') {
+                $output = ['success' => false, 'msg' => __('validation.required', ['attribute' => $label])];
+                if ($request->ajax()) {
+                    return $output;
+                }
+
+                return redirect()->back()->withInput($request->except('portal_pin'))->with('status', $output);
+            }
+        }
+
+        return null;
     }
 
     /**
