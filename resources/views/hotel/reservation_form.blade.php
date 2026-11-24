@@ -16,6 +16,7 @@
 .ht-sugg { border: 1px solid #eaecf0; border-radius: 10px; margin-top: 4px; overflow: hidden; }
 .ht-sugg button { display: block; width: 100%; text-align: left; padding: 9px 12px; border: 0; border-bottom: 1px solid #f2f4f7; background: #fff; font: inherit; cursor: pointer; }
 .ht-sugg button:hover, .ht-sugg button:focus { background: #f5f8ff; }
+#ht_rooms_pick { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); margin-top: 4px; }
 .ht-picked { display: flex; gap: 12px; align-items: center; padding: 11px 13px; border-radius: 10px; background: #f5f8ff; border: 1px solid #d1e0ff; margin-top: 8px; }
 </style>
 <section class="content ht" id="ht_res_form">
@@ -55,9 +56,12 @@
                         <select class="ht-in" id="ht_plan_pick" style="width:auto;min-width:200px;" aria-label="{{ __('hotel.rate_plan') }}"></select>
                     </div>
                     <div id="ht_types"><p class="ht-muted">{{ __('hotel.loading') }}</p></div>
+                    <div style="margin:6px 0 12px;">
+                        <div id="ht_room_lbl" style="font-size:13px;font-weight:600;color:#344054;margin-bottom:5px;">{{ __('hotel.room_optional') }}</div>
+                        <div class="ht-rooms" id="ht_rooms_pick" role="radiogroup" aria-labelledby="ht_room_lbl" data-want="{{ old('room_id', $room_id) }}"></div>
+                        @if ($walk_in)<div class="ht-note amber" id="ht_dirty_warn" hidden style="margin-top:12px;">{{ __('hotel.dirty_warn') }}</div>@endif
+                    </div>
                     <div class="ht-fields" style="margin-top:6px;">
-                        <div class="ht-f"><label for="ht_room">{{ __('hotel.room_optional') }}</label>
-                            <select class="ht-in" name="room_id" id="ht_room" data-want="{{ old('room_id', $room_id) }}"><option value="">{{ __('hotel.any_free_room') }}</option></select></div>
                         @if ($can_rate)
                             <div class="ht-f"><label for="ht_rate">{{ __('hotel.rate_override') }}</label>
                                 <input class="ht-in" type="text" name="rate" id="ht_rate" value="{{ old('rate') }}" placeholder="{{ __('hotel.rate_override_ph') }}" inputmode="decimal"></div>
@@ -131,6 +135,7 @@
         'for_n' => __('hotel.js_for_n'), 'for_1' => __('hotel.js_for_1'), 'nights' => __('hotel.js_nights'), 'night' => __('hotel.js_night'), 'any' => __('hotel.any_free_room'),
         'not_clean' => __('hotel.js_not_clean'), 'stays' => __('hotel.js_stays'), 'new_guest' => __('hotel.js_new_guest'),
         'tax' => __('hotel.js_tax'), 'none' => __('hotel.no_room_types'),
+        'tile' => __('hotel.tile_per_night'), 'ready' => __('hotel.ready'), 'to_clean' => __('hotel.to_clean'), 'any_hint' => __('hotel.any_room_hint'),
     ]) !!};
     var $ = function (id) { return document.getElementById(id); };
     var data = null, typeId = $('ht_type_id').value, plan = $('ht_plan').value || 'room_only';
@@ -174,20 +179,59 @@
             if (!t.plans[plan]) plan = 'room_only';
             Object.keys(t.plans).forEach(function (k) { var o = el('option', null, t.plans[k].label); o.value = k; if (k === plan) o.selected = true; sel.appendChild(o); });
         }
-        var room = $('ht_room'), want = room.getAttribute('data-want') || room.value; room.innerHTML = '';
-        var any = el('option', null, T.any); any.value = ''; room.appendChild(any);
-        if (t) t.free_rooms.forEach(function (r) { var o = el('option', null, r.number + (r.clean ? '' : ' · ' + T.not_clean)); o.value = r.id; if (String(r.id) === String(want)) o.selected = true; room.appendChild(o); });
-        room.setAttribute('data-want', '');
+        rooms(t);
         $('ht_type_id').value = typeId; $('ht_plan').value = plan;
         summary();
+    }
+    // the free rooms of the chosen type, as cards; "any free room" first
+    function rooms(t) {
+        var box = $('ht_rooms_pick'), on = picked(), want = box.getAttribute('data-want') || (on ? on.value : '');
+        box.innerHTML = ''; box.setAttribute('data-want', '');
+        if (!t) return;
+        var p = t.plans[plan] || t.plans.room_only, list = [{ id: '', any: true }].concat(t.free_rooms);
+        if (!t.free_rooms.some(function (r) { return String(r.id) === String(want); })) want = '';
+        list.forEach(function (r) {
+            var lab = el('label', 'ht-roomopt'), inp = el('input'), inn = el('span', 'in'), top = el('span', 'top');
+            inp.type = 'radio'; inp.name = 'room_id'; inp.value = r.id;
+            if (!r.any) { inp.setAttribute('data-no', r.number); inp.setAttribute('data-clean', r.clean ? 1 : 0); }
+            if (String(r.id) === String(want)) { inp.checked = true; lab.classList.add('on'); }
+            var tick = el('span', 'tick', '✓'); tick.setAttribute('aria-hidden', 'true');
+            top.appendChild(el('span', 'no', r.any ? T.any : r.number)); top.appendChild(tick);
+            if (r.any) top.firstChild.style.fontSize = '17px';
+            inn.appendChild(top);
+            if (r.any) { inn.appendChild(el('span', 'sub', T.any_hint)); }
+            else {
+                inn.appendChild(el('span', 'ty', t.name));
+                var sub = [r.floor, t.sleeps].filter(Boolean).join(' · ');
+                if (sub) inn.appendChild(el('span', 'sub', sub));
+            }
+            inn.appendChild(el('span', 'pr', T.tile.replace(':amount', p.rate_f)));
+            lab.appendChild(inp); lab.appendChild(inn);
+            lab.appendChild(el('span', 'bar ' + (r.any ? 'any' : (r.clean ? 'ok' : 'no')), r.any ? T.free.replace(':n', t.free).replace(':m', t.rooms) : (r.clean ? T.ready : T.to_clean)));
+            inp.addEventListener('change', roomPicked);
+            box.appendChild(lab);
+        });
+        roomPicked();
+    }
+    function picked() { return document.querySelector('#ht_rooms_pick input[name=room_id]:checked'); }
+    function roomPicked() {
+        var on = picked();
+        document.querySelectorAll('#ht_rooms_pick .ht-roomopt').forEach(function (l) { l.classList.toggle('on', l.contains(on)); });
+        if ($('ht_dirty_warn')) $('ht_dirty_warn').hidden = !(on && on.value && on.getAttribute('data-clean') === '0');
+        summary();
+    }
+    // the room as text for the summary and the check page
+    function roomText() {
+        var on = picked();
+        return on && on.value ? on.getAttribute('data-no') + (on.getAttribute('data-clean') === '0' ? ' · ' + T.not_clean : '') : T.any;
     }
     function current() { return data ? data.types.find(function (t) { return String(t.id) === String(typeId); }) : null; }
     function summary() {
         var t = current();
         $('ht_sum_stay').textContent = data ? ($('ht_arrival').value.split('-').reverse().slice(0, 2).join('/') + ' → ' + $('ht_departure').value.split('-').reverse().slice(0, 2).join('/') + ' · ' + nn(data.nights)) : '—';
         if (!t) { $('ht_sum_room').textContent = $('ht_sum_rate').textContent = $('ht_sum_total').textContent = '—'; return; }
-        var p = t.plans[plan] || t.plans.room_only, room = $('ht_room').selectedOptions[0];
-        $('ht_sum_room').textContent = t.name + ' · ' + (room && room.value ? room.textContent : T.any);
+        var p = t.plans[plan] || t.plans.room_only;
+        $('ht_sum_room').textContent = t.name + ' · ' + roomText();
         $('ht_sum_rate').textContent = p.rate_f + ' (' + p.label + ')';
         $('ht_sum_total').textContent = p.total_f;
         $('ht_sum_tax').textContent = t.tax > 0 ? T.tax.replace(':amount', fmt(t.tax)) : '';
@@ -196,7 +240,6 @@
     }
     $('ht_deposit').addEventListener('input', function () { this.dataset.touched = '1'; });
     $('ht_plan_pick').addEventListener('change', function () { plan = this.value; render(); });
-    $('ht_room').addEventListener('change', summary);
     ['ht_arrival', 'ht_departure'].forEach(function (id) { $(id).addEventListener('change', function () {
         if ($('ht_departure').value <= $('ht_arrival').value) { var d = new Date($('ht_arrival').value); d.setDate(d.getDate() + 1); $('ht_departure').value = d.toISOString().slice(0, 10); }
         load(); }); });
@@ -228,7 +271,7 @@
     C.attach($('ht_res_create'), function () {
         var t = current(), p = t ? (t.plans[plan] || t.plans.room_only) : null, n = data ? data.nights : 0;
         var over = $('ht_rate') ? C.num($('ht_rate').value) : 0, rate = over > 0 ? over : (p ? p.rate : 0);
-        var total = rate * n, tax = t ? t.tax * n : 0, dep = C.num($('ht_deposit').value), room = $('ht_room').selectedOptions[0];
+        var total = rate * n, tax = t ? t.tax * n : 0, dep = C.num($('ht_deposit').value);
         var guest = $('ht_contact_id').value ? $('ht_guest_name').textContent : ($('ht_name').value.trim() ? X.new_guest.replace(':name', $('ht_name').value.trim()) : '');
         var phone = $('ht_contact_id').value ? $('ht_guest_meta').textContent : $('ht_mobile').value.trim();
         var rows = [
@@ -237,7 +280,7 @@
             [T.l_stay, C.date($('ht_arrival').value) + ' → ' + C.date($('ht_departure').value) + (n ? ' · ' + nn(n) : '')],
             [X.people, X.people_v.replace(':a', $('ht_adults').value || 0).replace(':c', $('ht_children').value || 0)],
             [T.l_type, t ? t.name : ''],
-            [T.l_room, room && room.value ? room.textContent : T.any],
+            [T.l_room, roomText()],
             [T.l_plan, p ? p.label : ''],
             [T.l_rate, over > 0 ? X.special.replace(':amount', C.money(over)) : C.money(rate), over > 0 ? 'warn' : ''],
             tax > 0 ? [X.tax + ' (' + C.money(t.tax) + ' × ' + n + ')', C.money(tax)] : null,

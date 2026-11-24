@@ -323,6 +323,7 @@ return [
     'loading' => 'Loading…',
     'room_optional' => 'Room (optional: if the guest asked for one)',
     'any_free_room' => 'Any free room',
+    'any_room_hint' => 'The front desk picks a ready one at check-in',
     'rate_override' => 'Special price per night (manager)',
     'rate_override_ph' => 'Leave empty for the plan\'s price',
     'find_guest' => 'Find a guest (name, phone or ID number)',

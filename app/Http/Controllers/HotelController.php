@@ -242,8 +242,10 @@ class HotelController extends HotelBaseController
                 $plans[$p] = ['label' => __('hotel.plan_'.$p), 'rate' => $t->rateFor($p), 'rate_f' => $this->money($t->rateFor($p), false), 'total_f' => $this->money($t->rateFor($p) * $nights, false)];
             }
             $out[] = ['id' => $tid, 'name' => $t->name, 'description' => $t->description, 'capacity' => $t->capacity, 'free' => max(0, $a['free']),
+                'sleeps' => $t->capacity ? trans_choice('hotel.sleeps_n', $t->capacity, ['n' => $t->capacity]) : '',
                 'rooms' => $a['rooms'], 'plans' => $plans, 'tax' => (float) $t->tourist_tax,
-                'free_rooms' => Hotel::freeRooms($biz, $tid, $arr, $dep, $request->input('except'))->map(fn ($r) => ['id' => $r->id, 'number' => $r->number, 'clean' => Hotel::sellable($r)])->values()];
+                'free_rooms' => Hotel::freeRooms($biz, $tid, $arr, $dep, $request->input('except'))->map(fn ($r) => ['id' => $r->id, 'number' => $r->number, 'clean' => Hotel::sellable($r),
+                    'floor' => (string) $r->floor !== '' ? __('hotel.floor_n', ['n' => $r->floor]) : ''])->values()];
         }
 
         return response()->json(['nights' => $nights, 'types' => $out]);
