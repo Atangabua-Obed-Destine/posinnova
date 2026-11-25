@@ -584,6 +584,10 @@ class ModuleUtil extends Util
             'pressing' => ['name' => __('pressing.module'),
                 'tooltip' => __('pressing.module_tooltip'),
             ],
+            // PosInnova: gym (plans and passes, members with a QR card, the door, WhatsApp renewal reminders)
+            'gym' => ['name' => __('gym.module'),
+                'tooltip' => __('gym.module_tooltip'),
+            ],
             // PosInnova: accounting (the paxhitestbed ledger, SYSCOHADA): sales, purchases, payments and expenses post themselves
             'accounting' => ['name' => __('ledger.module'),
                 'tooltip' => __('ledger.module_tooltip'),

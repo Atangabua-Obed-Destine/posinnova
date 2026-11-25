@@ -733,6 +733,33 @@ class AdminSidebarMenu
                 }
             }
 
+            // PosInnova gym module: its own group, after the pressing
+            if (in_array('gym', $enabled_modules)) {
+                $gu = auth()->user();
+                $gcan = fn (...$p) => collect($p)->contains(fn ($x) => $gu->can($x));
+                if ($gcan('gym.door', 'gym.members', 'gym.setup')) {
+                    $menu->dropdown(
+                        __('gym.module'),
+                        function ($sub) use ($gcan) {
+                            $on = request()->segment(1) == 'gym';
+                            $s2 = request()->segment(2);
+                            $G = \App\Http\Controllers\GymController::class;
+                            if ($gcan('gym.door', 'gym.members')) {
+                                $sub->url(action([$G, 'door']), __('gym.menu_door'), ['icon' => '', 'active' => $on && $s2 == null]);
+                                $sub->url(action([$G, 'members']), __('gym.menu_members'), ['icon' => '', 'active' => $on && $s2 == 'members' && request()->segment(3) != 'create']);
+                            }
+                            if ($gcan('gym.members')) {
+                                $sub->url(action([$G, 'create']), __('gym.menu_new'), ['icon' => '', 'active' => $on && $s2 == 'members' && request()->segment(3) == 'create']);
+                            }
+                            if ($gcan('gym.setup')) {
+                                $sub->url(action([\App\Http\Controllers\GymSetupController::class, 'index']), __('gym.menu_setup'), ['icon' => '', 'active' => $on && $s2 == 'setup']);
+                            }
+                        },
+                        ['icon' => \App\Utils\ClinicIcons::svg('barbell')]
+                    )->order(5.08);
+                }
+            }
+
             // PosInnova online channels: E-Ride linking and the products sent to it
             if (in_array('eride', $enabled_modules) && auth()->user()->can('business_settings.access')) {
                 $menu->dropdown(

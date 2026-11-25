@@ -583,8 +583,10 @@ class Pressing
                 $q->where('ticket_no', $ticket)->orWhere('ticket_no', 'like', '%'.$ticket)
                     ->orWhereHas('contact', fn ($c) => $c->where('name', 'like', '%'.$term.'%'));
                 if (strlen($digits) >= 6) {
-                    $q->orWhere('phone', 'like', '%'.substr($digits, -8).'%')
-                        ->orWhereHas('contact', fn ($c) => $c->where('mobile', 'like', '%'.substr($digits, -8).'%'));
+                    // numbers are typed with spaces or dashes: compare the digits only
+                    $like = '%'.substr($digits, -8).'%';
+                    $q->orWhereRaw("REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '.', '') LIKE ?", [$like])
+                        ->orWhereHas('contact', fn ($c) => $c->whereRaw("REPLACE(REPLACE(REPLACE(mobile, ' ', ''), '-', ''), '.', '') LIKE ?", [$like]));
                 }
             })->orderByDesc('id')->limit(30)->get();
     }

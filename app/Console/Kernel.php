@@ -46,6 +46,9 @@ class Kernel extends ConsoleKernel
             //PosInnova pressing: WhatsApp reminder for clothes ready and not collected
             $schedule->command('pressing:reminders')->hourly()->withoutOverlapping(30);
 
+            //PosInnova gym: WhatsApp reminder before a membership ends, and after it lapsed
+            $schedule->command('gym:reminders')->hourly()->withoutOverlapping(30);
+
             //PosInnova accounting: post anything the observers missed and retry failed postings
             $schedule->command('ledger:sync')->everyFiveMinutes()->withoutOverlapping(30);
 

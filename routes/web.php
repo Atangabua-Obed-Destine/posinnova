@@ -505,6 +505,27 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::post('/setup/settings', [$S, 'settings']);
     });
 
+    // PosInnova gym module (Settings › Modules › Gym)
+    Route::prefix('gym')->group(function () {
+        $G = \App\Http\Controllers\GymController::class;
+        $S = \App\Http\Controllers\GymSetupController::class;
+        Route::get('/', [$G, 'door']);
+        Route::post('/day-pass', [$G, 'dayPass']);
+        Route::post('/guest-in', [$G, 'guestIn']);
+        Route::get('/members', [$G, 'members']);
+        Route::get('/members/create', [$G, 'create']);
+        Route::post('/members', [$G, 'store']);
+        Route::get('/members/{id}', [$G, 'show'])->whereNumber('id');
+        Route::post('/members/{id}/check-in', [$G, 'checkIn'])->whereNumber('id');
+        Route::post('/members/{id}/renew', [$G, 'renew'])->whereNumber('id');
+        Route::get('/members/{id}/card', [$G, 'card'])->whereNumber('id');
+        Route::get('/setup', [$S, 'index']);
+        Route::post('/setup/plans', [$S, 'plans']);
+        Route::post('/setup/plans/usual', [$S, 'usualPlans']);
+        Route::post('/setup/plans/add', [$S, 'addPlan']);
+        Route::post('/setup/settings', [$S, 'settings']);
+    });
+
     // Inventory Count (physical recount – separate from Stock Adjustment)
     // PosInnova bulk items: bags / packs / bottles opened and used a little at a time
     Route::get('/bulk-items', [\App\Http\Controllers\BulkItemController::class, 'index']);

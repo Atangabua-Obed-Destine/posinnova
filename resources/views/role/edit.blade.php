@@ -1788,6 +1788,7 @@
         @include('role.partials.hospital_permissions')
         @include('role.partials.hotel_permissions')
         @include('role.partials.pressing_permissions')
+        @include('role.partials.gym_permissions')
         @include('role.partials.ledger_permissions')
         @include('role.partials.module_permissions')
         <div class="row">
