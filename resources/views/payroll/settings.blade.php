@@ -21,6 +21,17 @@
         <p class="ht-muted ht-small">{{ __('payroll.prorate_hint') }}</p>
         <div class="ht-f" style="max-width:320px"><label for="py_basis">{{ __('payroll.count_in') }}</label><select id="py_basis" name="proration_basis" class="ht-in"><option value="calendar_days" {{ $s['proration_basis'] === 'calendar_days' ? 'selected' : '' }}>{{ __('payroll.calendar_days') }}</option><option value="working_days" {{ $s['proration_basis'] === 'working_days' ? 'selected' : '' }}>{{ __('payroll.working_days') }}</option></select></div>
 
+        <h2>{{ __('payroll.cnps_title') }}</h2>
+        <p class="ht-muted ht-small">{{ __('payroll.cnps_hint') }}</p>
+        <div class="ht-fields">
+            <div class="ht-f"><label for="py_sector">{{ __('payroll.sector') }}</label><select id="py_sector" name="sector" class="ht-in">
+                @foreach (\App\Payroll\PayrollRules::SECTORS as $key => $sec)<option value="{{ $key }}" data-risk="{{ $sec['risk'] }}" data-family="{{ $sec['family'] }}" {{ $s['sector'] === $key ? 'selected' : '' }}>{{ __('payroll.sector_'.$key) }}</option>@endforeach
+            </select><span class="ht-muted ht-small" id="py_family_rate">{{ __('payroll.family_rate', ['rate' => (\App\Payroll\PayrollRules::SECTORS[$s['sector']] ?? ['family' => 7])['family']]) }}</span></div>
+            <div class="ht-f"><label for="py_risk">{{ __('payroll.risk_group') }}</label><select id="py_risk" name="risk_group" class="ht-in">
+                @foreach (\App\Payroll\PayrollRules::RISK_RATES as $g => $rate)<option value="{{ $g }}" {{ $s['risk_group'] === $g ? 'selected' : '' }}>{{ __('payroll.risk_'.$g, ['rate' => $rate]) }}</option>@endforeach
+            </select><span class="ht-muted ht-small">{{ __('payroll.risk_hint') }}</span></div>
+        </div>
+
         <h2>{{ __('payroll.menu_loans') }}</h2>
         <div class="ht-f" style="max-width:320px"><label for="py_adv">{{ __('payroll.advance_account') }}</label><input id="py_adv" name="advance_account_code" class="ht-in" inputmode="numeric" value="{{ $s['advance_account_code'] }}"><span class="ht-muted ht-small">{{ __('payroll.advance_account_hint') }}</span></div>
 
@@ -59,10 +70,7 @@
 
     <div class="ht-card" id="py_taxes">
         <h2>{{ __('payroll.taxes') }}</h2>
-        @if (! $hasTaxes)
-            <div class="ht-note amber">{{ __('payroll.no_taxes') }}</div>
-            <form method="post" action="{{ action([$P, 'installTaxes']) }}">@csrf<button class="ht-btn pri" type="submit" id="py_install_taxes">{{ __('payroll.install_cameroon') }}</button></form>
-        @else
+        <div class="ht-note blue">{{ __('payroll.taxes_default_note', ['sector' => __('payroll.sector_'.$s['sector'])]) }}</div>
             <p class="ht-muted ht-small">{{ __('payroll.taxes_hint') }}</p>
             <form method="post" action="{{ action([$P, 'saveTaxes']) }}">@csrf
                 @foreach ($groups as $g)
@@ -91,7 +99,26 @@
                 </div>
                 <button class="ht-btn pri" type="submit" id="py_save_taxes">{{ __('payroll.save_taxes') }}</button>
             </form>
-        @endif
+            <form method="post" action="{{ action([$P, 'installTaxes']) }}" style="margin-top:12px" onsubmit="return confirm({{ json_encode(__('payroll.restore_confirm')) }})">@csrf
+                <button class="ht-btn" type="submit" id="py_restore_taxes">{{ __('payroll.restore_defaults') }}</button>
+                <span class="ht-muted ht-small">{{ __('payroll.restore_hint') }}</span>
+            </form>
     </div>
 </section>
+@endsection
+
+@section('javascript')
+<script>
+// a type of business brings its usual risk group and family-allowance rate (both can still be changed)
+(function () {
+    var sec = document.getElementById('py_sector'), risk = document.getElementById('py_risk'), fam = document.getElementById('py_family_rate');
+    var T = {!! json_encode(__('payroll.family_rate')) !!};
+    if (!sec) { return; }
+    sec.addEventListener('change', function () {
+        var o = sec.options[sec.selectedIndex];
+        risk.value = o.getAttribute('data-risk');
+        fam.textContent = T.replace(':rate', o.getAttribute('data-family'));
+    });
+})();
+</script>
 @endsection

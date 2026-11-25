@@ -41,6 +41,8 @@ class PayrollController extends Controller
         if (! PayrollRules::enabled($this->biz())) {
             abort(404);
         }
+        // the Cameroon taxes are there from the start: nobody has to add them
+        PayrollRules::ensureDefaults($this->biz());
         foreach ($perms as $p) {
             if (auth()->user()->can($p)) {
                 return;
@@ -480,17 +482,22 @@ class PayrollController extends Controller
             'bank_file_header' => $request->boolean('bank_file_header') ? 1 : 0,
             'bank_file_reference' => mb_substr(trim((string) $request->input('bank_file_reference')), 0, 60) ?: PayrollRules::DEFAULTS['bank_file_reference'],
             'bank_file_decimals' => (int) $request->input('bank_file_decimals') === 2 ? 2 : 0,
+            'sector' => array_key_exists($request->input('sector'), PayrollRules::SECTORS) ? $request->input('sector') : PayrollRules::settings($this->biz())['sector'],
+            'risk_group' => array_key_exists($request->input('risk_group'), PayrollRules::RISK_RATES) ? $request->input('risk_group') : PayrollRules::settings($this->biz())['risk_group'],
         ]);
+        // the family-allowance and work-accident rates follow the type of business
+        PayrollRules::applySector($this->biz());
 
         return $this->back(true, __('payroll.settings_saved'));
     }
 
+    /** Back to the Cameroon defaults for the business's type (every rate changed by hand is undone). */
     public function installTaxes()
     {
         $this->guard('payroll-setting');
-        $ok = PayrollRules::installCameroonTaxes($this->biz());
+        PayrollRules::restoreDefaults($this->biz());
 
-        return $this->back($ok, $ok ? __('payroll.taxes_installed') : __('payroll.taxes_exist'));
+        return $this->back(true, __('payroll.taxes_restored'));
     }
 
     /** Rates, bounds and amounts of the taxes, in one save (bands and single taxes). */
