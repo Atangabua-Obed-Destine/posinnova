@@ -226,7 +226,11 @@
                         <tbody>
                             @forelse($prescriptions as $rx)
                                 <tr>
-                                    <td>{{ @format_date(optional($rx->consultation)->created_at) }}</td>
+                                    <td>{{ @format_date(optional($rx->consultation)->created_at) }}
+                                        @if ($rx->consultation_id)
+                                            <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'prescription'], [$rx->consultation_id]) }}" target="_blank" class="patient-print-rx" title="@lang('lang_v1.print_prescription')"><i class="fas fa-print"></i></a>
+                                        @endif
+                                    </td>
                                     <td>{{ $rx->displayName() }}</td>
                                     <td>{{ $rx->dosage ?: '-' }}</td>
                                     <td>{{ $rx->frequency ?: '-' }}</td>

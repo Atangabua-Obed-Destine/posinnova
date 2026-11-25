@@ -37,6 +37,7 @@ class ClinicServices
         'morgue' => 'SVC-MORGUE',
         'deposit' => 'SVC-DEPOSIT',
         'insurance' => 'SVC-INSURER',
+        'report' => 'SVC-REPORT',
         'other' => 'SVC-OTHER',
     ];
 

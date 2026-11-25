@@ -1891,6 +1891,7 @@ return [
     'charge_type_morgue' => 'Morgue',
     'charge_type_deposit' => 'Acompte',
     'charge_type_other' => 'Autre',
+    'charge_type_report' => 'Compte rendu médical',
     'no_charges_yet' => 'Aucun frais enregistré pour l’instant',
     'total_charges' => 'Total des frais',
     'deposit_paid' => 'Acompte versé',

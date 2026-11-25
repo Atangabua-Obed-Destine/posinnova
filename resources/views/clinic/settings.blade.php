@@ -33,6 +33,11 @@
                     {!! Form::text('consultation_fee', $fmt($business->consultation_fee), ['class' => 'form-control input_number', 'style' => 'max-width:220px;']) !!}
                 </div>
                 <div class="form-group">
+                    {!! Form::label('report_fee', __('clinic.rpt_fee') . ':') !!}
+                    {!! Form::text('report_fee', $fmt($s['report_fee'] ?? 0), ['class' => 'form-control input_number', 'style' => 'max-width:220px;']) !!}
+                    <p class="help-block">@lang('clinic.rpt_fee_help')</p>
+                </div>
+                <div class="form-group">
                     <label>@lang('clinic.when_patients_pay'):</label>
                     <div class="radio">
                         <label>{!! Form::radio('pay_first', 0, ! $s['pay_first']) !!} <strong>@lang('clinic.pay_after')</strong></label>

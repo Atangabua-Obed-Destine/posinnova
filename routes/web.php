@@ -654,6 +654,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('consultations/{id}/finalize', [\App\Http\Controllers\ConsultationController::class, 'finalize']);
     Route::get('consultations/{id}/prescription', [\App\Http\Controllers\ConsultationController::class, 'prescription']);
     Route::get('consultations/{id}/report', [\App\Http\Controllers\ConsultationController::class, 'report'])->whereNumber('id');
+    Route::post('consultations/{id}/report-fee', [\App\Http\Controllers\ConsultationController::class, 'chargeReportFee'])->whereNumber('id');
     Route::get('consultations/exam-form', [\App\Http\Controllers\ConsultationExamController::class, 'form']);
     Route::get('consultations/exam/{id}/drawing/{block}', [\App\Http\Controllers\ConsultationExamController::class, 'drawing'])->whereNumber('id')->where('block', '[a-z0-9_]+');
 

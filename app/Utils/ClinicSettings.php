@@ -40,6 +40,8 @@ class ClinicSettings
         'portal_enabled' => true,
         'portal_idle_minutes' => 30,       // signed out after this long without activity
         'portal_consultation_detail' => 'diagnosis', // 'diagnosis' only, or 'full' notes
+        // Printing: the prescription is free; the full consultation report costs this (0 = free)
+        'report_fee' => 0,
     ];
 
     const SECTIONS = ['wards', 'theatre', 'maternity', 'morgue', 'imaging', 'departments'];
@@ -106,6 +108,7 @@ class ClinicSettings
         $s['portal_enabled'] = ! empty($input['portal_enabled']);
         $s['portal_idle_minutes'] = max(5, min(240, (int) ($input['portal_idle_minutes'] ?? 30)));
         $s['portal_consultation_detail'] = ($input['portal_consultation_detail'] ?? '') === 'full' ? 'full' : 'diagnosis';
+        $s['report_fee'] = max(0, round((float) ($input['report_fee'] ?? 0), 4));
 
         Business::where('id', $business_id)->update(['hospital_settings' => json_encode($s)]);
         unset(self::$cache[$business_id]);

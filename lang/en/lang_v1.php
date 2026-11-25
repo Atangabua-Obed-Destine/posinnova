@@ -109,7 +109,7 @@ return [
     'consultation_finalized_success' => 'Consultation finalized', 'consultation_saved_draft' => 'Consultation saved as draft',
     'visit_opened_success' => 'Visit opened', 'visit_closed_success' => 'Visit closed',
     'patient_added_success' => 'Patient added', 'patient_updated_success' => 'Patient updated',
-    'charge_type_consultation' => 'Consultation', 'charge_type_lab' => 'Lab', 'charge_type_imaging' => 'Imaging', 'charge_type_procedure' => 'Procedure', 'charge_type_admission' => 'Admission', 'charge_type_pharmacy' => 'Pharmacy',
+    'charge_type_consultation' => 'Consultation', 'charge_type_lab' => 'Lab', 'charge_type_imaging' => 'Imaging', 'charge_type_procedure' => 'Procedure', 'charge_type_admission' => 'Admission', 'charge_type_pharmacy' => 'Pharmacy', 'charge_type_report' => 'Medical report',
     // Patient Portal
     'patient_portal' => 'Patient Portal',
     'file_number' => 'File Number',

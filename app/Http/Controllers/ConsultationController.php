@@ -604,8 +604,11 @@ class ConsultationController extends Controller
         $can_continue = $consultation->status == 'draft' && auth()->user()->can('consultation.create') && $this->mayContinue($consultation);
         $can_correct = $this->mayCorrect($consultation);
         $corrections = \App\Utils\ConsultationCorrections::of($consultation->id);
+        $report_invoice = \App\Utils\ConsultationReportFee::invoice($consultation);
+        $report_state = \App\Utils\ConsultationReportFee::state($consultation, $report_invoice);
+        $report_fee = \App\Utils\ConsultationReportFee::fee($business_id);
 
-        return view('consultation.show')->with(compact('consultation', 'lab_requests', 'imaging_requests', 'can_continue', 'can_correct', 'corrections'));
+        return view('consultation.show')->with(compact('consultation', 'lab_requests', 'imaging_requests', 'can_continue', 'can_correct', 'corrections', 'report_invoice', 'report_state', 'report_fee'));
     }
 
     public function finalize($id)
@@ -679,11 +682,45 @@ class ConsultationController extends Controller
         if (! auth()->user()->can('consultation.view_all') && $consultation->consulted_by != auth()->id()) {
             abort(403, 'Unauthorized action.');
         }
+        // the full report can be a paid extra: closed until its fee is paid (the prescription stays free)
+        if (! \App\Utils\ConsultationReportFee::mayPrint($consultation)) {
+            return redirect()->action([self::class, 'show'], [$consultation->id])
+                ->with('status', ['success' => 0, 'msg' => __('clinic.rpt_unpaid_blocked')]);
+        }
         [$lab_requests, $imaging_requests] = $this->requestsOf($consultation);
         $business = \App\Business::find($business_id);
         $corrections = \App\Utils\ConsultationCorrections::of($consultation->id);
 
         return view('consultation.report_print')->with(compact('consultation', 'business', 'lab_requests', 'imaging_requests', 'corrections'));
+    }
+
+    /**
+     * PosInnova: a patient asks for the full consultation report: its fee (Clinic settings) goes on the
+     * patient's bill, once. The report prints once that invoice is paid. See App\Utils\ConsultationReportFee.
+     */
+    public function chargeReportFee($id)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('consultation.view_own') && ! auth()->user()->can('consultation.view_all')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $business_id = request()->session()->get('user.business_id');
+        $consultation = Consultation::forBusiness($business_id)->with('visit')->findOrFail($id);
+        if (! auth()->user()->can('consultation.view_all') && $consultation->consulted_by != auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $invoice = \App\Utils\ConsultationReportFee::charge($consultation, auth()->id());
+            $output = $invoice
+                ? ['success' => 1, 'msg' => __('clinic.rpt_charged')]
+                : ['success' => 1, 'msg' => __('clinic.rpt_no_fee')];
+        } catch (\Exception $e) {
+            \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
+            $output = ['success' => 0, 'msg' => __('messages.something_went_wrong')];
+        }
+
+        return redirect()->action([self::class, 'show'], [$consultation->id])->with('status', $output);
     }
 
     /**

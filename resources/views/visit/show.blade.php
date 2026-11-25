@@ -219,6 +219,11 @@
                                 <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'show'], [$c->id]) }}" class="btn btn-xs btn-info">
                                     <i class="fas fa-eye"></i> @lang('messages.view')
                                 </a>
+                                @if ($c->prescriptions->count() > 0)
+                                    <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'prescription'], [$c->id]) }}" target="_blank" class="btn btn-xs btn-primary visit-print-rx" title="{{ __('clinic.rpt_print_rx_help') }}">
+                                        <i class="fas fa-prescription"></i> @lang('lang_v1.print_prescription')
+                                    </a>
+                                @endif
                             </td>
                         </tr>
                     @empty

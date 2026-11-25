@@ -183,7 +183,8 @@
 <div class="box box-solid" id="gd_print"><div class="box-body">
     <h2><i class="fas fa-print"></i> Partie 3 — Le compte rendu imprimé</h2>
     <ol class="gd-steps">
-        <li>Ouvrez la consultation (après l'avoir enregistrée) et cliquez sur <span class="gd-b"><i class="fas fa-file-medical"></i> Imprimer la consultation</span>.</li>
+        <li>Ouvrez la consultation (après l'avoir enregistrée). Pour ce que le patient emporte, <span class="gd-b"><i class="fas fa-prescription"></i> Imprimer l’ordonnance</span> imprime les médicaments seulement, gratuitement. Pour toute la consultation, cliquez sur <span class="gd-b"><i class="fas fa-file-medical"></i> Imprimer le compte rendu complet</span>.
+            Si la clinique fait payer le compte rendu complet (<span class="gd-b">Paramètres de la clinique</span> → <em>Frais du compte rendu complet de consultation</em>), le bouton affiche le prix à la place : un clic met les frais sur la facture du patient, et le compte rendu s'imprime une fois payé.</li>
         <li>Le compte rendu s'ouvre dans un nouvel onglet, présenté comme la fiche papier : le nom et le logo de la clinique, le patient (âge, sexe, profession, résidence, situation matrimoniale, téléphone), le motif, l'histoire de la maladie, les signes vitaux, la fiche d'examen avec les dessins et les signes, les photos, les diagnostics, les examens, le tableau des médicaments, la conduite à tenir et la date de contrôle.</li>
         <li>Cliquez sur <span class="gd-b">Imprimer</span> en haut (ou enregistrez-le en PDF depuis la fenêtre d'impression).</li>
     </ol>

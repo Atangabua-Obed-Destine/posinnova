@@ -49,6 +49,7 @@ class ClinicSettingsController extends Controller
             'hospital_file_prefix' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9]+$/'],
             'consultation_fee' => 'nullable|string|max:30',
             'morgue_daily_fee' => 'nullable|string|max:30',
+            'report_fee' => 'nullable|string|max:30',
             'plan_fixed_day' => 'nullable|integer|min:1|max:28',
             'plan_grace_days' => 'nullable|integer|min:0|max:60',
             'portal_idle_minutes' => 'nullable|integer|min:5|max:240',
@@ -72,6 +73,7 @@ class ClinicSettingsController extends Controller
             'appointments_enabled', 'appointments_portal', 'appointments_days_ahead', 'appointments_min_notice_hours', 'appointments_booked_first', 'whatsapp_country_code',
             'sections', 'portal_enabled', 'portal_idle_minutes', 'portal_consultation_detail',
         ]);
+        $input['report_fee'] = $this->num_uf($request->input('report_fee'));
         // only real Admins of this business can be ticked as also seeing patients
         $input['admin_doctors'] = array_values(array_intersect(
             array_map('intval', (array) $request->input('admin_doctors', [])),

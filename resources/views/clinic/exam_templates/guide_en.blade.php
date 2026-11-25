@@ -181,7 +181,8 @@
 <div class="box box-solid" id="gd_print"><div class="box-body">
     <h2><i class="fas fa-print"></i> Part 3 — The printed report</h2>
     <ol class="gd-steps">
-        <li>Open the consultation (after saving it) and click <span class="gd-b"><i class="fas fa-file-medical"></i> Print the consultation</span>.</li>
+        <li>Open the consultation (after saving it). For the patient to take home, <span class="gd-b"><i class="fas fa-prescription"></i> Print Prescription</span> prints the medicines only, free. For the whole consultation, click <span class="gd-b"><i class="fas fa-file-medical"></i> Print the full report</span>.
+            If the clinic charges for the full report (<span class="gd-b">Clinic settings</span> → <em>Full consultation report fee</em>), the button shows the price instead: clicking it puts the fee on the patient's bill, and the report prints once it is paid.</li>
         <li>The report opens in a new tab, laid out like the paper form: the clinic's name and logo, the patient (age, gender, occupation, residence, marital status, telephone), complaint, history, vitals, the examination form with the drawings and findings, photos, diagnoses, tests, the drug table, the plan and the review date.</li>
         <li>Click <span class="gd-b">Print</span> at the top (or save it as PDF from the print window).</li>
     </ol>

@@ -66,15 +66,41 @@
                         <i class="fas fa-x-ray"></i> @lang('lang_v1.request_imaging')
                     </a>
                 @endcan
-                <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'report'], [$c->id]) }}" target="_blank"
-                    class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline" id="print_consultation_report">
-                    <i class="fas fa-file-medical"></i> @lang('clinic.cons_print_report')
-                </a>
+                {{-- PosInnova: the prescription is what the patient takes home (free); the full report can be a paid extra --}}
                 @if($c->prescriptions->count() > 0)
                     <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'prescription'], [$c->id]) }}" target="_blank"
-                        class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline">
-                        <i class="fas fa-print"></i> @lang('lang_v1.print_prescription')
+                        class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-primary tw-text-white" id="print_prescription" title="{{ __('clinic.rpt_print_rx_help') }}">
+                        <i class="fas fa-prescription"></i> @lang('lang_v1.print_prescription')
                     </a>
+                @endif
+                @if (in_array($report_state, ['free', 'paid']))
+                    <a href="{{ action([\App\Http\Controllers\ConsultationController::class, 'report'], [$c->id]) }}" target="_blank"
+                        class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline" id="print_consultation_report">
+                        <i class="fas fa-file-medical"></i> @lang('clinic.cons_print_report')
+                    </a>
+                @elseif ($report_state == 'not_charged')
+                    @php
+                        $cur = session('currency');
+                        $fee_text = number_format((float) $report_fee, session('business.currency_precision', 2), $cur['decimal_separator'] ?? '.', $cur['thousand_separator'] ?? ',');
+                        $fee_text = session('business.currency_symbol_placement') == 'after' ? $fee_text.' '.($cur['symbol'] ?? '') : trim(($cur['symbol'] ?? '').' '.$fee_text);
+                    @endphp
+                    <form method="POST" action="{{ action([\App\Http\Controllers\ConsultationController::class, 'chargeReportFee'], [$c->id]) }}" style="display:inline;"
+                        onsubmit="return confirm(this.getAttribute('data-confirm'));" data-confirm="{{ __('clinic.rpt_charge_confirm', ['amount' => $fee_text]) }}">
+                        @csrf
+                        <button type="submit" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline" id="charge_report_fee">
+                            <i class="fas fa-file-medical"></i> {{ __('clinic.rpt_btn_charge', ['amount' => $fee_text]) }}
+                        </button>
+                    </form>
+                @else
+                    <span class="tw-dw-btn tw-dw-btn-sm" id="report_fee_unpaid" title="{{ __('clinic.rpt_unpaid_blocked') }}" style="background:#fffaeb;color:#b54708;border:1px solid #fec84b;cursor:default;">
+                        <i class="fas fa-file-medical"></i> @lang('clinic.rpt_unpaid')
+                    </span>
+                    @can('sell.payments')
+                        <a href="{{ action([\App\Http\Controllers\TransactionPaymentController::class, 'addPayment'], [$report_invoice->id]) }}?post_to_register=1"
+                            class="add_payment_modal tw-dw-btn tw-dw-btn-sm tw-dw-btn-success tw-text-white" id="report_fee_pay">
+                            <i class="fas fa-money-bill-alt"></i> @lang('clinic.take_payment')
+                        </a>
+                    @endcan
                 @endif
                 <a href="{{ action([\App\Http\Controllers\VisitController::class, 'show'], [$c->visit_id]) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline">
                     <i class="fa fa-arrow-left"></i> @lang('lang_v1.back_to_visit')
@@ -203,10 +229,17 @@
     @endif
 
 </section>
+@if ($report_state == 'due')
+    <div class="modal fade payment_modal" tabindex="-1" role="dialog"></div>
+    <div class="modal fade edit_payment_modal" tabindex="-1" role="dialog"></div>
+@endif
 @endsection
 
 @section('javascript')
 @include('consultation.exam.assets')
+@if ($report_state == 'due')
+    <script src="{{ asset('js/payment.js?v=' . $asset_v) }}"></script>
+@endif
 @if (session('status.success'))
     {{-- just saved: the copy kept on this device in case the page was closed is no longer needed --}}
     <script>try { window.localStorage.removeItem('pi_consult_v{{ (int) $c->visit_id }}_u{{ (int) auth()->id() }}'); window.localStorage.removeItem('pi_consult_v{{ (int) $c->visit_id }}_u{{ (int) auth()->id() }}_fix{{ (int) $c->id }}'); } catch (e) { /* private mode */ }</script>
