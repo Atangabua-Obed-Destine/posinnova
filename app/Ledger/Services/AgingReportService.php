@@ -325,7 +325,7 @@ class AgingReportService
         }
 
         $journal = DB::table('transaction_mappings')->where('business_id', $bid)
-            ->where('transaction_type', '!=', 'payment')->whereIn('transaction_id', array_keys($owed))
+            ->whereNotIn('transaction_type', ['payment', 'account_transaction'])->whereIn('transaction_id', array_keys($owed))
             ->where('status', 'posted')->pluck('journal_entry_id', 'transaction_id');
 
         $asOf = Carbon::parse($D);

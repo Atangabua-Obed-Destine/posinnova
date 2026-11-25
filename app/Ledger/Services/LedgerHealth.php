@@ -146,14 +146,18 @@ class LedgerHealth
 
         // The document is gone, its entry still counts
         $goneDocs = DB::table('transaction_mappings as m')->where('m.business_id', $b)->where('m.status', 'posted')
-            ->where('m.transaction_type', '!=', 'payment')
+            ->whereNotIn('m.transaction_type', ['payment', 'account_transaction'])
             ->leftJoin('transactions as t', 't.id', '=', 'm.transaction_id')->whereNull('t.id')
             ->get(['m.transaction_type', 'm.transaction_id', 'm.transaction_date', 'm.amount', 'm.journal_entry_id as entry_id']);
         $gonePays = DB::table('transaction_mappings as m')->where('m.business_id', $b)->where('m.status', 'posted')
             ->where('m.transaction_type', 'payment')
             ->leftJoin('transaction_payments as p', 'p.id', '=', 'm.transaction_id')->whereNull('p.id')
             ->get(['m.transaction_type', 'm.transaction_id', 'm.transaction_date', 'm.amount', 'm.journal_entry_id as entry_id']);
-        $orphans = $goneDocs->concat($gonePays);
+        $goneMoves = DB::table('transaction_mappings as m')->where('m.business_id', $b)->where('m.status', 'posted')
+            ->where('m.transaction_type', 'account_transaction')
+            ->leftJoin('account_transactions as at', 'at.id', '=', 'm.transaction_id')->whereNull('at.id')
+            ->get(['m.transaction_type', 'm.transaction_id', 'm.transaction_date', 'm.amount', 'm.journal_entry_id as entry_id']);
+        $orphans = $goneDocs->concat($gonePays)->concat($goneMoves);
         $out[] = $this->check('mapping_orphan', 'mappings', $orphans->count(), (float) $orphans->sum('amount'),
             $this->mappingRows($orphans, false), self::CRITICAL);
 
@@ -592,7 +596,7 @@ class LedgerHealth
     private function documents($mappings): array
     {
         $out = [];
-        $tx = collect($mappings)->where('transaction_type', '!=', 'payment')->pluck('transaction_id')->unique()->all();
+        $tx = collect($mappings)->whereNotIn('transaction_type', ['payment', 'account_transaction'])->pluck('transaction_id')->unique()->all();
         $pay = collect($mappings)->where('transaction_type', 'payment')->pluck('transaction_id')->unique()->all();
         if ($tx) {
             foreach (DB::table('transactions')->where('business_id', $this->bid)->whereIn('id', $tx)
@@ -613,6 +617,13 @@ class LedgerHealth
     private function docCell(string $type, int $id, $doc): array
     {
         $no = $doc ? ($doc->invoice_no ?: ($doc->ref_no ?? null)) : null;
+        if ($type === 'account_transaction') {
+            // a Payment Accounts movement: its own table, its own numbering
+            $m = DB::table('account_transactions')->where('id', $id)->first(['sub_type', 'reff_no']);
+            $kind = $m && $m->sub_type ? $m->sub_type : 'deposit';
+
+            return ['text' => trim(__('ledger.doc_account_'.$kind).' '.(($m->reff_no ?? null) ?: '#'.$id)), 'url' => url('/account/account'), 'modal' => false];
+        }
         if (! $doc) {
             $no = $type === 'payment'
                 ? DB::table('transaction_payments')->where('id', $id)->value('payment_ref_no')

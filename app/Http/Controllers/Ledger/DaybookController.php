@@ -19,10 +19,12 @@ use Maatwebsite\Excel\Facades\Excel;
  * copies. Same screens, buttons and wording.
  *
  * Where paxhitestbed opens a book on a budget and one of its months,
- * PosInnova opens it on a fiscal year and one of its months (there are no
- * budgets here), and adds a cash box picker: the book is the money in and out
+ * PosInnova opens it on a fiscal year and one of its months, and adds a cash
+ * box picker: the book is the money in and out
  * of each cash, bank and mobile-money account, read from the posted ledger
- * (App\Ledger\Services\DaybookService). Nothing here writes to the books.
+ * (App\Ledger\Services\DaybookService). The Monthly Summary adds the month
+ * against the Income & Expenditure sheet covering it (Budget, Monthly,
+ * BB Forward, Cumulative, Balance by budget line). Nothing here writes to the books.
  */
 class DaybookController extends LedgerController
 {
@@ -240,9 +242,19 @@ class DaybookController extends LedgerController
             return null;
         }
 
+        // paxhitestbed's Budget and Balance columns: the month against the
+        // Income & Expenditure sheet (the institutional budget) covering it
+        $period = $context['period'];
+        $budget = \App\Ledger\Models\Budget::where('is_institutional', true)->where('status', '!=', 'cancelled')
+            ->whereDate('start_date', '<=', $period->end_date->toDateString())
+            ->whereDate('end_date', '>=', $period->start_date->toDateString())
+            ->orderByDesc('start_date')->first();
+
         return $context + [
             'title' => __('ledger_daybook.monthly_summary_title'),
             'summary' => $this->daybook->monthlySummary($context['year'], $context['period'], $context['cashIds']),
+            'againstBudget' => $budget ? app(\App\Ledger\Services\BudgetActualsService::class)
+                ->monthAgainstBudget($budget, $period->start_date->toDateString(), $period->end_date->toDateString()) : null,
         ];
     }
 

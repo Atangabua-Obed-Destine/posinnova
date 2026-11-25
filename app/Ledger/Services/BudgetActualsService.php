@@ -239,6 +239,89 @@ class BudgetActualsService
         return round($total, 2);
     }
 
+    // ------------------------------------------------------------ one month against the budget
+
+    /**
+     * The Daybook Monthly Summary's budget columns (paxhitestbed's summary rows
+     * are the Income & Expenditure sheet's lines): for each line of the sheet,
+     * the year's Budget, this month's actual (Monthly), everything since the
+     * budget opened up to the end of last month (BB Forward), their sum
+     * (Cumulative) and what is left (Balance = Budget - Cumulative).
+     *
+     * Actuals are the sheet's own (forPeriod, from the posted ledger), so at the
+     * budget's end Cumulative equals the sheet. The month is clipped to the
+     * budget's dates; a month outside the budget returns null.
+     *
+     * @return array{budget: Budget, rows: array, totals: array, unallocated: array}|null
+     */
+    public function monthAgainstBudget(Budget $budget, string $monthStart, string $monthEnd): ?array
+    {
+        $bStart = $budget->start_date->format('Y-m-d');
+        $bEnd = $budget->end_date->format('Y-m-d');
+        if ($monthEnd < $bStart || $monthStart > $bEnd) {
+            return null;
+        }
+        $from = max($monthStart, $bStart);
+        $to = min($monthEnd, $bEnd);
+        $priorEnd = date('Y-m-d', strtotime($from.' -1 day'));
+
+        $budgeted = BudgetAllocation::where('budget_id', $budget->id)->whereNotNull('budget_line_id')
+            ->pluck('allocated_amount', 'budget_line_id')->map(fn ($v) => (float) $v)->toArray();
+        $month = $this->forPeriod($from, $to);
+        $brought = $priorEnd >= $bStart ? $this->forPeriod($bStart, $priorEnd) : ['lines' => [], 'unallocated' => []];
+
+        $lines = BudgetLine::sheet();
+        $ends = BudgetLine::groupEnds($lines);
+        $b = $this->withHeaderTotals($budgeted);
+        $m = $this->withHeaderTotals($month['lines']);
+        $f = $this->withHeaderTotals($brought['lines']);
+        $row = function (BudgetLine $line, string $kind) use ($b, $m, $f) {
+            $has = array_key_exists($line->id, $b);
+            $cum = round(($m[$line->id] ?? 0) + ($f[$line->id] ?? 0), 2);
+
+            return [
+                'id' => (int) $line->id, 'code' => (string) $line->code, 'name' => $line->display_name,
+                'section' => $line->section, 'kind' => $kind,
+                'budget' => $has ? round($b[$line->id], 2) : null,
+                'monthly' => round($m[$line->id] ?? 0, 2),
+                'brought' => round($f[$line->id] ?? 0, 2),
+                'cumulative' => $cum,
+                'balance' => $has ? round($b[$line->id] - $cum, 2) : null,
+            ];
+        };
+
+        $rows = [];
+        foreach ($lines as $line) {
+            $rows[] = $row($line, $line->is_header ? 'header' : ($line->parent_id ? 'child' : 'line'));
+            if (isset($ends[$line->id])) {
+                $rows[] = $row($ends[$line->id], 'subtotal');
+            }
+        }
+
+        $totals = [];
+        foreach (BudgetLine::SECTIONS as $s) {
+            $bud = $this->sectionTotal($budgeted, $s);
+            $cum = round($this->sectionTotal($month['lines'], $s) + $this->sectionTotal($brought['lines'], $s), 2);
+            $totals[$s] = [
+                'budget' => $bud,
+                'monthly' => $this->sectionTotal($month['lines'], $s),
+                'brought' => $this->sectionTotal($brought['lines'], $s),
+                'cumulative' => $cum,
+                'balance' => round($bud - $cum, 2),
+            ];
+        }
+        $unallocated = [];
+        foreach (BudgetLine::SECTIONS as $s) {
+            $um = (float) ($month['unallocated'][$s] ?? 0);
+            $ub = (float) ($brought['unallocated'][$s] ?? 0);
+            if (abs($um) > 0.004 || abs($ub) > 0.004) {
+                $unallocated[$s] = ['monthly' => round($um, 2), 'brought' => round($ub, 2), 'cumulative' => round($um + $ub, 2)];
+            }
+        }
+
+        return ['budget' => $budget, 'from' => $from, 'to' => $to, 'rows' => $rows, 'totals' => $totals, 'unallocated' => $unallocated];
+    }
+
     // ------------------------------------------------------------ budgets' spend
 
     /**

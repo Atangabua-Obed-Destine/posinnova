@@ -657,7 +657,7 @@
 
 	        var account_dropdown = payment_row.find('select#account_' + row_index);
 		    if (payment_type && payment_type != 'advance') {
-		        var default_account = default_accounts && default_accounts[payment_type]['account'] ? 
+		        var default_account = default_accounts && default_accounts[payment_type] && default_accounts[payment_type]['account'] ? 
 		            default_accounts[payment_type]['account'] : '';
 		        if (account_dropdown.length && default_accounts) {
 		            account_dropdown.val(default_account);

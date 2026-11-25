@@ -14,9 +14,11 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 /**
  * The Monthly Summary in the screen's column order: Monthly · BB Forward ·
- * Cumulative (paxhitestbed App\Exports\DaybookSummarySheet, without the
- * Budget and Balance columns: PosInnova keeps no budgets). Named "<Month> MS"
- * as the workbook names its tabs.
+ * Cumulative by counter-account, then (paxhitestbed's Budget and Balance
+ * columns) the month against the Income & Expenditure Sheet covering it, by
+ * budget line: Budget · Monthly · BB Forward · Cumulative · Balance
+ * (paxhitestbed App\Exports\DaybookSummarySheet). Named "<Month> MS" as the
+ * workbook names its tabs.
  */
 class DaybookSummarySheet implements FromArray, WithTitle, WithColumnWidths, WithEvents, WithStrictNullComparison
 {
@@ -33,6 +35,11 @@ class DaybookSummarySheet implements FromArray, WithTitle, WithColumnWidths, Wit
     protected array $headerRows = [];
 
     protected array $subtotalRows = [];
+
+    /** rows of the budget block, styled over seven columns */
+    protected array $wide = [];
+
+    protected int $budgetHeadingRow = 0;
 
     public function __construct(array $data)
     {
@@ -91,6 +98,46 @@ class DaybookSummarySheet implements FromArray, WithTitle, WithColumnWidths, Wit
         }
         $rows[] = ['', __('ledger_daybook.net_balance'), $n($summary['net']['monthly']), $n($summary['net']['brought']), $n($summary['net']['cumulative'])];
         $this->totalRows[] = count($rows);
+
+        $ab = $this->data['againstBudget'] ?? null;
+        if ($ab) {
+            $rows[] = [''];
+            $rows[] = [mb_strtoupper(__('ledger_daybook.against_budget_title', ['budget' => $ab['budget']->title]))];
+            $this->headerRows[] = count($rows);
+            $this->budgetHeadingRow = count($rows) + 1;
+            $rows[] = [__('ledger_daybook.code'), __('ledger_daybook.description'), __('ledger_daybook.budget_col'), __('ledger_daybook.monthly'),
+                __('ledger_daybook.bb_forward'), __('ledger_daybook.cumulative'), __('ledger_daybook.balance_col')];
+            foreach (['income', 'expenditure', 'capital'] as $section) {
+                $rows[] = [$labels[$section], '', '', '', '', '', ''];
+                $this->sectionRows[] = $this->wide[] = count($rows);
+                foreach ($ab['rows'] as $row) {
+                    if ($row['section'] !== $section) {
+                        continue;
+                    }
+                    $sub = $row['kind'] === 'subtotal';
+                    $rows[] = [$sub ? '' : $row['code'],
+                        ($sub ? '    '.__('ledger_daybook.total').' ' : ($row['kind'] === 'child' ? '    ' : '')).($row['kind'] === 'header' ? mb_strtoupper($row['name']) : $row['name']),
+                        $row['budget'] === null ? null : round($row['budget'], 2), $n($row['monthly']), $n($row['brought']), $n($row['cumulative']),
+                        $row['budget'] ? round($row['balance'], 2) : null];
+                    if ($sub) {
+                        $this->subtotalRows[] = $this->wide[] = count($rows);
+                    } elseif ($row['kind'] === 'header') {
+                        $this->headerRows[] = $this->wide[] = count($rows);
+                    }
+                }
+                if (isset($ab['unallocated'][$section])) {
+                    $u = $ab['unallocated'][$section];
+                    $rows[] = ['', __('ledger_daybook.not_on_a_line'), null, $n($u['monthly']), $n($u['brought']), $n($u['cumulative']), null];
+                }
+                $t = $ab['totals'][$section];
+                $rows[] = ['', __('ledger_daybook.total').' '.$labels[$section], $n($t['budget']), $n($t['monthly']), $n($t['brought']), $n($t['cumulative']), $n($t['balance'])];
+                $this->totalRows[] = $this->wide[] = count($rows);
+            }
+            $T = $ab['totals'];
+            $net = fn ($k) => $n($T['income'][$k] - $T['expenditure'][$k] - $T['capital'][$k]);
+            $rows[] = ['', __('ledger_daybook.net_balance'), $net('budget'), $net('monthly'), $net('brought'), $net('cumulative'), null];
+            $this->totalRows[] = $this->wide[] = count($rows);
+        }
         $this->lastRow = count($rows);
 
         return $rows;
@@ -98,7 +145,7 @@ class DaybookSummarySheet implements FromArray, WithTitle, WithColumnWidths, Wit
 
     public function columnWidths(): array
     {
-        return ['A' => 10, 'B' => 50, 'C' => 16, 'D' => 16, 'E' => 16];
+        return ['A' => 10, 'B' => 50, 'C' => 16, 'D' => 16, 'E' => 16, 'F' => 16, 'G' => 16];
     }
 
     public function registerEvents(): array
@@ -112,21 +159,27 @@ class DaybookSummarySheet implements FromArray, WithTitle, WithColumnWidths, Wit
                 $h = "A{$this->headingRow}:E{$this->headingRow}";
                 $sheet->getStyle($h)->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
                 $sheet->getStyle($h)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('34495E');
-                $sheet->getStyle('C'.($this->headingRow + 1).':E'.$last)->getNumberFormat()->setFormatCode('#,##0;[Red](#,##0);"—"');
+                $sheet->getStyle('C'.($this->headingRow + 1).':G'.$last)->getNumberFormat()->setFormatCode('#,##0;[Red](#,##0);"—"');
+                if ($this->budgetHeadingRow) {
+                    $b = "A{$this->budgetHeadingRow}:G{$this->budgetHeadingRow}";
+                    $sheet->getStyle($b)->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+                    $sheet->getStyle($b)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('34495E');
+                }
+                $col = fn ($row) => in_array($row, $this->wide, true) ? 'G' : 'E';
                 foreach ($this->sectionRows as $row) {
-                    $sheet->getStyle("A{$row}:E{$row}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-                    $sheet->getStyle("A{$row}:E{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('212B36');
+                    $sheet->getStyle("A{$row}:".$col($row)."{$row}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+                    $sheet->getStyle("A{$row}:".$col($row)."{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('212B36');
                 }
                 foreach ($this->headerRows as $row) {
-                    $sheet->getStyle("A{$row}:E{$row}")->getFont()->setBold(true);
-                    $sheet->getStyle("A{$row}:E{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF1F6');
+                    $sheet->getStyle("A{$row}:".$col($row)."{$row}")->getFont()->setBold(true);
+                    $sheet->getStyle("A{$row}:".$col($row)."{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF1F6');
                 }
                 foreach ($this->subtotalRows as $row) {
-                    $sheet->getStyle("A{$row}:E{$row}")->getFont()->setItalic(true)->setBold(true);
+                    $sheet->getStyle("A{$row}:".$col($row)."{$row}")->getFont()->setItalic(true)->setBold(true);
                 }
                 foreach ($this->totalRows as $row) {
-                    $sheet->getStyle("A{$row}:E{$row}")->getFont()->setBold(true);
-                    $sheet->getStyle("A{$row}:E{$row}")->getBorders()->getTop()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('34495E');
+                    $sheet->getStyle("A{$row}:".$col($row)."{$row}")->getFont()->setBold(true);
+                    $sheet->getStyle("A{$row}:".$col($row)."{$row}")->getBorders()->getTop()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('34495E');
                 }
                 $sheet->freezePane('C'.($this->headingRow + 1));
             },

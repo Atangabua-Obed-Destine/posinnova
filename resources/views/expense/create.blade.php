@@ -184,7 +184,7 @@
 	    var payment_types_dropdown = $('.payment_types_dropdown');
 	    var payment_type = payment_types_dropdown.val();
 	    if (payment_type) {
-	        var default_account = default_accounts && default_accounts[payment_type]['account'] ? 
+	        var default_account = default_accounts && default_accounts[payment_type] && default_accounts[payment_type]['account'] ? 
 	            default_accounts[payment_type]['account'] : '';
 	        var payment_row = payment_types_dropdown.closest('.payment_row');
 	        var row_index = payment_row.find('.payment_row_index').val();

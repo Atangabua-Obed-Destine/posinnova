@@ -978,7 +978,7 @@
 			                .data('default_payment_accounts') : $('#location_id').data('default_payment_accounts');
 			    var payment_type = $(this).val();
 			    if (payment_type) {
-			        var default_account = default_accounts && default_accounts[payment_type]['account'] ? 
+			        var default_account = default_accounts && default_accounts[payment_type] && default_accounts[payment_type]['account'] ? 
 			            default_accounts[payment_type]['account'] : '';
 			        var account_dropdown = $('select#prefer_payment_account');
 			        if (account_dropdown.length && default_accounts) {

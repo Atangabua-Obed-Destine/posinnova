@@ -95,7 +95,8 @@ class LedgerSync
             return 'none';
         }
         $map = $t ? TransactionMapping::where('transaction_type', $t->type)->where('transaction_id', $id)->first()
-                  : TransactionMapping::where('transaction_type', '!=', 'payment')->where('transaction_id', $id)->first();
+                  // a document's mapping: never a payment's or a Payment Accounts movement's (their ids are another series)
+                  : TransactionMapping::whereNotIn('transaction_type', ['payment', 'account_transaction'])->where('transaction_id', $id)->first();
         if (! $t || ! in_array($t->type, PostingRules::TYPES)) {
             return $map ? $this->apply($map, null, 'doc', $id) : 'none';
         }
@@ -183,9 +184,13 @@ class LedgerSync
             return $this->fail($map, $e->getMessage());
         }
 
+        $fp = null;
         if ($want) {
-            $want['date'] = $this->postingDate($want['date'], $want);
+            // What the document says, on its own date: a closed month moving the posting
+            // date to today is not a change, or every later look at an old document (a
+            // payment on an October invoice in November) would reverse and repost it.
             $fp = sha1(json_encode([$want['date'], $want['lines']]));
+            $want['date'] = $this->postingDate($want['date'], $want);
             if ($map->exists && $map->status === 'posted' && $map->fingerprint === $fp) {
                 return 'same';
             }
@@ -201,7 +206,7 @@ class LedgerSync
         }
 
         try {
-            return DB::transaction(function () use ($map, $want, $userId, $kind, $id) {
+            return DB::transaction(function () use ($map, $want, $userId, $kind, $id, $fp) {
                 $had = $map->journal_entry_id ? JournalEntry::find($map->journal_entry_id) : null;
                 $result = 'posted';
                 if ($had && $had->is_posted && ! $had->is_reversed) {
@@ -231,7 +236,7 @@ class LedgerSync
                         'description' => $want['description'],
                         'debit_account_id' => $dr['account_id'] ?? null,
                         'credit_account_id' => $cr['account_id'] ?? null,
-                        'fingerprint' => sha1(json_encode([$want['date'], $want['lines']])),
+                        'fingerprint' => $fp,
                         'mapped_at' => now(),
                         'mapped_by' => $userId,
                         'status' => 'posted',
@@ -365,11 +370,18 @@ class LedgerSync
         }
 
         // entries whose document or payment is gone
+        // (documents only: payments and Payment Accounts movements are numbered in their own tables)
         $gone = DB::table('transaction_mappings as m')->where('m.business_id', $bid)->where('m.status', 'posted')
-            ->where('m.transaction_type', '!=', 'payment')
+            ->whereNotIn('m.transaction_type', ['payment', 'account_transaction'])
             ->leftJoin('transactions as t', 't.id', '=', 'm.transaction_id')->whereNull('t.id')->pluck('m.transaction_id');
         foreach ($gone as $id) {
             $count($this->transaction($id));
+        }
+        $gone = DB::table('transaction_mappings as m')->where('m.business_id', $bid)->where('m.status', 'posted')
+            ->where('m.transaction_type', 'account_transaction')
+            ->leftJoin('account_transactions as at', 'at.id', '=', 'm.transaction_id')->whereNull('at.id')->pluck('m.transaction_id');
+        foreach ($gone as $id) {
+            $count($this->accountTransaction((int) $id));
         }
         $gone = DB::table('transaction_mappings as m')->where('m.business_id', $bid)->where('m.status', 'posted')
             ->where('m.transaction_type', 'payment')

@@ -396,9 +396,10 @@ class DaybookService
      * One month of the book, summarised the way paxhitestbed's workbook does
      * it: Monthly · BB Forward · Cumulative, one row per counter-account.
      *
-     * PosInnova keeps no budgets, so paxhitestbed's Budget and Balance columns
-     * (and its profit centres, which pair budget lines) have nothing to show
-     * and are left out. BB Forward is everything since the fiscal year opened
+     * paxhitestbed's Budget and Balance columns are by budget line, not by
+     * counter-account: they come with the month against the Income &
+     * Expenditure sheet (BudgetActualsService::monthAgainstBudget), shown
+     * under this table. BB Forward is everything since the fiscal year opened
      * up to the end of the previous month, so the first month opens at zero.
      *
      * Sections: a counter-account in class 2 is capital expenditure, one in
@@ -598,13 +599,33 @@ class DaybookService
             $opening += $b['opening'];
         }
 
-        // No budgets in PosInnova: pacing has nothing to compare against.
+        // Pacing against the Income & Expenditure sheet (the institutional
+        // budget) that covers this year, as paxhitestbed paces against its
+        // budget: what went out over the budget's days against what it allows
+        // for expenditure and capital, the time gone measured on its dates.
         $budgetOut = 0.0;
         $budgetIn = 0.0;
+        $spentInBudget = $cumOut;
+        $budget = \App\Ledger\Models\Budget::where('is_institutional', true)->where('status', '!=', 'cancelled')
+            ->whereDate('start_date', '<=', $to)->whereDate('end_date', '>=', $from)
+            ->orderByRaw('(start_date <= ? AND end_date >= ?) DESC', [now()->toDateString(), now()->toDateString()])
+            ->orderByDesc('start_date')->first();
+        if ($budget) {
+            $bySection = \App\Ledger\Models\BudgetAllocation::where('budget_allocations.budget_id', $budget->id)
+                ->join('budget_lines as bl', 'bl.id', '=', 'budget_allocations.budget_line_id')
+                ->where('bl.is_header', false)->groupBy('bl.section')
+                ->selectRaw('bl.section, SUM(budget_allocations.allocated_amount) AS total')->pluck('total', 'section');
+            $budgetOut = (float) ($bySection['expenditure'] ?? 0) + (float) ($bySection['capital'] ?? 0);
+            $budgetIn = (float) ($bySection['income'] ?? 0);
+            $bs = $budget->start_date->toDateString();
+            $be = $budget->end_date->toDateString();
+            $spentInBudget = array_sum(array_map(fn ($r) => $r['direction'] === self::OUT && $r['date'] >= $bs && $r['date'] <= $be ? $r['amount'] : 0, $rows));
+        }
 
         return [
             'months' => $months,
-            'pacing' => $this->pacing($year, $cumOut, $budgetOut),
+            'pacing' => $this->pacing($year, $spentInBudget, $budgetOut, $budget),
+            'budget_sheet' => $budget,
             'top_expenditure' => $this->topLines($rows, 10, self::OUT),
             'top_income' => $this->topLines($rows, 10, self::IN),
             'concentration' => [
@@ -624,13 +645,14 @@ class DaybookService
     }
 
     /**
-     * Are we spending faster than the year is passing? Kept from paxhitestbed
-     * so a budget can be plugged in later; with none, the status is 'none'.
+     * Are we spending faster than the year is passing? (paxhitestbed.) The
+     * time gone is measured on the budget's own dates when there is one; with
+     * no budget, the status is 'none'.
      */
-    protected function pacing(FiscalYear $year, float $spent, float $budgeted): array
+    protected function pacing(FiscalYear $year, float $spent, float $budgeted, $budget = null): array
     {
-        $start = $year->start_date->getTimestamp();
-        $end = $year->end_date->copy()->endOfDay()->getTimestamp();
+        $start = ($budget ? $budget->start_date : $year->start_date)->copy()->startOfDay()->getTimestamp();
+        $end = ($budget ? $budget->end_date : $year->end_date)->copy()->endOfDay()->getTimestamp();
         $now = Carbon::now()->getTimestamp();
 
         $elapsed = $end > $start ? max(0.0, min(1.0, ($now - $start) / ($end - $start))) * 100 : 0.0;
