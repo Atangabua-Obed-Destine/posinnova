@@ -19,7 +19,17 @@ class PayrollRules
         'prorate_partial_months' => 0,
         'proration_basis' => 'calendar_days',   // calendar_days | working_days
         'location_id' => null,
+        'advance_account_code' => '421',          // staff advances: loans given, repayments withheld
+        // the file a bank takes to pay salaries (paxhitestbed bank file)
+        'bank_file_columns' => ['name', 'bank_name', 'account_number', 'amount', 'reference'],
+        'bank_file_delimiter' => ',',              // , ; tab
+        'bank_file_header' => 1,
+        'bank_file_reference' => 'SALARY {MONTH} {YEAR}',
+        'bank_file_decimals' => 0,
     ];
+
+    /** The columns a bank file can have, in the order they are written. */
+    const BANK_COLUMNS = ['staff_no', 'name', 'bank_name', 'account_number', 'amount', 'currency', 'reference', 'month', 'cnps_no', 'job_title'];
 
     const OPEN_TOP = 50000000;
 

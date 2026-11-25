@@ -15,11 +15,13 @@
         <details class="ht-card" data-user="{{ $u->id }}" style="padding:12px 18px" {{ $s ? '' : '' }}>
             <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;list-style:none">
                 <span><strong>{{ trim($u->first_name.' '.$u->last_name) }}</strong> <span class="ht-muted ht-small">{{ $u->username }}</span></span>
-                <span>@if ($s && $s->is_active)<span class="ht-pill ht-p-free">{{ __('payroll.on_payroll') }}</span> {{ $fmt($s->basic_salary) }} {{ __('payroll.per_month') }}@else<span class="ht-pill ht-p-checked_out">{{ __('payroll.not_on_payroll') }}</span>@endif</span>
+                <span>@if ($s && $s->is_active)<span class="ht-pill ht-p-free">{{ __('payroll.on_payroll') }}</span> @if ($s->pay_type === 'hourly'){{ $fmt($s->hourly_rate) }} {{ __('payroll.per_hour') }}@else{{ $fmt($s->basic_salary) }} {{ __('payroll.per_month') }}@endif @else<span class="ht-pill ht-p-checked_out">{{ __('payroll.not_on_payroll') }}</span>@endif</span>
             </summary>
             <form method="post" action="{{ action([$P, 'saveStaff'], [$u->id]) }}" style="margin-top:12px">@csrf
                 <div class="ht-fields">
-                    <div class="ht-f"><label for="bs_{{ $u->id }}">{{ __('payroll.basic_salary') }} *</label><input id="bs_{{ $u->id }}" name="basic_salary" class="ht-in" inputmode="decimal" value="{{ $s ? (float) $s->basic_salary : '' }}"><span class="ht-muted ht-small">{{ __('payroll.basic_hint') }}</span></div>
+                    <div class="ht-f"><label for="pt_{{ $u->id }}">{{ __('payroll.pay_type') }}</label><select id="pt_{{ $u->id }}" name="pay_type" class="ht-in py-pay-type"><option value="monthly">{{ __('payroll.pay_monthly') }}</option><option value="hourly" {{ optional($s)->pay_type === 'hourly' ? 'selected' : '' }}>{{ __('payroll.pay_hourly') }}</option></select></div>
+                    <div class="ht-f py-hourly" @if (optional($s)->pay_type !== 'hourly') hidden @endif><label for="hr_{{ $u->id }}">{{ __('payroll.hourly_rate') }} *</label><input id="hr_{{ $u->id }}" name="hourly_rate" class="ht-in" inputmode="decimal" value="{{ $s && (float) $s->hourly_rate ? (float) $s->hourly_rate : '' }}"><span class="ht-muted ht-small">{{ __('payroll.hourly_hint') }}</span></div>
+                    <div class="ht-f py-monthly" @if (optional($s)->pay_type === 'hourly') hidden @endif><label for="bs_{{ $u->id }}">{{ __('payroll.basic_salary') }} *</label><input id="bs_{{ $u->id }}" name="basic_salary" class="ht-in" inputmode="decimal" value="{{ $s ? (float) $s->basic_salary : '' }}"><span class="ht-muted ht-small">{{ __('payroll.basic_hint') }}</span></div>
                     <div class="ht-f"><label for="jt_{{ $u->id }}">{{ __('payroll.job_title') }}</label><input id="jt_{{ $u->id }}" name="job_title" class="ht-in" value="{{ optional($s)->job_title }}"></div>
                     <div class="ht-f"><label for="cn_{{ $u->id }}">{{ __('payroll.cnps_no') }}</label><input id="cn_{{ $u->id }}" name="cnps_no" class="ht-in" value="{{ optional($s)->cnps_no }}"></div>
                     <div class="ht-f"><label for="tx_{{ $u->id }}">{{ __('payroll.tax_no') }}</label><input id="tx_{{ $u->id }}" name="tax_no" class="ht-in" value="{{ optional($s)->tax_no }}"></div>
@@ -35,4 +37,18 @@
         </details>
     @endforeach
 </section>
+@endsection
+
+@section('javascript')
+<script>
+// monthly staff have a salary, hourly staff a rate (their hours are typed on each payroll)
+document.querySelectorAll('.py-pay-type').forEach(function (sel) {
+    var form = sel.closest('form');
+    var show = function () {
+        form.querySelector('.py-hourly').hidden = sel.value !== 'hourly';
+        form.querySelector('.py-monthly').hidden = sel.value === 'hourly';
+    };
+    sel.addEventListener('change', show);
+});
+</script>
 @endsection

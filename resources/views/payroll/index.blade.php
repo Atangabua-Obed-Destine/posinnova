@@ -17,6 +17,8 @@
         <div class="ht-actions">
             <a class="ht-btn" href="{{ action([$P, 'report'], ['month' => $month->month, 'year' => $month->year]) }}">{{ __('payroll.menu_report') }}</a>
             @if ($can('payroll-setting') || $can('payroll-action'))<a class="ht-btn" href="{{ action([$P, 'staff']) }}">{{ __('payroll.menu_staff') }}</a>@endif
+            @if ($can('payroll-loans') || $can('payroll-view'))<a class="ht-btn" href="{{ action([$P, 'loans']) }}">{{ __('payroll.menu_loans') }}</a>@endif
+            @if ($can('payroll-remit') || $can('payroll-report'))<a class="ht-btn" href="{{ action([$P, 'remittances']) }}">{{ __('payroll.menu_remittances') }}</a>@endif
         </div>
     </div>
 
@@ -38,6 +40,17 @@
         <button class="ht-btn pri" type="submit">{{ __('payroll.filter') }}</button>
         <span class="ht-muted ht-small" style="margin-left:auto">{{ __('payroll.month_totals', ['paid' => $totals['paid'], 'net' => $fmt($totals['net']), 'cost' => $fmt($totals['cost'])]) }}</span>
     </form>
+
+    @if (($can('payroll-action') || $can('payroll-report')) && $payrolls->isNotEmpty())
+    {{-- paxhitestbed's bank file: the net pay of each payroll, for the bank to pay --}}
+    <form method="get" action="{{ action([$P, 'bankFile']) }}" class="ht-card" id="py_bank_file" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:12px 18px">
+        <input type="hidden" name="month" value="{{ $month->month }}"><input type="hidden" name="year" value="{{ $month->year }}">
+        <div style="flex:1 1 260px"><strong>{{ __('payroll.bank_file') }}</strong><div class="ht-muted ht-small">{{ __('payroll.bank_file_hint') }}</div></div>
+        <div class="ht-f" style="margin:0"><label for="py_which">{{ __('payroll.bank_which') }}</label>
+            <select id="py_which" name="which" class="ht-in"><option value="unpaid">{{ __('payroll.bank_unpaid') }}</option><option value="paid">{{ __('payroll.bank_paid') }}</option><option value="all">{{ __('payroll.bank_all') }}</option></select></div>
+        <button class="ht-btn" type="submit">{{ __('payroll.bank_download') }}</button>
+    </form>
+    @endif
 
     <div class="ht-card">
         <form method="post" action="{{ action([$P, 'bulk']) }}" id="py_bulk">@csrf
@@ -61,7 +74,7 @@
                             <td><input type="checkbox" name="users[]" value="{{ $st->user_id }}" class="py-tick" aria-label="{{ $st->user->first_name }}"></td>
                             <td><strong>{{ trim($st->user->first_name.' '.$st->user->last_name) }}</strong><div class="ht-muted ht-small">{{ $st->user->username }}</div></td>
                             <td>{{ $st->job_title ?: '—' }}</td>
-                            <td class="num">{{ $fmt($st->basic_salary) }}</td>
+                            <td class="num">@if ($st->pay_type === 'hourly'){{ $fmt($st->hourly_rate) }} <span class="ht-muted ht-small">{{ __('payroll.per_hour') }}</span>@else{{ $fmt($st->basic_salary) }}@endif</td>
                             <td class="num">{{ $p ? $fmt($p->net_salary) : '—' }}</td>
                             <td>
                                 @if (! $p)<span class="ht-pill ht-p-bad">{{ __('payroll.st_not_generated') }}</span>

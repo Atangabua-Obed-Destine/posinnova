@@ -23,7 +23,7 @@
         <div><div class="ht-muted ht-small">{{ __('payroll.name') }}</div><strong style="font-size:17px">{{ trim($u->first_name.' '.$u->last_name) }}</strong> <span class="ht-pill {{ $p ? 'ht-p-occ' : 'ht-p-tentative' }}">{{ $p ? __('payroll.draft') : __('payroll.new_payroll') }}</span></div>
         <div><div class="ht-muted ht-small">{{ __('payroll.job_title') }}</div>{{ $staff->job_title ?: '—' }}</div>
         <div><div class="ht-muted ht-small">{{ __('payroll.payroll_period') }}</div>{{ \App\Payroll\PayrollBook::monthLabel($month) }}</div>
-        <div><div class="ht-muted ht-small">{{ __('payroll.basic_salary') }}</div>{{ $fmt($staff->basic_salary) }} {{ __('payroll.per_month') }}</div>
+        @if ($staff->pay_type === 'hourly')<div><div class="ht-muted ht-small">{{ __('payroll.hourly_rate') }}</div>{{ $fmt($staff->hourly_rate) }} {{ __('payroll.per_hour') }}</div>@else<div><div class="ht-muted ht-small">{{ __('payroll.basic_salary') }}</div>{{ $fmt($staff->basic_salary) }} {{ __('payroll.per_month') }}</div>@endif
         <div><div class="ht-muted ht-small">{{ __('payroll.cnps_no') }}</div>{{ $staff->cnps_no ?: '—' }}</div>
     </div>
 
@@ -49,6 +49,9 @@
             <div class="ht-card py-calc" id="py_calc">
                 <h2 style="display:flex;justify-content:space-between;align-items:center">{{ __('payroll.calculate') }} <button class="ht-btn sm" type="button" id="py_recalc">{{ __('payroll.recalculate') }}</button></h2>
                 <p class="ht-muted ht-small">{{ __('payroll.calculate_hint') }}</p>
+                @if ($staff->pay_type === 'hourly')
+                    <div class="ht-f"><label for="py_hours">{{ __('payroll.hours_worked') }} *</label><input id="py_hours" name="hours_worked" class="ht-in" inputmode="decimal" value="{{ old('hours_worked', $p && $p->hours_worked !== null ? (float) $p->hours_worked : '') }}" style="max-width:160px"><span class="ht-muted ht-small">{{ __('payroll.hours_hint', ['rate' => $fmt($staff->hourly_rate)]) }}</span></div>
+                @endif
                 <div class="ht-row"><span>{{ __('payroll.earning') }}<small>{{ __('payroll.earning_hint') }}</small><small id="py_note"></small></span><strong data-f="earning"></strong></div>
                 <div class="ht-row"><span>{{ __('payroll.allowance') }}<small>{{ __('payroll.allowance_sum') }}</small></span><strong data-f="total_allowance"></strong></div>
                 <div class="ht-row"><span>{{ __('payroll.deduction') }}<small>{{ __('payroll.deduction_sum') }}</small></span><strong data-f="total_deduction"></strong></div>
@@ -76,16 +79,19 @@
         'none' => __('payroll.no_tax'), 'staff' => __('payroll.staff_share'), 'employer' => __('payroll.employer_share'), 'rate' => __('payroll.effective_rate'),
         'taxed_on' => __('payroll.taxed_on'), 'failed' => __('payroll.preview_failed'), 'pick' => __('payroll.pick_type'),
         'check' => __('payroll.cf_check'), 'intro' => __('payroll.cf_intro'), 'yes' => __('payroll.cf_yes'), 'net' => __('payroll.net_salary'),
-        'gross' => __('payroll.gross_salary'), 'tax' => __('payroll.employee_tax'), 'emp' => __('payroll.employer_tax'), 'cost' => __('payroll.total_cost')]) !!};
+        'loan' => __('payroll.loan_line'), 'gross' => __('payroll.gross_salary'), 'tax' => __('payroll.employee_tax'), 'emp' => __('payroll.employer_tax'), 'cost' => __('payroll.total_cost')]) !!};
     var URL = {!! json_encode(action([\App\Http\Controllers\PayrollController::class, 'preview'])) !!};
     var form = document.getElementById('py_form');
     var money = function (n) { return window.__currency_trans_from_en && typeof __currency_precision !== 'undefined' ? __currency_trans_from_en(Math.round(n), true) : Math.round(n).toLocaleString(); };
     var last = null, timer = null;
 
-    function row(box, kind, title, amount) {
+    function row(box, kind, title, amount, loanId) {
         var r = document.createElement('div'); r.className = 'ln';
         var sel;
-        if (kind === 'allowances') {
+        if (loanId) {
+            sel = document.createElement('input'); sel.className = 'ht-in'; sel.value = title || ''; sel.readOnly = true; sel.title = T.loan;
+            var lid = document.createElement('input'); lid.type = 'hidden'; lid.value = loanId; lid.setAttribute('data-part', 'loan_id'); r.appendChild(lid);
+        } else if (kind === 'allowances') {
             sel = document.createElement('select'); sel.className = 'ht-in';
             var o0 = document.createElement('option'); o0.value = ''; o0.textContent = T.pick; sel.appendChild(o0);
             var found = false;
@@ -94,19 +100,21 @@
         } else {
             sel = document.createElement('input'); sel.className = 'ht-in'; sel.value = title || ''; sel.setAttribute('list', 'py_deduct_types');
         }
-        sel.name = kind + '[' + box.children.length + '][title]'; sel.setAttribute('aria-label', T.title);
+        sel.setAttribute('data-part', 'title'); sel.setAttribute('aria-label', T.title);
         var amt = document.createElement('input'); amt.className = 'ht-in'; amt.inputMode = 'decimal'; amt.value = amount || ''; amt.setAttribute('aria-label', T.amount);
-        amt.name = kind + '[' + box.children.length + '][amount]';
+        amt.setAttribute('data-part', 'amount');
         var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'ht-btn sm danger'; rm.textContent = '×'; rm.setAttribute('aria-label', T.remove);
         rm.addEventListener('click', function () { r.remove(); renumber(); later(); });
         sel.addEventListener('change', later); amt.addEventListener('input', later);
         r.appendChild(sel); r.appendChild(amt); r.appendChild(rm); box.appendChild(r);
-        empties();
+        renumber();
     }
     function renumber() {
         ['allowances', 'deductions'].forEach(function (k) {
             var box = document.getElementById(k === 'allowances' ? 'py_allow' : 'py_deduct');
-            [].slice.call(box.children).forEach(function (r, i) { r.children[0].name = k + '[' + i + '][title]'; r.children[1].name = k + '[' + i + '][amount]'; });
+            [].slice.call(box.children).forEach(function (r, i) {
+                r.querySelectorAll('[data-part]').forEach(function (el) { el.name = k + '[' + i + '][' + el.getAttribute('data-part') + ']'; });
+            });
         });
         empties();
     }
@@ -151,7 +159,8 @@
     document.getElementById('py_add_deduct').addEventListener('click', function () { row(document.getElementById('py_deduct'), 'deductions', '', ''); });
     document.getElementById('py_recalc').addEventListener('click', preview);
     START.allowances.forEach(function (l) { row(document.getElementById('py_allow'), 'allowances', l.title, l.amount); });
-    START.deductions.forEach(function (l) { row(document.getElementById('py_deduct'), 'deductions', l.title, l.amount); });
+    START.deductions.forEach(function (l) { row(document.getElementById('py_deduct'), 'deductions', l.title, l.amount, l.loan_id); });
+    var hours = document.getElementById('py_hours'); if (hours) { hours.addEventListener('input', later); }
     var dl = document.createElement('datalist'); dl.id = 'py_deduct_types'; DEDUCT.forEach(function (t) { var o = document.createElement('option'); o.value = t; dl.appendChild(o); }); document.body.appendChild(dl);
     empties();
     show({!! json_encode($calc) !!});

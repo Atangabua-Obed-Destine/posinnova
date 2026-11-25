@@ -452,7 +452,7 @@ class AccountController extends Controller
                                     }
                                 }
                                 // PosInnova: a salary is changed from the payroll (it carries its own ledger entry)
-                                if (auth()->user()->can('edit_account_transaction') && $row->sub_type !== 'payroll') {
+                                if (auth()->user()->can('edit_account_transaction') && ! in_array($row->sub_type, ['payroll', 'staff_loan', 'tax_remittance'])) {
                                     $action .= ' <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-primary btn-modal" data-container="#edit_account_transaction" data-href="'.action([\App\Http\Controllers\AccountController::class, 'editAccountTransaction'], [$row->id]).'"><i class="fa fa-edit"></i> '.__('messages.edit').'</button>';
                                 }
 
@@ -1259,7 +1259,7 @@ class AccountController extends Controller
 
             $account_transaction = AccountTransaction::with(['transfer_transaction'])->findOrFail($id);
             // PosInnova: a salary payment is reversed and paid again from the payroll, never edited here
-            if ($account_transaction->sub_type === 'payroll') {
+            if (in_array($account_transaction->sub_type, ['payroll', 'staff_loan', 'tax_remittance'], true)) {
                 DB::rollBack();
 
                 return ['success' => false, 'msg' => __('account.payroll_locked')];

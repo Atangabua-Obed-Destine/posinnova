@@ -527,6 +527,13 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::post('/settings/taxes', [$P, 'saveTaxes']);
         Route::post('/settings/types', [$P, 'addType']);
         Route::post('/settings/types/{id}/toggle', [$P, 'toggleType'])->whereNumber('id');
+        Route::get('/bank-file', [$P, 'bankFile']);
+        Route::get('/loans', [$P, 'loans']);
+        Route::post('/loans', [$P, 'giveLoan'])->middleware('ledger.review');
+        Route::post('/loans/{id}/cancel', [$P, 'cancelLoan'])->whereNumber('id')->middleware('ledger.review');
+        Route::get('/remittances', [$P, 'remittances']);
+        Route::post('/remittances', [$P, 'remit'])->middleware('ledger.review');
+        Route::post('/remittances/{id}/void', [$P, 'voidRemit'])->whereNumber('id')->middleware('ledger.review');
     });
 
     // PosInnova gym module (Settings › Modules › Gym)

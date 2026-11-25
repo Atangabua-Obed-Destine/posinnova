@@ -764,7 +764,7 @@ class AdminSidebarMenu
             if (in_array('payroll', $enabled_modules)) {
                 $yu = auth()->user();
                 $ycan = fn (...$p) => collect($p)->contains(fn ($x) => $yu->can($x));
-                if ($ycan('payroll-view', 'payroll-action', 'payroll-report', 'payroll-setting')) {
+                if ($ycan('payroll-view', 'payroll-action', 'payroll-report', 'payroll-setting', 'payroll-loans', 'payroll-remit')) {
                     $menu->dropdown(
                         __('payroll.module'),
                         function ($sub) use ($ycan) {
@@ -779,6 +779,12 @@ class AdminSidebarMenu
                             }
                             if ($ycan('payroll-setting', 'payroll-action')) {
                                 $sub->url(action([$Y, 'staff']), __('payroll.menu_staff'), ['icon' => '', 'active' => $on && $s2 == 'staff']);
+                            }
+                            if ($ycan('payroll-loans', 'payroll-view')) {
+                                $sub->url(action([$Y, 'loans']), __('payroll.menu_loans'), ['icon' => '', 'active' => $on && $s2 == 'loans']);
+                            }
+                            if ($ycan('payroll-remit', 'payroll-report')) {
+                                $sub->url(action([$Y, 'remittances']), __('payroll.menu_remittances'), ['icon' => '', 'active' => $on && $s2 == 'remittances']);
                             }
                             if ($ycan('payroll-setting')) {
                                 $sub->url(action([$Y, 'settings']), __('payroll.menu_settings'), ['icon' => '', 'active' => $on && $s2 == 'settings']);

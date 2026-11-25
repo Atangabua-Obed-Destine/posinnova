@@ -45,7 +45,7 @@
     <table>
         <tr><th style="width:25%">{{ __('payroll.name') }}</th><td>{{ \App\Payroll\PayrollBook::name($p) }}</td><th style="width:22%">{{ __('payroll.job_title') }}</th><td>{{ optional($staff)->job_title ?: '—' }}</td></tr>
         <tr><th>{{ __('payroll.cnps_no') }}</th><td>{{ optional($staff)->cnps_no ?: '—' }}</td><th>{{ __('payroll.tax_no') }}</th><td>{{ optional($staff)->tax_no ?: '—' }}</td></tr>
-        <tr><th>{{ __('payroll.basic_salary') }}</th><td>{{ $fmt($p->basic_salary) }}</td><th>{{ __('payroll.status') }}</th><td>{{ $p->isPaid() ? __('payroll.st_paid') : __('payroll.st_unpaid') }}</td></tr>
+        <tr>@if ((int) $p->salary_type === 2)<th>{{ __('payroll.hourly_rate') }}</th><td>{{ $fmt($p->basic_salary) }} {{ __('payroll.per_hour') }}</td>@else<th>{{ __('payroll.basic_salary') }}</th><td>{{ $fmt($p->basic_salary) }}</td>@endif<th>{{ __('payroll.status') }}</th><td>{{ $p->isPaid() ? __('payroll.st_paid') : __('payroll.st_unpaid') }}</td></tr>
         <tr><th>{{ __('payroll.pay_date') }}</th><td>{{ optional($p->pay_date)->format('d/m/Y') ?: '—' }}</td><th>{{ __('payroll.paid_from') }}</th><td>{{ $account ?: '—' }}</td></tr>
         @if (optional($staff)->bank_account_no)<tr><th>{{ __('payroll.bank_account') }}</th><td colspan="3">{{ $staff->bank_name }} {{ $staff->bank_account_no }}</td></tr>@endif
     </table>
@@ -54,7 +54,7 @@
         <div>
             <h2>▲ {{ __('payroll.earnings') }}</h2>
             <table>
-                <tr><td>{{ $p->paid_days && $p->period_days && $p->paid_days < $p->period_days ? __('payroll.basic_days', ['x' => (float) $p->paid_days, 'y' => (float) $p->period_days]) : __('payroll.basic_total') }}</td><td class="num">{{ $fmt($p->total_earning) }}</td></tr>
+                <tr><td>{{ (int) $p->salary_type === 2 ? __('payroll.hours_line', ['hours' => (float) $p->hours_worked, 'rate' => $fmt($p->basic_salary)]) : ($p->paid_days && $p->period_days && $p->paid_days < $p->period_days ? __('payroll.basic_days', ['x' => (float) $p->paid_days, 'y' => (float) $p->period_days]) : __('payroll.basic_total')) }}</td><td class="num">{{ $fmt($p->total_earning) }}</td></tr>
                 @forelse ($allow as $a)<tr><td>{{ $a->title }}@if ($a->is_taxable) <span class="muted">({{ __('payroll.taxed') }})</span>@endif</td><td class="num">{{ $fmt($a->amount) }}</td></tr>
                 @empty<tr><td colspan="2" class="muted">{{ __('payroll.no_additional') }}</td></tr>@endforelse
                 <tr class="tot"><td>{{ __('payroll.total_earnings') }}</td><td class="num">{{ $fmt($p->total_earning + $p->total_allowance) }}</td></tr>

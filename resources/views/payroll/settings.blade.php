@@ -20,6 +20,23 @@
         <label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" name="prorate_partial_months" value="1" {{ ! empty($s['prorate_partial_months']) ? 'checked' : '' }}> {{ __('payroll.prorate') }}</label>
         <p class="ht-muted ht-small">{{ __('payroll.prorate_hint') }}</p>
         <div class="ht-f" style="max-width:320px"><label for="py_basis">{{ __('payroll.count_in') }}</label><select id="py_basis" name="proration_basis" class="ht-in"><option value="calendar_days" {{ $s['proration_basis'] === 'calendar_days' ? 'selected' : '' }}>{{ __('payroll.calendar_days') }}</option><option value="working_days" {{ $s['proration_basis'] === 'working_days' ? 'selected' : '' }}>{{ __('payroll.working_days') }}</option></select></div>
+
+        <h2>{{ __('payroll.menu_loans') }}</h2>
+        <div class="ht-f" style="max-width:320px"><label for="py_adv">{{ __('payroll.advance_account') }}</label><input id="py_adv" name="advance_account_code" class="ht-in" inputmode="numeric" value="{{ $s['advance_account_code'] }}"><span class="ht-muted ht-small">{{ __('payroll.advance_account_hint') }}</span></div>
+
+        <h2>{{ __('payroll.bank_file') }}</h2>
+        <p class="ht-muted ht-small">{{ __('payroll.bank_settings_hint') }}</p>
+        <div style="display:flex;gap:6px 16px;flex-wrap:wrap;margin-bottom:10px" id="py_bank_cols">
+            @foreach (\App\Payroll\PayrollRules::BANK_COLUMNS as $col)
+                <label style="display:flex;gap:6px;align-items:center;margin:0;font-weight:500"><input type="checkbox" name="bank_file_columns[]" value="{{ $col }}" {{ in_array($col, (array) $s['bank_file_columns'], true) ? 'checked' : '' }}> {{ __('payroll.bank_col_'.$col) }}</label>
+            @endforeach
+        </div>
+        <div class="ht-fields">
+            <div class="ht-f"><label for="py_delim">{{ __('payroll.bank_delimiter') }}</label><select id="py_delim" name="bank_file_delimiter" class="ht-in">@foreach ([',' => __('payroll.delim_comma'), ';' => __('payroll.delim_semicolon'), 'tab' => __('payroll.delim_tab')] as $v => $l)<option value="{{ $v }}" {{ $s['bank_file_delimiter'] === $v ? 'selected' : '' }}>{{ $l }}</option>@endforeach</select></div>
+            <div class="ht-f"><label for="py_ref">{{ __('payroll.bank_reference') }}</label><input id="py_ref" name="bank_file_reference" class="ht-in" value="{{ $s['bank_file_reference'] }}"><span class="ht-muted ht-small">{{ __('payroll.bank_reference_hint') }}</span></div>
+            <div class="ht-f"><label for="py_dec">{{ __('payroll.bank_decimals') }}</label><select id="py_dec" name="bank_file_decimals" class="ht-in"><option value="0">0</option><option value="2" {{ (int) $s['bank_file_decimals'] === 2 ? 'selected' : '' }}>2</option></select></div>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" name="bank_file_header" value="1" {{ ! empty($s['bank_file_header']) ? 'checked' : '' }}> {{ __('payroll.bank_header') }}</label>
         <button class="ht-btn pri" type="submit">{{ __('payroll.save') }}</button>
     </form>
 

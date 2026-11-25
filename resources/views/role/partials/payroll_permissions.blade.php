@@ -4,7 +4,7 @@
     as hidden fields: RoleController syncs exactly what is posted.
 --}}
 @php
-    $py_perms = ['payroll-view', 'payroll-action', 'payroll-approve', 'payroll-print', 'payroll-report', 'payroll-setting'];
+    $py_perms = ['payroll-view', 'payroll-action', 'payroll-approve', 'payroll-print', 'payroll-report', 'payroll-setting', 'payroll-loans', 'payroll-remit'];
     $py_has = $role_permissions ?? [];
 @endphp
 @if (in_array('payroll', $enabled_modules))

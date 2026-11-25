@@ -18,8 +18,9 @@ use Illuminate\Support\Facades\DB;
  * the pay date, through the ledger's only way in (LedgerPoster), when the business keeps its books
  * in PosInnova:
  *
- *   Dr 661 salaries          gross salary
+ *   Dr 661 salaries          gross salary (+ loan repayments taken from it)
  *   Dr 664 employer charges  employer contributions
+ *       Cr 421 staff advances the loan and advance repayments withheld
  *       Cr 431 / 447 …       each tax and contribution, both shares, on the account it is owed on
  *       Cr 5xx               the net salary, from the payment account it was paid from
  *
@@ -31,28 +32,35 @@ class PayrollBook
 {
     // ------------------------------------------------------------------ generate
 
-    /** The lines a new payroll starts from: last month's, when the settings say so. */
+    /**
+     * The lines a new payroll starts from: last month's (when the settings say so), without last
+     * month's loan repayments, then each open loan's instalment for this month, worked out afresh so
+     * a loan stops being deducted once it is repaid.
+     */
     public static function startingLines($business_id, $user_id, Carbon $month)
     {
-        if (empty(PayrollRules::settings($business_id)['carry_over_lines'])) {
-            return ['allowances' => [], 'deductions' => [], 'from' => null];
+        $out = ['allowances' => [], 'deductions' => [], 'from' => null];
+        if (! empty(PayrollRules::settings($business_id)['carry_over_lines'])) {
+            $prev = Payroll::where('business_id', $business_id)->where('user_id', $user_id)->where('salary_month', '<', $month->toDateString())
+                ->orderByDesc('salary_month')->first();
+            if ($prev) {
+                $d = $prev->details()->get();
+                $out = [
+                    'allowances' => $d->where('status', 1)->map(fn ($x) => ['title' => $x->title, 'amount' => (float) $x->amount])->values()->all(),
+                    'deductions' => $d->where('status', 0)->whereNull('staff_loan_id')->map(fn ($x) => ['title' => $x->title, 'amount' => (float) $x->amount])->values()->all(),
+                    'from' => $prev->salary_month,
+                ];
+            }
         }
-        $prev = Payroll::where('business_id', $business_id)->where('user_id', $user_id)->where('salary_month', '<', $month->toDateString())
-            ->orderByDesc('salary_month')->first();
-        if (! $prev) {
-            return ['allowances' => [], 'deductions' => [], 'from' => null];
+        foreach (PayrollLoan::dueLines($business_id, $user_id, $month) as $l) {
+            $out['deductions'][] = $l;
         }
-        $d = $prev->details()->get();
 
-        return [
-            'allowances' => $d->where('status', 1)->map(fn ($x) => ['title' => $x->title, 'amount' => (float) $x->amount])->values()->all(),
-            'deductions' => $d->where('status', 0)->map(fn ($x) => ['title' => $x->title, 'amount' => (float) $x->amount])->values()->all(),
-            'from' => $prev->salary_month,
-        ];
+        return $out;
     }
 
     /** Generate (or change) a staff member's payroll for a month. Clears its approval. */
-    public static function save($business_id, $user_id, Carbon $month, array $allowances, array $deductions, $actor_id)
+    public static function save($business_id, $user_id, Carbon $month, array $allowances, array $deductions, $actor_id, $hours = null)
     {
         $month = $month->copy()->startOfMonth();
         $staff = PayrollStaff::where('business_id', $business_id)->where('user_id', $user_id)->first();
@@ -63,14 +71,15 @@ class PayrollBook
         if ($existing && $existing->isPaid()) {
             throw new PayrollException(__('payroll.err_paid_locked'));
         }
-        $c = PayrollCalculator::calculate($business_id, $staff, $month, $allowances, $deductions, $existing);
+        $c = PayrollCalculator::calculate($business_id, $staff, $month, $allowances, $deductions, $existing, $hours);
         if ($c['problems']) {
             throw new PayrollException(__('payroll.err_not_saved', ['why' => implode(' ', $c['problems'])]));
         }
 
         return DB::transaction(function () use ($business_id, $user_id, $month, $staff, $c, $actor_id, $existing) {
             $p = Payroll::updateOrCreate(['business_id' => $business_id, 'user_id' => $user_id, 'salary_month' => $month->toDateString()], [
-                'basic_salary' => $staff->basic_salary, 'salary_type' => 1, 'total_earning' => $c['earning'],
+                'basic_salary' => $c['pay_type'] === 'hourly' ? $c['hourly_rate'] : $staff->basic_salary,
+                'salary_type' => $c['pay_type'] === 'hourly' ? 2 : 1, 'hours_worked' => $c['hours_worked'], 'total_earning' => $c['earning'],
                 'paid_days' => $c['paid_days'], 'period_days' => $c['period_days'],
                 'total_allowance' => $c['total_allowance'], 'total_deduction' => $c['total_deduction'],
                 'gross_salary' => $c['gross'], 'taxable_salary' => $c['taxable'], 'tax' => $c['tax'], 'employer_tax' => $c['employer_tax'],
@@ -83,7 +92,7 @@ class PayrollBook
                 PayrollDetail::create(['payroll_id' => $p->id, 'title' => $l['title'], 'amount' => $l['amount'], 'is_taxable' => $l['is_taxable'], 'status' => 1]);
             }
             foreach ($c['deductions'] as $l) {
-                PayrollDetail::create(['payroll_id' => $p->id, 'title' => $l['title'], 'amount' => $l['amount'], 'status' => 0]);
+                PayrollDetail::create(['payroll_id' => $p->id, 'staff_loan_id' => $l['loan_id'] ?? null, 'title' => $l['title'], 'amount' => $l['amount'], 'status' => 0]);
             }
             self::recordTaxLines($p, $c['tax_lines']);
 
@@ -176,7 +185,18 @@ class PayrollBook
         if (! $cash) {
             throw new PayrollException(__('payroll.err_account_not_linked', ['name' => $account->name]));
         }
-        $lines = [['account_id' => $salary, 'debit' => round((float) $p->gross_salary, 2), 'credit' => 0, 'description' => __('payroll.l_gross', ['name' => $name])]];
+        // loan and advance repayments came off the gross: the salary cost is the gross before them,
+        // and what was withheld settles what the staff member owes on staff advances
+        $repaid = round((float) $p->details()->where('status', 0)->whereNotNull('staff_loan_id')->sum('amount'), 2);
+        $lines = [['account_id' => $salary, 'debit' => round((float) $p->gross_salary + $repaid, 2), 'credit' => 0, 'description' => __('payroll.l_gross', ['name' => $name])]];
+        if ($repaid > 0) {
+            $code = PayrollRules::settings($p->business_id)['advance_account_code'] ?: '421';
+            $adv = $acc($code) ?: $acc(substr($code, 0, 3));
+            if (! $adv) {
+                throw new PayrollException(__('payroll.err_no_account', ['code' => $code]));
+            }
+            $lines[] = ['account_id' => $adv, 'debit' => 0, 'credit' => $repaid, 'description' => __('payroll.l_repaid', ['name' => $name])];
+        }
         if ((float) $p->employer_tax > 0) {
             $lines[] = ['account_id' => $charges, 'debit' => round((float) $p->employer_tax, 2), 'credit' => 0, 'description' => __('payroll.l_employer', ['name' => $name])];
         }

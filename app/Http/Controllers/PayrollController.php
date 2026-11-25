@@ -6,7 +6,12 @@ use App\Payroll\Payroll;
 use App\Payroll\PayrollBook;
 use App\Payroll\PayrollCalculator;
 use App\Payroll\PayrollException;
+use App\Payroll\PayrollBankFile;
 use App\Payroll\PayrollLineType;
+use App\Payroll\PayrollLoan;
+use App\Payroll\PayrollLoans;
+use App\Payroll\PayrollRemittance;
+use App\Payroll\PayrollRemittances;
 use App\Payroll\PayrollRules;
 use App\Payroll\PayrollStaff;
 use App\Payroll\PayrollTaxGroup;
@@ -21,7 +26,8 @@ use Illuminate\Support\Facades\DB;
  * PosInnova payroll (paxhitestbed's Payroll screens and wording): the month list (generate, approve,
  * pay ticked), a staff member's payroll (allowances, deductions, the calculation), paying and
  * reversing through the review, the payslip, the report, each staff member's pay details, and the
- * settings (approval, part months, allowance and deduction types, the payroll taxes).
+ * settings (approval, part months, allowance and deduction types, the payroll taxes, the bank file);
+ * staff loans and advances, paying the withheld taxes over (remittances), the bank file.
  */
 class PayrollController extends Controller
 {
@@ -100,13 +106,13 @@ class PayrollController extends Controller
             return $this->back(false, __('payroll.err_paid_locked'), redirect()->action([self::class, 'index'], ['month' => $m->month, 'year' => $m->year]));
         }
         $start = $p ? ['allowances' => $p->details->where('status', 1)->map(fn ($d) => ['title' => $d->title, 'amount' => (float) $d->amount])->values()->all(),
-            'deductions' => $p->details->where('status', 0)->map(fn ($d) => ['title' => $d->title, 'amount' => (float) $d->amount])->values()->all(), 'from' => null]
+            'deductions' => $p->details->where('status', 0)->map(fn ($d) => ['title' => $d->title, 'amount' => (float) $d->amount, 'loan_id' => $d->staff_loan_id])->values()->all(), 'from' => null]
             : PayrollBook::startingLines($bid, $user_id, $m);
         $types = PayrollLineType::where('business_id', $bid)->where('status', 1)->orderBy('title')->get();
 
         return view('payroll.generate', ['staff' => $staff, 'month' => $m, 'p' => $p, 'start' => $start,
             'allowanceTypes' => $types->where('kind', 'allowance')->values(), 'deductionTypes' => $types->where('kind', 'deduction')->values(),
-            'calc' => PayrollCalculator::calculate($bid, $staff, $m, $start['allowances'], $start['deductions'], $p)]);
+            'calc' => PayrollCalculator::calculate($bid, $staff, $m, $start['allowances'], $start['deductions'], $p, old('hours_worked', optional($p)->hours_worked))]);
     }
 
     public function preview(Request $request)
@@ -117,7 +123,7 @@ class PayrollController extends Controller
         $m = $this->month($request);
         $p = Payroll::where('business_id', $bid)->where('user_id', $staff->user_id)->where('salary_month', $m->toDateString())->first();
 
-        return response()->json(PayrollCalculator::calculate($bid, $staff, $m, (array) $request->input('allowances', []), (array) $request->input('deductions', []), $p));
+        return response()->json(PayrollCalculator::calculate($bid, $staff, $m, (array) $request->input('allowances', []), (array) $request->input('deductions', []), $p, $request->input('hours_worked')));
     }
 
     public function store(Request $request)
@@ -125,7 +131,7 @@ class PayrollController extends Controller
         $this->guard('payroll-action');
         $m = $this->month($request);
         try {
-            $p = PayrollBook::save($this->biz(), (int) $request->input('user_id'), $m, (array) $request->input('allowances', []), (array) $request->input('deductions', []), auth()->id());
+            $p = PayrollBook::save($this->biz(), (int) $request->input('user_id'), $m, (array) $request->input('allowances', []), (array) $request->input('deductions', []), auth()->id(), $request->input('hours_worked'));
         } catch (PayrollException $e) {
             return $this->back(false, $e->getMessage(), redirect()->back()->withInput());
         }
@@ -195,6 +201,9 @@ class PayrollController extends Controller
                 } else {
                     if ($p) {
                         throw new PayrollException($p->isPaid() ? __('payroll.skip_paid') : __('payroll.skip_generated'));
+                    }
+                    if ($staff->pay_type === 'hourly') {
+                        throw new PayrollException(__('payroll.skip_hourly'));
                     }
                     $start = PayrollBook::startingLines($bid, $staff->user_id, $m);
                     PayrollBook::save($bid, $staff->user_id, $m, $start['allowances'], $start['deductions'], auth()->id());
@@ -305,6 +314,8 @@ class PayrollController extends Controller
         }
         PayrollStaff::updateOrCreate(['business_id' => $bid, 'user_id' => $user->id], [
             'basic_salary' => max(0, (float) $u->num_uf((string) $request->input('basic_salary', 0))),
+            'pay_type' => $request->input('pay_type') === 'hourly' ? 'hourly' : 'monthly',
+            'hourly_rate' => max(0, (float) $u->num_uf((string) $request->input('hourly_rate', 0))),
             'joining_date' => $joining, 'ending_date' => $ending,
             'job_title' => mb_substr(trim((string) $request->input('job_title')), 0, 120) ?: null,
             'cnps_no' => mb_substr(trim((string) $request->input('cnps_no')), 0, 60) ?: null,
@@ -316,6 +327,127 @@ class PayrollController extends Controller
         ]);
 
         return $this->back(true, __('payroll.staff_saved', ['name' => trim($user->first_name.' '.$user->last_name)]));
+    }
+
+    // ---------------------------------------------------------------- the bank file
+
+    public function bankFile(Request $request)
+    {
+        $this->guard('payroll-action', 'payroll-report');
+        $bid = $this->biz();
+        $m = $this->month($request);
+        $which = in_array($request->input('which'), ['unpaid', 'paid', 'all'], true) ? $request->input('which') : 'unpaid';
+        $payrolls = Payroll::where('business_id', $bid)->where('salary_month', $m->toDateString())->with('user')
+            ->when($which === 'unpaid', fn ($q) => $q->where('status', 0))->when($which === 'paid', fn ($q) => $q->where('status', 1))
+            ->when($request->filled('users'), fn ($q) => $q->whereIn('user_id', (array) $request->input('users')))
+            ->get()->sortBy(fn ($p) => mb_strtolower(optional($p->user)->first_name.' '.optional($p->user)->last_name))->values();
+        // with approval required, an unpaid payroll is only ready once approved
+        if (! empty(PayrollRules::settings($bid)['require_approval']) && $which !== 'paid') {
+            $payrolls = $payrolls->filter(fn ($p) => $p->isPaid() || $p->isApproved())->values();
+        }
+        $built = PayrollBankFile::build($bid, $payrolls);
+        if (! $built['rows']) {
+            return $this->back(false, __('payroll.bank_nothing').($built['missing'] ? ' '.__('payroll.bank_missing', ['names' => implode(', ', $built['missing'])]) : ''));
+        }
+        $name = 'salaries-'.$m->format('Y-m').'-'.$which.'.csv';
+
+        return response(PayrollBankFile::csv($bid, $built['rows']), 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$name.'"',
+            'X-Payroll-Rows' => (string) count($built['rows']),
+            'X-Payroll-Total' => (string) $built['total'],
+            'X-Payroll-Missing' => rawurlencode(implode('; ', $built['missing'])),
+        ]);
+    }
+
+    // ---------------------------------------------------------------- loans and advances
+
+    public function loans(Request $request)
+    {
+        $this->guard('payroll-loans', 'payroll-view');
+        $bid = $this->biz();
+        $status = in_array($request->input('status'), ['active', 'cleared', 'cancelled', 'all'], true) ? $request->input('status') : 'active';
+        $loans = PayrollLoan::where('business_id', $bid)->with('user')->orderByDesc('given_on')->orderByDesc('id')->get()
+            ->filter(function ($l) use ($status) {
+                if ($status === 'all') {
+                    return true;
+                }
+                if ($status === 'cancelled') {
+                    return $l->status === 'cancelled';
+                }
+
+                return $l->status === 'active' && ($status === 'cleared' ? $l->isCleared() : ! $l->isCleared());
+            })->values();
+        $staff = PayrollStaff::where('business_id', $bid)->where('is_active', 1)->with('user')->get()->filter(fn ($s) => $s->user)
+            ->sortBy(fn ($s) => mb_strtolower($s->user->first_name.' '.$s->user->last_name))->values();
+
+        return view('payroll.loans', ['loans' => $loans, 'staff' => $staff, 'status' => $status, 'accounts' => $this->accounts(),
+            'books' => \App\Payroll\PayrollCash::books($bid), 'advance' => PayrollRules::settings($bid)['advance_account_code']]);
+    }
+
+    public function giveLoan(Request $request)
+    {
+        $this->guard('payroll-loans');
+        try {
+            $loan = PayrollLoans::give($this->biz(), $request->only(['user_id', 'kind', 'title', 'amount', 'instalment', 'start_month', 'given_on', 'payment_account_id', 'note']), auth()->id());
+        } catch (PayrollException|\RuntimeException $e) {
+            return $this->back(false, $e->getMessage(), redirect()->back()->withInput());
+        }
+
+        return $this->back(true, __('payroll.loan_given', ['month' => PayrollBook::monthLabel($loan->start_month)]), redirect()->action([self::class, 'loans']));
+    }
+
+    public function cancelLoan($id)
+    {
+        $this->guard('payroll-loans');
+        try {
+            PayrollLoans::cancel(PayrollLoan::where('business_id', $this->biz())->findOrFail($id), auth()->id());
+        } catch (PayrollException|\RuntimeException $e) {
+            return $this->back(false, $e->getMessage());
+        }
+
+        return $this->back(true, __('payroll.loan_cancelled'));
+    }
+
+    // ---------------------------------------------------------------- remittances
+
+    public function remittances()
+    {
+        $this->guard('payroll-remit', 'payroll-report');
+        $bid = $this->biz();
+        $months = PayrollRemittances::months($bid);
+
+        return view('payroll.remittances', [
+            'months' => $months,
+            'breakdown' => collect($months)->mapWithKeys(fn ($m) => [$m['code'].'|'.$m['month'] => PayrollRemittances::breakdown($bid, $m['code'], $m['month'])]),
+            'history' => PayrollRemittance::where('business_id', $bid)->with('creator')->orderByDesc('payment_date')->orderByDesc('id')->limit(200)->get(),
+            'reconciliation' => PayrollRemittances::reconciliation($bid, $months),
+            'accounts' => $this->accounts(),
+        ]);
+    }
+
+    public function remit(Request $request)
+    {
+        $this->guard('payroll-remit');
+        try {
+            PayrollRemittances::record($this->biz(), $request->only(['code', 'month', 'amount', 'payment_date', 'payment_account_id', 'reference', 'note', 'allow_additional', 'allow_overpay']), auth()->id());
+        } catch (PayrollException|\RuntimeException $e) {
+            return $this->back(false, $e->getMessage());
+        }
+
+        return $this->back(true, __('payroll.remitted'));
+    }
+
+    public function voidRemit(Request $request, $id)
+    {
+        $this->guard('payroll-remit');
+        try {
+            PayrollRemittances::void(PayrollRemittance::where('business_id', $this->biz())->findOrFail($id), $request->input('reason'), auth()->id());
+        } catch (PayrollException|\RuntimeException $e) {
+            return $this->back(false, $e->getMessage());
+        }
+
+        return $this->back(true, __('payroll.remit_voided'));
     }
 
     // ---------------------------------------------------------------- settings
@@ -342,6 +474,12 @@ class PayrollController extends Controller
             'carry_over_lines' => $request->boolean('carry_over_lines') ? 1 : 0,
             'prorate_partial_months' => $request->boolean('prorate_partial_months') ? 1 : 0,
             'proration_basis' => $request->input('proration_basis') === 'working_days' ? 'working_days' : 'calendar_days',
+            'advance_account_code' => preg_match('/^\d{2,10}$/', (string) $request->input('advance_account_code')) ? $request->input('advance_account_code') : '421',
+            'bank_file_columns' => array_values(array_intersect(PayrollRules::BANK_COLUMNS, (array) $request->input('bank_file_columns', []))) ?: PayrollRules::DEFAULTS['bank_file_columns'],
+            'bank_file_delimiter' => in_array($request->input('bank_file_delimiter'), [',', ';', 'tab'], true) ? $request->input('bank_file_delimiter') : ',',
+            'bank_file_header' => $request->boolean('bank_file_header') ? 1 : 0,
+            'bank_file_reference' => mb_substr(trim((string) $request->input('bank_file_reference')), 0, 60) ?: PayrollRules::DEFAULTS['bank_file_reference'],
+            'bank_file_decimals' => (int) $request->input('bank_file_decimals') === 2 ? 2 : 0,
         ]);
 
         return $this->back(true, __('payroll.settings_saved'));
