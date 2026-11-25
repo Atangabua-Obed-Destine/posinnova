@@ -17,6 +17,9 @@ Route::prefix('accounting')->name('ledger.')->group(function () {
     Route::post('setup', $NS.'SetupController@store')->name('setup.store');
     Route::get('/', $NS.'SetupController@home')->name('home');
 
+    // The review of any form marked data-review: its real request replayed and rolled back
+    Route::post('review/dry-run', $NS.'ReviewController@dryRun')->name('review.dry-run');
+
     // Chart of Accounts
     Route::resource('chart-of-accounts', $NS.'ChartOfAccountController');
     Route::post('chart-of-accounts/{id}/toggle-status', $NS.'ChartOfAccountController@toggleStatus')->name('chart-of-accounts.toggle-status');
@@ -24,8 +27,8 @@ Route::prefix('accounting')->name('ledger.')->group(function () {
 
     // Fiscal Years, and closing / reopening one month through the review dialog
     Route::resource('fiscal-years', $NS.'FiscalYearController');
-    Route::post('fiscal-years/{id}/close', $NS.'FiscalYearController@close')->name('fiscal-years.close');
-    Route::post('fiscal-years/{id}/reopen', $NS.'FiscalYearController@reopen')->name('fiscal-years.reopen');
+    Route::post('fiscal-years/{id}/close', $NS.'FiscalYearController@close')->name('fiscal-years.close')->middleware('ledger.review');
+    Route::post('fiscal-years/{id}/reopen', $NS.'FiscalYearController@reopen')->name('fiscal-years.reopen')->middleware('ledger.review');
     Route::post('fiscal-years/{id}/set-active', $NS.'FiscalYearController@setActive')->name('fiscal-years.set-active');
     Route::post('fiscal-years/{id}/generate-periods', $NS.'FiscalYearController@generatePeriods')->name('fiscal-years.generate-periods');
     Route::get('accounting-periods/{id}/preview/close', $NS.'FiscalYearController@previewClosePeriod')->name('accounting-periods.preview-close');
@@ -43,7 +46,7 @@ Route::prefix('accounting')->name('ledger.')->group(function () {
     Route::delete('journal-entries/{id}/force-delete', $NS.'JournalEntryController@forceDelete')->name('journal-entries.force-delete');
     Route::match(['get', 'post'], 'journal-entries/{id}/preview/post', $NS.'JournalEntryController@previewPost')->name('journal-entries.preview-post');
     Route::post('journal-entries/{id}/post', $NS.'JournalEntryController@post')->name('journal-entries.post');
-    Route::post('journal-entries/{id}/unpost', $NS.'JournalEntryController@unpost')->name('journal-entries.unpost');
+    Route::post('journal-entries/{id}/unpost', $NS.'JournalEntryController@unpost')->name('journal-entries.unpost')->middleware('ledger.review');
     Route::post('journal-entries/{id}/duplicate', $NS.'JournalEntryController@duplicate')->name('journal-entries.duplicate');
     Route::match(['get', 'post'], 'journal-entries/{id}/preview/reverse', $NS.'JournalEntryController@previewReverse')->name('journal-entries.preview-reverse');
     Route::post('journal-entries/{id}/reverse', $NS.'JournalEntryController@reverse')->name('journal-entries.reverse');
@@ -70,4 +73,9 @@ Route::prefix('accounting')->name('ledger.')->group(function () {
     Route::post('mappings/{mappingId}/remap', $NS.'AccountMappingController@remap')->name('mappings.remap');
     Route::get('cash-accounts', $NS.'CashAccountController@index')->name('cash-accounts');
     Route::post('cash-accounts', $NS.'CashAccountController@update')->name('cash-accounts.update');
+
+    // Stage 2 areas: each in its own file (routes/ledger/*.php), inside this group
+    foreach (glob(__DIR__.'/ledger/*.php') ?: [] as $area) {
+        require $area;
+    }
 });

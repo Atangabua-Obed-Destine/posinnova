@@ -135,9 +135,9 @@
                                 <span class="btn btn-default btn-xs disabled" title="{{ $locked }}"><i class="fa fa-lock"></i></span>
                                 @elseif(!$entry->is_reversed)
                                 @can('journal-entry-unpost')
-                                <form action="{{ route('ledger.journal-entries.unpost', $entry->id) }}" method="POST" style="display: inline-block;">
+                                <form action="{{ route('ledger.journal-entries.unpost', $entry->id) }}" method="POST" data-review="{{ __('ledger_je.confirm_unpost_entry') }}" data-review-label="{{ __('ledger_je.unpost_entry') }}" data-review-class="btn-warning" style="display: inline-block;">
                                     @csrf
-                                    <button type="submit" class="btn btn-warning btn-xs" title="{{ __('ledger_je.unpost_entry') }}" onclick="return confirm({{ json_encode(__('ledger_je.confirm_unpost_entry')) }})"><i class="fa fa-undo"></i></button>
+                                    <button type="submit" class="btn btn-warning btn-xs" title="{{ __('ledger_je.unpost_entry') }}"><i class="fa fa-undo"></i></button>
                                 </form>
                                 @endcan
                                 @endif

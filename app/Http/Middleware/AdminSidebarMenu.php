@@ -795,37 +795,68 @@ class AdminSidebarMenu
                 )->order(50);
             }
 
-            // PosInnova accounting (the paxhitestbed ledger): same items, same order as paxhitestbed's
-            // Accounting menu (its Reports and Transaction Mappings sub-groups listed in place).
+            // PosInnova accounting (the paxhitestbed ledger): the same groups, items and order as
+            // paxhitestbed's sidebar (Budget, then Accounting, then Accounting Reports); its nested
+            // sub-groups (Reports, Transaction Mappings, Fixed Assets, Budget reports) listed in place.
             if (in_array('accounting', $enabled_modules) && \App\Ledger\Permissions::can(...\App\Ledger\Permissions::all())) {
-                $menu->dropdown(
-                    __('ledger.menu_accounting'),
-                    function ($sub) {
-                        $s2 = request()->segment(2);
-                        $P = fn (...$p) => \App\Ledger\Permissions::can(...$p);
-                        $items = [
-                            ['ledger.chart-of-accounts.index', 'menu_chart_of_accounts', ['chart-of-accounts-view'], $s2 == 'chart-of-accounts'],
-                            ['ledger.fiscal-years.index', 'menu_fiscal_years', ['accounting-period-view'], $s2 == 'fiscal-years'],
-                            ['ledger.journal-entries.index', 'menu_journal_entries', ['journal-entry-view'], in_array($s2, ['journal-entries', 'journal-entries-trash'])],
-                            ['ledger.ledger-health', 'menu_ledger_health', ['transaction-mapping-view', 'general-ledger-view'], $s2 == 'ledger-health'],
-                            ['ledger.general-ledger.index', 'menu_general_ledger', ['general-ledger-view'], $s2 == 'general-ledger' && request()->segment(3) != 'trial-balance'],
-                            ['ledger.general-ledger.trial-balance', 'menu_trial_balance', ['trial-balance-view'], $s2 == 'general-ledger' && request()->segment(3) == 'trial-balance'],
-                            ['ledger.mappings.settings', 'menu_mapping_settings', ['transaction-mapping-settings'], $s2 == 'mappings' && request()->segment(3) == 'settings'],
-                            ['ledger.cash-accounts', 'menu_cash_accounts', ['transaction-mapping-settings'], $s2 == 'cash-accounts'],
-                            ['ledger.mappings.transactions', 'menu_view_transactions', ['transaction-mapping-view'], $s2 == 'mappings' && request()->segment(3) == 'transactions'],
-                        ];
-                        foreach ($items as [$route, $label, $perms, $active]) {
-                            if ($P(...$perms)) {
-                                $sub->url(route($route), __('ledger.'.$label), ['icon' => '', 'active' => request()->segment(1) == 'accounting' && $active]);
-                            }
-                        }
-                    },
-                    ['icon' => '<svg aria-hidden="true" class="tw-size-5 tw-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                $ledgerIcon = '<svg aria-hidden="true" class="tw-size-5 tw-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                     <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                     <path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-14a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1z"></path>
                     <path d="M4 9h16"></path><path d="M10 4v16"></path><path d="M13 13h4"></path><path d="M13 16h4"></path>
-                  </svg>']
-                )->order(50.5);
+                  </svg>';
+                $ledgerGroup = function ($title, array $items, $order) use ($menu, $ledgerIcon) {
+                    $allowed = array_filter($items, fn ($i) => \App\Ledger\Permissions::can(...$i[2]) && \Illuminate\Support\Facades\Route::has($i[0]));
+                    if (empty($allowed)) {
+                        return;
+                    }
+                    $menu->dropdown($title, function ($sub) use ($allowed) {
+                        $path = request()->path();
+                        foreach ($allowed as [$route, $label, $perms, $prefix]) {
+                            $active = request()->routeIs($route) || (request()->segment(1) == 'accounting' && $prefix && str_starts_with($path, 'accounting/'.$prefix));
+                            $sub->url(route($route), __($label), ['icon' => '', 'active' => $active]);
+                        }
+                    }, ['icon' => $ledgerIcon])->order($order);
+                };
+                // [route, label, permissions (any), path prefix after accounting/ that marks it active]
+                $ledgerGroup(__('ledger.menu_budget'), [
+                    ['ledger.budget.dashboard', 'ledger.menu_budget_dashboard', ['budget-view'], null],
+                    ['ledger.budget-sheet.index', 'ledger.menu_ie_sheet', ['budget-view'], null],
+                    ['ledger.daybook.index', 'ledger.menu_daybook', ['daybook-view'], null],
+                    ['ledger.daybook.summary', 'ledger.menu_daybook_summary', ['daybook-view'], null],
+                    ['ledger.daybook.analysis', 'ledger.menu_daybook_analysis', ['daybook-view'], null],
+                    ['ledger.budget.index', 'ledger.menu_departmental_budgets', ['budget-view'], null],
+                    ['ledger.budget-line.index', 'ledger.menu_budget_lines', ['budget-line-view'], null],
+                    ['ledger.budget.reports.performance', 'ledger.menu_performance_report', ['budget-view'], null],
+                    ['ledger.budget.reports.variance', 'ledger.menu_variance_report', ['budget-view'], null],
+                    ['ledger.budget.reports.department', 'ledger.menu_department_report', ['budget-view'], null],
+                    ['ledger.budget.reports.cashflow', 'ledger.menu_cashflow_projection', ['budget-view'], null],
+                ], 49.9);
+                $ledgerGroup(__('ledger.menu_accounting'), [
+                    ['ledger.chart-of-accounts.index', 'ledger.menu_chart_of_accounts', ['chart-of-accounts-view'], 'chart-of-accounts'],
+                    ['ledger.fiscal-years.index', 'ledger.menu_fiscal_years', ['accounting-period-view'], 'fiscal-years'],
+                    ['ledger.journal-entries.index', 'ledger.menu_journal_entries', ['journal-entry-view'], 'journal-entries'],
+                    ['ledger.ledger-health', 'ledger.menu_ledger_health', ['transaction-mapping-view', 'general-ledger-view'], 'ledger-health'],
+                    ['ledger.general-ledger.index', 'ledger.menu_general_ledger', ['general-ledger-view'], null],
+                    ['ledger.general-ledger.trial-balance', 'ledger.menu_trial_balance', ['trial-balance-view'], 'general-ledger/trial-balance'],
+                    ['ledger.mappings.settings', 'ledger.menu_mapping_settings', ['transaction-mapping-settings'], 'mappings/settings'],
+                    ['ledger.cash-accounts', 'ledger.menu_cash_accounts', ['transaction-mapping-settings'], 'cash-accounts'],
+                    ['ledger.mappings.transactions', 'ledger.menu_view_transactions', ['transaction-mapping-view'], 'mappings/transactions'],
+                    ['ledger.fixed-assets.index', 'ledger.menu_asset_register', ['fixed-asset-list'], null],
+                    ['ledger.fixed-asset-categories.index', 'ledger.menu_asset_categories', ['fixed-asset-list'], 'fixed-asset-categories'],
+                    ['ledger.fixed-assets.register', 'ledger.menu_asset_report', ['fixed-asset-list'], null],
+                    ['ledger.fixed-assets.depreciation-report', 'ledger.menu_depreciation_report', ['fixed-asset-list'], null],
+                    ['ledger.bank-reconciliation.index', 'ledger.menu_bank_reconciliation', ['bank-reconciliation-list'], 'bank-reconciliation'],
+                    ['ledger.recurring-entries.index', 'ledger.menu_recurring_entries', ['recurring-entry-list'], 'recurring-entries'],
+                    ['ledger.year-end-closing.index', 'ledger.menu_year_end_closing', ['year-end-closing-list'], 'year-end-closing'],
+                ], 50.5);
+                $ledgerGroup(__('ledger.menu_accounting_reports'), [
+                    ['ledger.accounting-reports.index', 'ledger.menu_reports_dashboard', ['accounting-report-view'], null],
+                    ['ledger.accounting-reports.receivables-aging', 'ledger.menu_receivables_aging', ['accounting-report-view'], 'accounting-reports/receivables-aging'],
+                    ['ledger.accounting-reports.payables-aging', 'ledger.menu_payables_aging', ['accounting-report-view'], 'accounting-reports/payables-aging'],
+                    ['ledger.accounting-reports.cash-flow-statement', 'ledger.menu_cash_flow_statement', ['accounting-report-view', 'cash-flow-view'], 'accounting-reports/cash-flow'],
+                    ['ledger.accounting-reports.budget-vs-actual', 'ledger.menu_budget_vs_actual', ['accounting-report-view', 'budget-view'], 'accounting-reports/budget-vs-actual'],
+                    ['ledger.accounting-reports.financial-health', 'ledger.menu_financial_health', ['accounting-report-view'], 'accounting-reports/financial-health'],
+                ], 50.6);
             }
 
             //Reports dropdown

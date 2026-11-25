@@ -41,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
         // of a business that has Accounting switched on (App\Ledger\LedgerObserver).
         \App\Transaction::observe(\App\Ledger\LedgerObserver::class);
         \App\TransactionPayment::observe(\App\Ledger\LedgerObserver::class);
+        \App\AccountTransaction::observe(\App\Ledger\LedgerObserver::class);
 
         // PosInnova live sales lists: the moment a sale becomes final (new, or a draft finalized later)
         \App\Transaction::saving(function ($t) {

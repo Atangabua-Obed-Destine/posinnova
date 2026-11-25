@@ -26,7 +26,19 @@ class LedgerObserver
     private function queue($model): void
     {
         try {
-            if (empty($model->business_id) || empty($model->id)) {
+            if (empty($model->id)) {
+                return;
+            }
+            if ($model instanceof \App\AccountTransaction) {
+                // a movement on a Payment Account: its business is its account's
+                $bid = (int) \DB::table('accounts')->where('id', $model->account_id)->value('business_id');
+                if ($bid && empty($model->transaction_payment_id) && empty($model->transaction_id)) {
+                    LedgerSync::queue('account_transaction', (int) $model->id, $bid);
+                }
+
+                return;
+            }
+            if (empty($model->business_id)) {
                 return;
             }
             $kind = $model instanceof \App\TransactionPayment ? 'payment' : 'transaction';

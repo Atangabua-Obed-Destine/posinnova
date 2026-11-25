@@ -299,6 +299,68 @@ class PostingRules
         return $this->paymentEntry($p, $out);
     }
 
+    // ---------------------------------------------------------------- payment accounts
+
+    /**
+     * A movement on a Payment Account (account_transactions) that is not the cash side of a
+     * payment (payments post themselves): a fund transfer, a deposit, an account's opening balance.
+     * UltimatePOS writes a transfer as a pair: a debit row on the account the money leaves and a
+     * credit row on the account it reaches, pointing at each other (transfer_transaction_id).
+     * The credit row posts the pair: Dr the receiving account's ledger account, Cr the sending
+     * one's. With no sending account (a deposit from outside, an opening balance) the other side
+     * is the opening-balance suspense account (4711), for the accountant to reclassify.
+     * A debit row posts only when it has no partner (money taken out to nowhere): Dr 4711, Cr the account.
+     */
+    public function forAccountTransaction(object $a): ?array
+    {
+        if (! empty($a->deleted_at) || ! empty($a->transaction_id) || ! empty($a->transaction_payment_id)) {
+            return null;
+        }
+        $amount = round((float) $a->amount, 2);
+        if ($amount <= 0) {
+            return null;
+        }
+        $partner = $a->transfer_transaction_id
+            ? DB::table('account_transactions')->where('id', $a->transfer_transaction_id)->whereNull('deleted_at')->first()
+            : null;
+        if ($a->type === 'debit') {
+            // a fund transfer's debit row is pointed at by its credit row (not the other way round)
+            $partner = $partner ?: DB::table('account_transactions')->where('transfer_transaction_id', $a->id)
+                ->where('type', 'credit')->whereNull('deleted_at')->first();
+            if ($partner) {
+                return null; // the credit row of the pair posts it
+            }
+        }
+        $here = $this->paymentAccountLedger((int) $a->account_id);
+        $there = $partner ? $this->paymentAccountLedger((int) $partner->account_id) : $this->map('opening_balance');
+        if ($here === $there) {
+            return null;
+        }
+        $label = trim(__('ledger.doc_account_'.($a->sub_type ?: 'deposit')).' '.($a->reff_no ?: '#'.$a->id));
+        $lines = $a->type === 'credit'
+            ? [$this->line($here, $amount, 0, $label), $this->line($there, 0, $amount, $label)]
+            : [$this->line($there, $amount, 0, $label), $this->line($here, 0, $amount, $label)];
+
+        return [
+            'date' => substr((string) $a->operation_date, 0, 10),
+            'journal_type' => 'cash',
+            'description' => $label.($a->note ? ' · '.mb_substr($a->note, 0, 120) : ''),
+            'reference' => $a->reff_no,
+            'lines' => $lines,
+        ];
+    }
+
+    /** The ledger account a Payment Account is linked to (Cash and bank in the ledger). */
+    private function paymentAccountLedger(int $accountId): int
+    {
+        $row = DB::table('accounts')->where('id', $accountId)->first(['name', 'chart_of_account_id']);
+        if (! $row || ! $row->chart_of_account_id) {
+            throw new \RuntimeException(__('ledger.err_account_not_linked', ['name' => $row->name ?? ('#'.$accountId)]));
+        }
+
+        return (int) $row->chart_of_account_id;
+    }
+
     // ---------------------------------------------------------------- helpers
 
     /** The cash side of a payment: its payment account's ledger account, else its method's. */

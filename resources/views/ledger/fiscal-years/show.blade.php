@@ -168,18 +168,18 @@
 
                         @can('accounting-period-close')
                         @if(! $fiscalYear->is_closed && $periods->count() > 0)
-                        <form action="{{ route('ledger.fiscal-years.close', $fiscalYear->id) }}" method="POST" style="display: inline-block;">
+                        <form action="{{ route('ledger.fiscal-years.close', $fiscalYear->id) }}" method="POST" data-review="{{ __('ledger_fy.confirm_close_fiscal_year') }}" data-review-label="{{ __('ledger_fy.close_year') }}" data-review-class="btn-danger" style="display: inline-block;">
                             @csrf
-                            <button type="submit" class="btn btn-danger" onclick="return confirm({{ json_encode(__('ledger_fy.confirm_close_fiscal_year')) }})"><i class="fa fa-lock"></i> @lang('ledger_fy.close_year')</button>
+                            <button type="submit" class="btn btn-danger"><i class="fa fa-lock"></i> @lang('ledger_fy.close_year')</button>
                         </form>
                         @endif
                         @endcan
 
                         @can('accounting-period-reopen')
                         @if($fiscalYear->is_closed)
-                        <form action="{{ route('ledger.fiscal-years.reopen', $fiscalYear->id) }}" method="POST" style="display: inline-block;">
+                        <form action="{{ route('ledger.fiscal-years.reopen', $fiscalYear->id) }}" method="POST" data-review="{{ __('ledger_fy.confirm_reopen_fiscal_year') }}" data-review-label="{{ __('ledger_fy.reopen_year') }}" data-review-class="btn-success" style="display: inline-block;">
                             @csrf
-                            <button type="submit" class="btn btn-success" onclick="return confirm({{ json_encode(__('ledger_fy.confirm_reopen_fiscal_year')) }})"><i class="fa fa-unlock"></i> @lang('ledger_fy.reopen_year')</button>
+                            <button type="submit" class="btn btn-success"><i class="fa fa-unlock"></i> @lang('ledger_fy.reopen_year')</button>
                         </form>
                         @endif
                         @endcan

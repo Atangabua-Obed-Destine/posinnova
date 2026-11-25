@@ -143,9 +143,9 @@
                         @endcan
                         @elseif(!$lockReason && !$entry->is_reversed)
                         @can('journal-entry-unpost')
-                        <form action="{{ route('ledger.journal-entries.unpost', $entry->id) }}" method="POST" style="display: inline-block;">
+                        <form action="{{ route('ledger.journal-entries.unpost', $entry->id) }}" method="POST" data-review="{{ __('ledger_je.confirm_unpost_entry') }}" data-review-label="{{ __('ledger_je.unpost_entry') }}" data-review-class="btn-warning" style="display: inline-block;">
                             @csrf
-                            <button type="submit" class="btn btn-warning" onclick="return confirm({{ json_encode(__('ledger_je.confirm_unpost_entry')) }})"><i class="fa fa-undo"></i> {{ __('ledger_je.unpost_entry') }}</button>
+                            <button type="submit" class="btn btn-warning"><i class="fa fa-undo"></i> {{ __('ledger_je.unpost_entry') }}</button>
                         </form>
                         @endcan
                         @endif

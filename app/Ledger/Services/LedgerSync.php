@@ -61,7 +61,8 @@ class LedgerSync
                     $sync = new self();
                     foreach ($items as [$kind, $id]) {
                         try {
-                            $done[$kind.':'.$id] = $kind === 'payment' ? $sync->payment($id) : $sync->transaction($id);
+                            $done[$kind.':'.$id] = $kind === 'payment' ? $sync->payment($id)
+                                : ($kind === 'account_transaction' ? $sync->accountTransaction($id) : $sync->transaction($id));
                         } catch (\Throwable $e) {
                             \Log::error('Ledger sync '.$kind.' '.$id.': '.$e->getMessage());
                             $done[$kind.':'.$id] = 'error';
@@ -107,6 +108,40 @@ class LedgerSync
         // its payments follow it (a draft's payment is an advance until the sale is final)
         foreach (DB::table('transaction_payments')->where('transaction_id', $id)->pluck('id') as $pid) {
             $this->payment((int) $pid);
+        }
+
+        return $result;
+    }
+
+    /** A Payment Accounts movement (transfer, deposit, opening balance). */
+    public function accountTransaction(int $id): string
+    {
+        $a = DB::table('account_transactions as at')->join('accounts as ac', 'ac.id', '=', 'at.account_id')
+            ->where('at.id', $id)->select('at.*', 'ac.business_id')->first();
+        if ($a && (int) $a->business_id !== Ledger::businessId()) {
+            return 'none';
+        }
+        $map = TransactionMapping::where('transaction_type', 'account_transaction')->where('transaction_id', $id)->first();
+        if (! $a) {
+            return $map ? $this->apply($map, null, 'account_transaction', $id) : 'none';
+        }
+        if (! $map && $this->isHistory($a->operation_date)) {
+            return 'history';
+        }
+        $map = $map ?: new TransactionMapping(['transaction_type' => 'account_transaction', 'transaction_id' => $id]);
+        $result = $this->apply($map, fn () => $this->rules->forAccountTransaction($a), 'account_transaction', $id);
+        // its partner follows (a deleted half changes who posts the pair)
+        if ($a->transfer_transaction_id && $a->transfer_transaction_id != $id) {
+            $pm = TransactionMapping::where('transaction_type', 'account_transaction')->where('transaction_id', $a->transfer_transaction_id)->exists();
+            if ($pm || ! $this->isHistory($a->operation_date)) {
+                $p = DB::table('account_transactions')->where('id', $a->transfer_transaction_id)->first();
+                if ($p) {
+                    $pmap = TransactionMapping::where('transaction_type', 'account_transaction')->where('transaction_id', $p->id)->first()
+                        ?: new TransactionMapping(['transaction_type' => 'account_transaction', 'transaction_id' => $p->id]);
+                    $pa = (object) array_merge((array) $p, ['business_id' => $a->business_id]);
+                    $this->apply($pmap, fn () => $this->rules->forAccountTransaction($pa), 'account_transaction', (int) $p->id);
+                }
+            }
         }
 
         return $result;
@@ -183,7 +218,7 @@ class LedgerSync
                         'journal_type' => $want['journal_type'],
                         'description' => $want['description'],
                         'reference_number' => $want['reference'],
-                        'reference_type' => $kind === 'payment' ? 'payment' : 'transaction',
+                        'reference_type' => in_array($kind, ['payment', 'account_transaction']) ? $kind : 'transaction',
                         'reference_id' => $id,
                         'is_system_generated' => true,
                     ], $want['lines'], $userId);
@@ -309,6 +344,24 @@ class LedgerSync
             })->orderBy('p.id');
         foreach ($q->pluck('p.id') as $id) {
             $count($this->payment($id));
+        }
+
+        // Payment Accounts movements (transfers, deposits, opening balances), not the cash side of payments
+        $q = DB::table('account_transactions as at')->join('accounts as ac', 'ac.id', '=', 'at.account_id')
+            ->where('ac.business_id', $bid)->whereNull('at.transaction_id')->whereNull('at.transaction_payment_id')
+            ->where('at.operation_date', '>=', $from)
+            ->leftJoin('transaction_mappings as m', function ($j) use ($bid) {
+                $j->on('m.transaction_id', '=', 'at.id')->where('m.transaction_type', 'account_transaction')->where('m.business_id', $bid);
+            })
+            ->where(function ($w) use ($since) {
+                $w->whereNull('m.id');
+                if ($since) {
+                    $w->orWhere('at.updated_at', '>=', $since);
+                }
+                $w->orWhere('m.status', 'failed');
+            })->orderBy('at.id');
+        foreach ($q->pluck('at.id') as $id) {
+            $count($this->accountTransaction((int) $id));
         }
 
         // entries whose document or payment is gone

@@ -91,18 +91,18 @@
 
                                 @can('accounting-period-close')
                                 @if(! $year->is_closed && $year->accounting_periods_count > 0)
-                                <form action="{{ route('ledger.fiscal-years.close', $year->id) }}" method="POST" style="display: inline-block;">
+                                <form action="{{ route('ledger.fiscal-years.close', $year->id) }}" method="POST" data-review="{{ __('ledger_fy.confirm_close_fiscal_year') }}" data-review-label="{{ __('ledger_fy.close_year') }}" data-review-class="btn-danger" style="display: inline-block;">
                                     @csrf
-                                    <button type="submit" class="btn btn-danger btn-xs" title="@lang('ledger_fy.close_year')" onclick="return confirm({{ json_encode(__('ledger_fy.confirm_close_fiscal_year')) }})"><i class="fa fa-lock"></i></button>
+                                    <button type="submit" class="btn btn-danger btn-xs" title="@lang('ledger_fy.close_year')"><i class="fa fa-lock"></i></button>
                                 </form>
                                 @endif
                                 @endcan
 
                                 @can('accounting-period-reopen')
                                 @if($year->is_closed)
-                                <form action="{{ route('ledger.fiscal-years.reopen', $year->id) }}" method="POST" style="display: inline-block;">
+                                <form action="{{ route('ledger.fiscal-years.reopen', $year->id) }}" method="POST" data-review="{{ __('ledger_fy.confirm_reopen_fiscal_year') }}" data-review-label="{{ __('ledger_fy.reopen_year') }}" data-review-class="btn-success" style="display: inline-block;">
                                     @csrf
-                                    <button type="submit" class="btn btn-success btn-xs" title="@lang('ledger_fy.reopen_year')" onclick="return confirm({{ json_encode(__('ledger_fy.confirm_reopen_fiscal_year')) }})"><i class="fa fa-unlock"></i></button>
+                                    <button type="submit" class="btn btn-success btn-xs" title="@lang('ledger_fy.reopen_year')"><i class="fa fa-unlock"></i></button>
                                 </form>
                                 @endif
                                 @endcan
@@ -127,4 +127,9 @@
         </div>
     </div>
 </section>
+@include('ledger.partials.review_modal')
+@endsection
+
+@section('javascript')
+@include('ledger.partials.review_script')
 @endsection
