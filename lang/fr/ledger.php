@@ -184,6 +184,7 @@ return [
     'review_nothing_saved' => 'Rien n\'est encore enregistré : voici ce que la confirmation fera.',
     'doc_account_fund_transfer' => 'Virement de fonds',
     'doc_account_deposit' => 'Dépôt',
+    'doc_account_payroll' => 'Paiement de salaire',
     'doc_account_opening_balance' => 'Solde d\'ouverture du compte de paiement',
     'err_account_not_linked' => 'Le compte de paiement « :name » n\'est pas relié à un compte du grand livre. Reliez-le dans Caisse et banque dans le grand livre.',
     'doc_depreciation' => 'Dotation aux amortissements',

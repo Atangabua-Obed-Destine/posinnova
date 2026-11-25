@@ -22,6 +22,8 @@ return [
     'selected_account' => 'Selected Account',
     'transfer_to' => 'Transfer To',
     'fund_transfered_success' => 'Fund transfered successfully',
+    'payroll' => 'Salary payment',
+    'payroll_locked' => 'This is a salary payment: change it from Payroll (reverse the payment, then pay it again).',
     'deposit' => 'Deposit',
     'deposited_successfully' => 'Amount deposited successfully',
     'from' => 'From',

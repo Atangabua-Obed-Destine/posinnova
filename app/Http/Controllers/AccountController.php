@@ -451,7 +451,8 @@ class AccountController extends Controller
                                         $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-error delete_account_transaction" data-href="'.action([\App\Http\Controllers\AccountController::class, 'destroyAccountTransaction'], [$row->id]).'"><i class="fa fa-trash"></i> '.__('messages.delete').'</button>';
                                     }
                                 }
-                                if (auth()->user()->can('edit_account_transaction')) {
+                                // PosInnova: a salary is changed from the payroll (it carries its own ledger entry)
+                                if (auth()->user()->can('edit_account_transaction') && $row->sub_type !== 'payroll') {
                                     $action .= ' <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-primary btn-modal" data-container="#edit_account_transaction" data-href="'.action([\App\Http\Controllers\AccountController::class, 'editAccountTransaction'], [$row->id]).'"><i class="fa fa-edit"></i> '.__('messages.edit').'</button>';
                                 }
 
@@ -1257,6 +1258,12 @@ class AccountController extends Controller
             DB::beginTransaction();
 
             $account_transaction = AccountTransaction::with(['transfer_transaction'])->findOrFail($id);
+            // PosInnova: a salary payment is reversed and paid again from the payroll, never edited here
+            if ($account_transaction->sub_type === 'payroll') {
+                DB::rollBack();
+
+                return ['success' => false, 'msg' => __('account.payroll_locked')];
+            }
 
             $amount = $this->commonUtil->num_uf($request->input('amount'));
             $note = $request->input('note');

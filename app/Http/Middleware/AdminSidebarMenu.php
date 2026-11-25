@@ -760,6 +760,35 @@ class AdminSidebarMenu
                 }
             }
 
+            // PosInnova payroll: its own group (paxhitestbed's Payroll menu)
+            if (in_array('payroll', $enabled_modules)) {
+                $yu = auth()->user();
+                $ycan = fn (...$p) => collect($p)->contains(fn ($x) => $yu->can($x));
+                if ($ycan('payroll-view', 'payroll-action', 'payroll-report', 'payroll-setting')) {
+                    $menu->dropdown(
+                        __('payroll.module'),
+                        function ($sub) use ($ycan) {
+                            $on = request()->segment(1) == 'payroll';
+                            $s2 = request()->segment(2);
+                            $Y = \App\Http\Controllers\PayrollController::class;
+                            if ($ycan('payroll-view', 'payroll-action')) {
+                                $sub->url(action([$Y, 'index']), __('payroll.menu_payrolls'), ['icon' => '', 'active' => $on && in_array($s2, [null, 'generate'])]);
+                            }
+                            if ($ycan('payroll-report', 'payroll-view')) {
+                                $sub->url(action([$Y, 'report']), __('payroll.menu_report'), ['icon' => '', 'active' => $on && $s2 == 'report']);
+                            }
+                            if ($ycan('payroll-setting', 'payroll-action')) {
+                                $sub->url(action([$Y, 'staff']), __('payroll.menu_staff'), ['icon' => '', 'active' => $on && $s2 == 'staff']);
+                            }
+                            if ($ycan('payroll-setting')) {
+                                $sub->url(action([$Y, 'settings']), __('payroll.menu_settings'), ['icon' => '', 'active' => $on && $s2 == 'settings']);
+                            }
+                        },
+                        ['icon' => \App\Utils\ClinicIcons::svg('cash')]
+                    )->order(5.09);
+                }
+            }
+
             // PosInnova online channels: E-Ride linking and the products sent to it
             if (in_array('eride', $enabled_modules) && auth()->user()->can('business_settings.access')) {
                 $menu->dropdown(

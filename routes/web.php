@@ -505,6 +505,30 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::post('/setup/settings', [$S, 'settings']);
     });
 
+    // PosInnova payroll (Settings › Modules › Payroll): paxhitestbed's payroll; paying goes through the review
+    Route::prefix('payroll')->group(function () {
+        $P = \App\Http\Controllers\PayrollController::class;
+        Route::get('/', [$P, 'index']);
+        Route::get('/generate/{user_id}/{month}/{year}', [$P, 'generate'])->whereNumber(['user_id', 'month', 'year']);
+        Route::post('/preview', [$P, 'preview']);
+        Route::post('/store', [$P, 'store']);
+        Route::post('/{id}/approve', [$P, 'approve'])->whereNumber('id');
+        Route::post('/{id}/pay', [$P, 'pay'])->whereNumber('id')->middleware('ledger.review');
+        Route::post('/{id}/unpay', [$P, 'unpay'])->whereNumber('id')->middleware('ledger.review');
+        Route::post('/bulk', [$P, 'bulk']);
+        Route::post('/bulk-pay', [$P, 'bulkPay'])->middleware('ledger.review');
+        Route::get('/{id}/payslip', [$P, 'payslip'])->whereNumber('id');
+        Route::get('/report', [$P, 'report']);
+        Route::get('/staff', [$P, 'staff']);
+        Route::post('/staff/{user_id}', [$P, 'saveStaff'])->whereNumber('user_id');
+        Route::get('/settings', [$P, 'settings']);
+        Route::post('/settings', [$P, 'saveSettings']);
+        Route::post('/settings/taxes/cameroon', [$P, 'installTaxes']);
+        Route::post('/settings/taxes', [$P, 'saveTaxes']);
+        Route::post('/settings/types', [$P, 'addType']);
+        Route::post('/settings/types/{id}/toggle', [$P, 'toggleType'])->whereNumber('id');
+    });
+
     // PosInnova gym module (Settings › Modules › Gym)
     Route::prefix('gym')->group(function () {
         $G = \App\Http\Controllers\GymController::class;

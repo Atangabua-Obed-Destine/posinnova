@@ -22,6 +22,8 @@ return [
     'selected_account' => 'Compte sélectionné',
     'transfer_to' => 'Transférer à',
     'fund_transfered_success' => 'Fonds transféré avec succès',
+    'payroll' => 'Paiement de salaire',
+    'payroll_locked' => "C'est un paiement de salaire : modifiez-le depuis la Paie (annulez le paiement, puis payez à nouveau).",
     'deposit' => 'Dépôt',
     'deposited_successfully' => 'Montant déposé avec succès',
     'from' => 'De',

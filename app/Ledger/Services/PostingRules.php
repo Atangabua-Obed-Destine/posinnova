@@ -316,6 +316,10 @@ class PostingRules
         if (! empty($a->deleted_at) || ! empty($a->transaction_id) || ! empty($a->transaction_payment_id)) {
             return null;
         }
+        // a salary paid by the payroll: its entry is the payroll's own (App\Payroll\PayrollBook)
+        if (($a->sub_type ?? null) === 'payroll') {
+            return null;
+        }
         $amount = round((float) $a->amount, 2);
         if ($amount <= 0) {
             return null;

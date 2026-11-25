@@ -189,6 +189,7 @@ return [
     'review_nothing_saved' => 'Nothing has been saved yet: this is what confirming will do.',
     'doc_account_fund_transfer' => 'Fund transfer',
     'doc_account_deposit' => 'Deposit',
+    'doc_account_payroll' => 'Salary payment',
     'doc_account_opening_balance' => 'Payment account opening balance',
     'err_account_not_linked' => 'The payment account ":name" is not linked to a ledger account. Link it under Cash and bank in the ledger.',
     'doc_depreciation' => 'Depreciation',
