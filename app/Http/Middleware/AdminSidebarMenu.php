@@ -703,6 +703,36 @@ class AdminSidebarMenu
                 }
             }
 
+            // PosInnova pressing module: its own group, after the hotel
+            if (in_array('pressing', $enabled_modules)) {
+                $pu = auth()->user();
+                $pcan = fn (...$p) => collect($p)->contains(fn ($x) => $pu->can($x));
+                if ($pcan('pressing.view', 'pressing.counter', 'pressing.workshop', 'pressing.reports', 'pressing.setup')) {
+                    $menu->dropdown(
+                        __('pressing.module'),
+                        function ($sub) use ($pcan) {
+                            $on = request()->segment(1) == 'pressing';
+                            $s2 = request()->segment(2);
+                            $P = \App\Http\Controllers\PressingController::class;
+                            if ($pcan('pressing.view', 'pressing.counter', 'pressing.workshop')) {
+                                $sub->url(action([$P, 'index']), __('pressing.menu_board'), ['icon' => '', 'active' => $on && $s2 == null]);
+                            }
+                            if ($pcan('pressing.counter')) {
+                                $sub->url(action([$P, 'create']), __('pressing.menu_new'), ['icon' => '', 'active' => $on && $s2 == 'orders' && request()->segment(3) == 'create']);
+                                $sub->url(action([$P, 'collectFind']), __('pressing.menu_collect'), ['icon' => '', 'active' => $on && $s2 == 'collect']);
+                            }
+                            if ($pcan('pressing.reports')) {
+                                $sub->url(action([$P, 'reports']), __('pressing.menu_reports'), ['icon' => '', 'active' => $on && $s2 == 'reports']);
+                            }
+                            if ($pcan('pressing.setup')) {
+                                $sub->url(action([\App\Http\Controllers\PressingSetupController::class, 'index']), __('pressing.menu_setup'), ['icon' => '', 'active' => $on && $s2 == 'setup']);
+                            }
+                        },
+                        ['icon' => \App\Utils\ClinicIcons::svg('shirt')]
+                    )->order(5.07);
+                }
+            }
+
             // PosInnova online channels: E-Ride linking and the products sent to it
             if (in_array('eride', $enabled_modules) && auth()->user()->can('business_settings.access')) {
                 $menu->dropdown(

@@ -580,6 +580,10 @@ class ModuleUtil extends Util
             'hotel' => ['name' => __('hotel.module'),
                 'tooltip' => __('hotel.module_tooltip'),
             ],
+            // PosInnova: pressing (laundry, dry cleaning): price list per item, tickets, WhatsApp when ready
+            'pressing' => ['name' => __('pressing.module'),
+                'tooltip' => __('pressing.module_tooltip'),
+            ],
             // PosInnova: accounting (the paxhitestbed ledger, SYSCOHADA): sales, purchases, payments and expenses post themselves
             'accounting' => ['name' => __('ledger.module'),
                 'tooltip' => __('ledger.module_tooltip'),

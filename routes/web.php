@@ -477,6 +477,34 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::post('/setup/settings', [$S, 'saveSettings']);
     });
 
+    // PosInnova pressing module (Settings › Modules › Pressing)
+    Route::prefix('pressing')->group(function () {
+        $P = \App\Http\Controllers\PressingController::class;
+        $S = \App\Http\Controllers\PressingSetupController::class;
+        Route::get('/', [$P, 'index']);
+        Route::get('/orders/create', [$P, 'create']);
+        Route::post('/orders', [$P, 'store']);
+        Route::get('/orders/{id}', [$P, 'show'])->whereNumber('id');
+        Route::get('/orders/{id}/ticket', [$P, 'ticket'])->whereNumber('id');
+        Route::post('/orders/{id}/stage', [$P, 'stage'])->whereNumber('id');
+        Route::post('/orders/{id}/ready', [$P, 'ready'])->whereNumber('id');
+        Route::post('/orders/{id}/pay', [$P, 'pay'])->whereNumber('id');
+        Route::post('/orders/{id}/notify', [$P, 'notify'])->whereNumber('id');
+        Route::post('/orders/{id}/cancel', [$P, 'cancel'])->whereNumber('id');
+        Route::post('/orders/{id}/problem', [$P, 'problem'])->whereNumber('id');
+        Route::get('/collect', [$P, 'collectFind']);
+        Route::get('/orders/{id}/collect', [$P, 'collectForm'])->whereNumber('id');
+        Route::post('/orders/{id}/collect', [$P, 'collect'])->whereNumber('id');
+        Route::get('/reports', [$P, 'reports']);
+        Route::get('/setup', [$S, 'index']);
+        Route::post('/setup/prices', [$S, 'prices']);
+        Route::post('/setup/items', [$S, 'addItem']);
+        Route::post('/setup/items/usual', [$S, 'usualItems']);
+        Route::post('/setup/items/{id}/toggle', [$S, 'toggleItem'])->whereNumber('id');
+        Route::post('/setup/services', [$S, 'service']);
+        Route::post('/setup/settings', [$S, 'settings']);
+    });
+
     // Inventory Count (physical recount – separate from Stock Adjustment)
     // PosInnova bulk items: bags / packs / bottles opened and used a little at a time
     Route::get('/bulk-items', [\App\Http\Controllers\BulkItemController::class, 'index']);

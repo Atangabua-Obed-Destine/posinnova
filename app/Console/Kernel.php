@@ -43,6 +43,9 @@ class Kernel extends ConsoleKernel
             //PosInnova hotel: close yesterday at each hotel's audit time, if nobody did it by hand
             $schedule->command('hotel:night-audit')->everyFifteenMinutes()->withoutOverlapping(30);
 
+            //PosInnova pressing: WhatsApp reminder for clothes ready and not collected
+            $schedule->command('pressing:reminders')->hourly()->withoutOverlapping(30);
+
             //PosInnova accounting: post anything the observers missed and retry failed postings
             $schedule->command('ledger:sync')->everyFiveMinutes()->withoutOverlapping(30);
 
