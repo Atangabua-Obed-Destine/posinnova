@@ -63,17 +63,7 @@ class ClinicQueueController extends Controller
         $booked_first = (bool) \App\Utils\ClinicSettings::get($business_id, 'appointments_booked_first');
         $active = $visits->filter(function ($v) {
             return $v->status == 'open' && in_array($v->queue_status, ['with_doctor', 'waiting']);
-        })->sortBy(function ($v) use ($booked_first) {
-            // with the doctor first; then (setting) booked patients by their time; then walk-ins by number
-            if ($v->queue_status == 'with_doctor') {
-                return sprintf('0-%06d', $v->queue_no);
-            }
-            if ($booked_first && $v->appointment) {
-                return '1-'.$v->appointment->start.'-'.sprintf('%06d', $v->queue_no);
-            }
-
-            return sprintf('2-%06d', $v->queue_no);
-        })->values();
+        })->sortBy(fn ($v) => ClinicQueue::orderKey($v, $booked_first))->values();
         $done = $visits->filter(function ($v) {
             return ! ($v->status == 'open' && in_array($v->queue_status, ['with_doctor', 'waiting']));
         })->values();
@@ -90,6 +80,21 @@ class ClinicQueueController extends Controller
         }
 
         return view('clinic.queue.index', $data);
+    }
+
+    /**
+     * The waiting alert's refresh (every page, doctors only): who is waiting for the signed-in doctor.
+     * See App\Utils\ClinicQueue::waitingFor and layouts/partials/waiting_alert.
+     */
+    public function waiting(Request $request)
+    {
+        $this->checkHospitalEnabled();
+        $business_id = $request->session()->get('user.business_id');
+        if (! ClinicQueue::isDoctor(auth()->user(), $business_id)) {
+            return response()->json(['doctor' => false]);
+        }
+
+        return response()->json(['doctor' => true] + ClinicQueue::waitingFor($business_id, auth()->id()));
     }
 
     /** Call the patient in: opens the consultation. */

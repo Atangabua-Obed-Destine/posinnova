@@ -99,6 +99,7 @@
             </div>
             <div class="tw-flex-1 tw-overflow-y-auto tw-h-screen" id="scrollable-container">
                 @if (! $pos_layout)
+                    @include('layouts.partials.waiting_alert')
                     @include('layouts.partials.consult_resume')
                 @endif
                 @yield('content')

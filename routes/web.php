@@ -764,6 +764,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('clinic/packages/{id}', [\App\Http\Controllers\ClinicPackageController::class, 'update']);
     Route::post('clinic/packages/{id}/delete', [\App\Http\Controllers\ClinicPackageController::class, 'destroy']);
     Route::get('clinic/queue', [\App\Http\Controllers\ClinicQueueController::class, 'index']);
+    Route::get('clinic/queue/waiting', [\App\Http\Controllers\ClinicQueueController::class, 'waiting']);
     Route::post('clinic/queue/{id}/start', [\App\Http\Controllers\ClinicQueueController::class, 'start']);
     Route::post('clinic/queue/{id}/let-through', [\App\Http\Controllers\ClinicQueueController::class, 'letThrough']);
     Route::post('clinic/queue/{id}/no-show', [\App\Http\Controllers\ClinicQueueController::class, 'noShow']);

@@ -1848,5 +1848,17 @@ return [
     'rpt_staff_list' => 'Full report printed without charge:',
     'rpt_portal_open' => 'Open the full consultation report',
     'rpt_portal_ask' => 'The full consultation report can be requested at the clinic.',
+    // waiting alert (every page, doctors only)
+    'wq_one' => ':name is waiting to see you',
+    'wq_many' => ':n patients are waiting to see you',
+    'wq_call_in' => 'Call :name in',
+    'wq_next' => 'Next: :name (no. :no)',
+    'wq_minutes' => 'waiting :n min',
+    'wq_with_you' => 'with you now: :name',
+    'wq_unpaid' => ':n more waiting to pay first',
+    'wq_title' => '(:n) Patient waiting',
+    'wq_open_queue' => 'My queue',
+    'wq_sound_on' => 'Sound: on',
+    'wq_sound_off' => 'Sound: off',
     'rpt_portal_setting_help' => 'When a full consultation report fee is set, patients see the full report only once they have paid for it, whatever is chosen here.',
 ];

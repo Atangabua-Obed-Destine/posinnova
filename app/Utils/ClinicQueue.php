@@ -129,6 +129,82 @@ class ClinicQueue
     }
 
     /**
+     * Does this user receive patients? The same rule as doctors(), for one user (no query over all users):
+     * visit.receive_patients, and an Admin only when ticked in Clinic settings.
+     */
+    public static function isDoctor($user, $business_id)
+    {
+        if (! $user || empty($business_id)) {
+            return false;
+        }
+        if ($user->hasRole('Admin#'.$business_id)) {
+            return in_array($user->id, (array) ClinicSettings::get($business_id, 'admin_doctors'));
+        }
+        try {
+            return $user->hasPermissionTo('visit.receive_patients');
+        } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
+            return false;
+        }
+    }
+
+    /**
+     * The queue order of a checked-in patient: with the doctor first; then (Clinic setting) booked patients
+     * by their appointment time; then walk-ins by number. Used by the doctor queue and the waiting alert.
+     */
+    public static function orderKey(Visit $v, $booked_first)
+    {
+        if ($v->queue_status == 'with_doctor') {
+            return sprintf('0-%06d', $v->queue_no);
+        }
+        if ($booked_first && $v->appointment) {
+            return '1-'.$v->appointment->start.'-'.sprintf('%06d', $v->queue_no);
+        }
+
+        return sprintf('2-%06d', $v->queue_no);
+    }
+
+    /**
+     * For the waiting alert shown to a doctor on every page: today's patients checked in for them.
+     *  - waiting:     ready to be called in, in queue order [{id, queue_no, name, minutes}];
+     *  - unpaid:      waiting but held back until they pay (clinic takes payment first);
+     *  - with_doctor: patients already marked as "with the doctor" (then the alert is quiet).
+     */
+    public static function waitingFor($business_id, $user_id)
+    {
+        $visits = Visit::forBusiness($business_id)
+            ->whereDate('visit_date', \Carbon::today()->toDateString())
+            ->whereNotNull('queue_no')
+            ->where('status', 'open')
+            ->where('doctor_id', $user_id)
+            ->whereIn('queue_status', ['waiting', 'with_doctor'])
+            ->with(['patient', 'appointment', 'feeTransaction'])
+            ->get();
+        $booked_first = (bool) ClinicSettings::get($business_id, 'appointments_booked_first');
+        $visits = $visits->sortBy(fn ($v) => self::orderKey($v, $booked_first))->values();
+
+        $waiting = [];
+        $unpaid = 0;
+        $with = [];
+        foreach ($visits as $v) {
+            if ($v->queue_status == 'with_doctor') {
+                $with[] = optional($v->patient)->name;
+
+                continue;
+            }
+            if (self::payGateBlocks($v)) {
+                $unpaid++;
+
+                continue;
+            }
+            $since = $v->created_at ? \Carbon::parse($v->created_at) : null;
+            $waiting[] = ['id' => $v->id, 'queue_no' => $v->queue_no, 'name' => optional($v->patient)->name,
+                'minutes' => $since ? max(0, (int) $since->diffInMinutes(now())) : 0];
+        }
+
+        return ['waiting' => $waiting, 'unpaid' => $unpaid, 'with_doctor' => $with];
+    }
+
+    /**
      * The consultations a doctor has not finished: saved to go on later (drafts of the last two weeks, visit
      * still open) and patients called in today or yesterday and still "with the doctor" with nothing saved.
      * For the "Continue" bar shown on every page: [['kind' => draft|open, 'visit_id', 'name', 'time', 'url']].

@@ -1849,5 +1849,17 @@ return [
     'rpt_staff_list' => 'Compte rendu complet imprimé sans frais :',
     'rpt_portal_open' => 'Ouvrir le compte rendu complet de la consultation',
     'rpt_portal_ask' => 'Le compte rendu complet de la consultation peut être demandé à la clinique.',
+    // alerte d'attente (toutes les pages, médecins seulement)
+    'wq_one' => ':name attend de vous voir',
+    'wq_many' => ':n patients attendent de vous voir',
+    'wq_call_in' => 'Faire entrer :name',
+    'wq_next' => 'Suivant : :name (n° :no)',
+    'wq_minutes' => 'attend depuis :n min',
+    'wq_with_you' => 'avec vous : :name',
+    'wq_unpaid' => ':n autre(s) doivent d’abord payer',
+    'wq_title' => '(:n) Patient en attente',
+    'wq_open_queue' => 'Ma file d’attente',
+    'wq_sound_on' => 'Son : activé',
+    'wq_sound_off' => 'Son : coupé',
     'rpt_portal_setting_help' => 'Quand des frais de compte rendu complet sont fixés, le patient ne voit le compte rendu complet qu’une fois payé, quel que soit le choix ici.',
 ];
