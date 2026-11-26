@@ -149,6 +149,7 @@
                 <div class="form-group">
                     {!! Form::label('portal_consultation_detail', __('clinic.portal_consultation_detail') . ':') !!}
                     {!! Form::select('portal_consultation_detail', ['diagnosis' => __('clinic.detail_diagnosis'), 'full' => __('clinic.detail_full')], $s['portal_consultation_detail'], ['class' => 'form-control']) !!}
+                    <p class="help-block">@lang('clinic.rpt_portal_setting_help')</p>
                 </div>
             @endcomponent
         </div>

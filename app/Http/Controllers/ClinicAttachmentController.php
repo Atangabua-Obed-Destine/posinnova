@@ -198,10 +198,15 @@ class ClinicAttachmentController extends Controller
         $patient = auth()->guard('patient')->user();
         abort_unless($patient, 403);
         $att = ClinicAttachment::where('business_id', $patient->business_id)->where('contact_id', $patient->id)
-            ->whereIn('attachable_type', ['lab_request', 'imaging_request'])->whereNull('draft_token')->findOrFail($id);
+            ->whereIn('attachable_type', ['lab_request', 'imaging_request', 'consultation'])->whereNull('draft_token')->findOrFail($id);
         $owner = $att->owner();
         abort_unless($owner && (int) $owner->contact_id === (int) $patient->id, 404);
-        abort_unless(ClinicRequestPayment::releasedToPatient(ClinicRequestPayment::of($owner)), 403);
+        if ($att->attachable_type === 'consultation') {
+            // consultation photos: only with the full report, once the patient may see it
+            abort_unless(\App\Utils\ConsultationReportFee::portalMayView($owner), 403);
+        } else {
+            abort_unless(ClinicRequestPayment::releasedToPatient(ClinicRequestPayment::of($owner)), 403);
+        }
 
         return $this->send($att);
     }

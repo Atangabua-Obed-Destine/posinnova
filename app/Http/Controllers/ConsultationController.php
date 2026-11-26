@@ -607,8 +607,10 @@ class ConsultationController extends Controller
         $report_invoice = \App\Utils\ConsultationReportFee::invoice($consultation);
         $report_state = \App\Utils\ConsultationReportFee::state($consultation, $report_invoice);
         $report_fee = \App\Utils\ConsultationReportFee::fee($business_id);
+        $may_staff_copy = in_array($report_state, ['not_charged', 'due']) && \App\Utils\ConsultationReportFee::mayPrintStaffCopy();
+        $staff_copies = \App\Utils\ConsultationReportFee::staffCopies($consultation);
 
-        return view('consultation.show')->with(compact('consultation', 'lab_requests', 'imaging_requests', 'can_continue', 'can_correct', 'corrections', 'report_invoice', 'report_state', 'report_fee'));
+        return view('consultation.show')->with(compact('consultation', 'lab_requests', 'imaging_requests', 'can_continue', 'can_correct', 'corrections', 'report_invoice', 'report_state', 'report_fee', 'may_staff_copy', 'staff_copies'));
     }
 
     public function finalize($id)
@@ -671,27 +673,85 @@ class ConsultationController extends Controller
      */
     public function report($id)
     {
-        $this->checkHospitalEnabled();
-        if (! auth()->user()->can('consultation.view_own') && ! auth()->user()->can('consultation.view_all')) {
-            abort(403, 'Unauthorized action.');
-        }
-        $business_id = request()->session()->get('user.business_id');
-        $consultation = Consultation::forBusiness($business_id)
-            ->with(['visit.location', 'patient.patientDetails', 'consultedBy', 'referralDepartment', 'prescriptions.variation', 'prescriptions.product', 'exam', 'attachments'])
-            ->findOrFail($id);
-        if (! auth()->user()->can('consultation.view_all') && $consultation->consulted_by != auth()->id()) {
-            abort(403, 'Unauthorized action.');
-        }
+        $consultation = $this->reportConsultation($id);
         // the full report can be a paid extra: closed until its fee is paid (the prescription stays free)
         if (! \App\Utils\ConsultationReportFee::mayPrint($consultation)) {
             return redirect()->action([self::class, 'show'], [$consultation->id])
                 ->with('status', ['success' => 0, 'msg' => __('clinic.rpt_unpaid_blocked')]);
         }
-        [$lab_requests, $imaging_requests] = $this->requestsOf($consultation);
-        $business = \App\Business::find($business_id);
-        $corrections = \App\Utils\ConsultationCorrections::of($consultation->id);
 
-        return view('consultation.report_print')->with(compact('consultation', 'business', 'lab_requests', 'imaging_requests', 'corrections'));
+        return view('consultation.report_print')->with(self::reportViewData($consultation));
+    }
+
+    /**
+     * PosInnova: a clinic admin prints the full report without charge (referral, transfer...). The reason
+     * is asked for and kept, with who printed it, in the activity log, and listed on the consultation.
+     */
+    public function staffCopy(Request $request, $id)
+    {
+        $consultation = $this->reportConsultation($id);
+        if (! \App\Utils\ConsultationReportFee::mayPrintStaffCopy()) {
+            abort(403, 'Unauthorized action.');
+        }
+        $reason = trim((string) $request->input('reason'));
+        if (mb_strlen($reason) < 3) {
+            return redirect()->action([self::class, 'show'], [$consultation->id])
+                ->with('status', ['success' => 0, 'msg' => __('clinic.rpt_staff_reason_needed')]);
+        }
+        \App\Utils\ConsultationReportFee::recordStaffCopy($consultation, mb_substr($reason, 0, 255));
+
+        return view('consultation.report_print')->with(self::reportViewData($consultation));
+    }
+
+    /** The consultation behind a report print, with the same access checks as viewing it. */
+    private function reportConsultation($id)
+    {
+        $this->checkHospitalEnabled();
+        if (! auth()->user()->can('consultation.view_own') && ! auth()->user()->can('consultation.view_all')) {
+            abort(403, 'Unauthorized action.');
+        }
+        $business_id = request()->session()->get('user.business_id');
+        $consultation = Consultation::forBusiness($business_id)->findOrFail($id);
+        if (! auth()->user()->can('consultation.view_all') && $consultation->consulted_by != auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        return $consultation;
+    }
+
+    /**
+     * What the full report shows, for staff and for the patient portal. In the portal ($portal = true) a
+     * lab or imaging result the patient may not see yet (unpaid) is left out, and photos use portal links.
+     */
+    public static function reportViewData(Consultation $consultation, $portal = false)
+    {
+        $consultation->load(['visit.location', 'patient.patientDetails', 'consultedBy', 'referralDepartment', 'prescriptions.variation', 'prescriptions.product', 'exam', 'attachments']);
+        $lab_requests = \App\LabRequest::forBusiness($consultation->business_id)->where('consultation_id', $consultation->id)
+            ->with(['lines'])->orderBy('id')->get();
+        $imaging_requests = \App\ImagingRequest::forBusiness($consultation->business_id)->where('consultation_id', $consultation->id)
+            ->orderBy('id')->get();
+        if ($portal) {
+            $released = fn ($r) => \App\Utils\ClinicRequestPayment::releasedToPatient(\App\Utils\ClinicRequestPayment::of($r));
+            foreach ($lab_requests as $lr) {
+                if (! $released($lr)) {
+                    $lr->setRelation('lines', $lr->lines->map(function ($l) {
+                        $l->result_value = null;
+
+                        return $l;
+                    }));
+                }
+            }
+            foreach ($imaging_requests as $ir) {
+                if (! $released($ir)) {
+                    $ir->report = null;
+                }
+            }
+        }
+        $business = \App\Business::find($consultation->business_id);
+        $corrections = \App\Utils\ConsultationCorrections::of($consultation->id);
+        $photo_url = $portal ? fn ($a) => $a->portalUrl() : fn ($a) => $a->url();
+
+        return compact('consultation', 'business', 'lab_requests', 'imaging_requests', 'corrections', 'photo_url');
     }
 
     /**

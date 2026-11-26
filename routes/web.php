@@ -655,6 +655,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('consultations/{id}/prescription', [\App\Http\Controllers\ConsultationController::class, 'prescription']);
     Route::get('consultations/{id}/report', [\App\Http\Controllers\ConsultationController::class, 'report'])->whereNumber('id');
     Route::post('consultations/{id}/report-fee', [\App\Http\Controllers\ConsultationController::class, 'chargeReportFee'])->whereNumber('id');
+    Route::post('consultations/{id}/staff-copy', [\App\Http\Controllers\ConsultationController::class, 'staffCopy'])->whereNumber('id');
     Route::get('consultations/exam-form', [\App\Http\Controllers\ConsultationExamController::class, 'form']);
     Route::get('consultations/exam/{id}/drawing/{block}', [\App\Http\Controllers\ConsultationExamController::class, 'drawing'])->whereNumber('id')->where('block', '[a-z0-9_]+');
 
@@ -1017,6 +1018,7 @@ Route::middleware(['setData', 'language'])->prefix('portal')->name('portal.')->g
         Route::get('lab-results/{id}', [\App\Http\Controllers\PatientPortal\PortalController::class, 'labShow'])->name('lab-show');
         Route::get('imaging', [\App\Http\Controllers\PatientPortal\PortalController::class, 'imaging'])->name('imaging');
         Route::get('attachments/{id}', [\App\Http\Controllers\ClinicAttachmentController::class, 'portalShow'])->whereNumber('id')->name('attachment');
+        Route::get('consultations/{id}/report', [\App\Http\Controllers\PatientPortal\PortalController::class, 'consultationReport'])->whereNumber('id')->name('consultation-report');
         Route::get('admissions', [\App\Http\Controllers\PatientPortal\PortalController::class, 'admissions'])->name('admissions');
         Route::get('maternity', [\App\Http\Controllers\PatientPortal\PortalController::class, 'maternity'])->name('maternity');
         Route::get('bills', [\App\Http\Controllers\PatientPortal\PortalController::class, 'bills'])->name('bills');

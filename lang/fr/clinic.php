@@ -1834,7 +1834,7 @@ return [
     'cfin_covered' => 'Pas de frais ici (payés à l\'accueil ou couverts par un forfait)',
     // le compte rendu complet en option payante (l'ordonnance s'imprime gratuitement)
     'rpt_fee' => 'Frais du compte rendu complet de consultation',
-    'rpt_fee_help' => 'Le patient repart avec l’ordonnance seulement. Un patient qui veut toute la consultation (antécédents, examen, diagnostic, examens demandés) paie ces frais une fois pour cette consultation, et le compte rendu s’imprime une fois payé. 0 = le compte rendu complet est gratuit.',
+    'rpt_fee_help' => 'Le patient repart avec l’ordonnance seulement. Un patient qui veut toute la consultation (antécédents, examen, diagnostic, examens demandés) paie ces frais une fois pour cette consultation, et le compte rendu s’imprime une fois payé. Tant que des frais sont fixés, le portail patient ne montre le compte rendu complet qu’une fois payé. 0 = le compte rendu complet est gratuit.',
     'rpt_btn_charge' => 'Compte rendu complet · :amount',
     'rpt_charge_confirm' => ':amount seront ajoutés à la facture du patient pour le compte rendu complet. Il s’imprime une fois payé. Continuer ?',
     'rpt_charged' => 'Les frais du compte rendu sont sur la facture du patient. Encaissez, puis imprimez le compte rendu.',
@@ -1842,4 +1842,12 @@ return [
     'rpt_unpaid_blocked' => 'Le compte rendu complet s’imprime une fois ses frais payés. L’ordonnance peut être imprimée gratuitement.',
     'rpt_no_fee' => 'Aucuns frais de compte rendu : le compte rendu complet est gratuit.',
     'rpt_print_rx_help' => 'Les médicaments seulement : ce que le patient emporte',
+    'rpt_staff_btn' => 'Imprimer sans frais',
+    'rpt_staff_help' => 'Administrateurs de la clinique : une copie du compte rendu complet pour le personnel (référence, transfert). Le motif est gardé avec votre nom.',
+    'rpt_staff_reason_ask' => 'Pourquoi le compte rendu complet est-il imprimé sans frais ? (par exemple : référence à l’hôpital régional)',
+    'rpt_staff_reason_needed' => 'Donnez un motif pour imprimer le compte rendu complet sans frais.',
+    'rpt_staff_list' => 'Compte rendu complet imprimé sans frais :',
+    'rpt_portal_open' => 'Ouvrir le compte rendu complet de la consultation',
+    'rpt_portal_ask' => 'Le compte rendu complet de la consultation peut être demandé à la clinique.',
+    'rpt_portal_setting_help' => 'Quand des frais de compte rendu complet sont fixés, le patient ne voit le compte rendu complet qu’une fois payé, quel que soit le choix ici.',
 ];

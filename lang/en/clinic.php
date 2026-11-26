@@ -1833,7 +1833,7 @@ return [
     'cfin_covered' => 'No fee here (paid at check-in or covered by a plan)',
     // the full consultation report as a paid extra (the prescription prints free)
     'rpt_fee' => 'Full consultation report fee',
-    'rpt_fee_help' => 'Patients go home with the prescription only. A patient who wants the whole consultation (history, examination, diagnosis, tests) pays this fee once for that consultation, and the report prints once it is paid. 0 = the full report is free.',
+    'rpt_fee_help' => 'Patients go home with the prescription only. A patient who wants the whole consultation (history, examination, diagnosis, tests) pays this fee once for that consultation, and the report prints once it is paid. While a fee is set, the patient portal shows the full report only once it is paid. 0 = the full report is free.',
     'rpt_btn_charge' => 'Full report · :amount',
     'rpt_charge_confirm' => ':amount will be added to the patient’s bill for the full consultation report. It prints once paid. Continue?',
     'rpt_charged' => 'The report fee is on the patient’s bill. Take the payment, then print the report.',
@@ -1841,4 +1841,12 @@ return [
     'rpt_unpaid_blocked' => 'The full report prints once its fee is paid. The prescription can be printed free.',
     'rpt_no_fee' => 'No report fee is set: the full report is free.',
     'rpt_print_rx_help' => 'The medicines only: what the patient takes home',
+    'rpt_staff_btn' => 'Print without charge',
+    'rpt_staff_help' => 'Clinic admins: a staff copy of the full report (referral, transfer). The reason is kept with your name.',
+    'rpt_staff_reason_ask' => 'Why is the full report printed without charge? (for example: referral to the regional hospital)',
+    'rpt_staff_reason_needed' => 'Give a reason to print the full report without charge.',
+    'rpt_staff_list' => 'Full report printed without charge:',
+    'rpt_portal_open' => 'Open the full consultation report',
+    'rpt_portal_ask' => 'The full consultation report can be requested at the clinic.',
+    'rpt_portal_setting_help' => 'When a full consultation report fee is set, patients see the full report only once they have paid for it, whatever is chosen here.',
 ];

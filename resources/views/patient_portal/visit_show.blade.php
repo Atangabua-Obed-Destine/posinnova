@@ -51,6 +51,15 @@
                 @endforeach
             </div>
         @endif
+
+        {{-- PosInnova: the full report once it is paid (or where the clinic shows the full notes free) --}}
+        @if (\App\Utils\ConsultationReportFee::portalMayView($c))
+            <a href="{{ route('portal.consultation-report', [$c->id]) }}" target="_blank" class="portal-full-report tw-inline-flex tw-items-center tw-gap-1.5 tw-mt-3 tw-text-sm tw-font-semibold tw-text-blue-700">
+                <i class="fas fa-file-medical"></i> @lang('clinic.rpt_portal_open')
+            </a>
+        @elseif ($c->status == 'final' && \App\Utils\ConsultationReportFee::state($c) !== 'free')
+            <p class="portal-report-ask tw-text-xs tw-text-gray-500 tw-mt-3 tw-mb-0"><i class="fas fa-file-medical"></i> @lang('clinic.rpt_portal_ask')</p>
+        @endif
     </div>
 @empty
     @include('patient_portal.partials.empty', ['msg' => __('lang_v1.no_consultations'), 'icon' => 'fa-notes-medical'])

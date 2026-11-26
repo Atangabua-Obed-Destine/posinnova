@@ -102,11 +102,31 @@
                         </a>
                     @endcan
                 @endif
+                @if ($may_staff_copy)
+                    {{-- clinic admins: a staff copy without charge (referral, transfer), with a reason that is kept --}}
+                    <form method="POST" action="{{ action([\App\Http\Controllers\ConsultationController::class, 'staffCopy'], [$c->id]) }}" target="_blank" style="display:inline;" id="staff_copy_form"
+                        data-ask="{{ __('clinic.rpt_staff_reason_ask') }}"
+                        onsubmit="var r = window.prompt(this.getAttribute('data-ask'), ''); if (r === null || r.trim().length < 3) { return false; } this.reason.value = r.trim(); setTimeout(function () { location.reload(); }, 1500); return true;">
+                        @csrf
+                        <input type="hidden" name="reason" value="">
+                        <button type="submit" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-ghost" id="staff_copy_btn" title="{{ __('clinic.rpt_staff_help') }}">
+                            <i class="fas fa-user-shield"></i> @lang('clinic.rpt_staff_btn')
+                        </button>
+                    </form>
+                @endif
                 <a href="{{ action([\App\Http\Controllers\VisitController::class, 'show'], [$c->visit_id]) }}" class="tw-dw-btn tw-dw-btn-sm tw-dw-btn-outline">
                     <i class="fa fa-arrow-left"></i> @lang('lang_v1.back_to_visit')
                 </a>
             </div>
         </div>
+        @if ($staff_copies->isNotEmpty())
+            <div id="staff_copies" class="tw-text-xs tw-text-gray-600 tw-mt-3" style="border-top:1px dashed #d0d5dd;padding-top:8px;">
+                <strong><i class="fas fa-user-shield"></i> @lang('clinic.rpt_staff_list')</strong>
+                @foreach ($staff_copies as $sc)
+                    <div class="staff-copy-row">{{ (new \App\Utils\Util())->format_date($sc->created_at, true) }} · {{ trim(optional($sc->causer)->user_full_name) ?: '-' }} · {{ $sc->getExtraProperty('reason') }}</div>
+                @endforeach
+            </div>
+        @endif
     </div>
 
     {{-- PosInnova: corrections made after it was finished (the earlier versions stay readable) --}}

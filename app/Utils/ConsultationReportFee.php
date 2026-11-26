@@ -51,6 +51,44 @@ class ConsultationReportFee
     }
 
     /**
+     * The patient portal shows the full report of a finished consultation once its fee is paid. Where the
+     * clinic charges nothing, the Clinic settings choice decides ("full" notes or the diagnosis only).
+     */
+    public static function portalMayView(Consultation $c)
+    {
+        if ($c->status != 'final') {
+            return false;
+        }
+        $state = self::state($c);
+
+        return $state === 'paid'
+            || ($state === 'free' && ClinicSettings::get($c->business_id, 'portal_consultation_detail') === 'full');
+    }
+
+    /** activity_log description of a full report printed by staff without charge. */
+    const STAFF_COPY = 'report_staff_copy';
+
+    /** Clinic admins may print a staff copy without charge (referral, transfer), with a reason. */
+    public static function mayPrintStaffCopy($user = null)
+    {
+        $user = $user ?: auth()->user();
+
+        return $user && $user->can('clinic_settings.manage');
+    }
+
+    public static function recordStaffCopy(Consultation $c, $reason)
+    {
+        (new Util())->activityLog($c, self::STAFF_COPY, null, ['reason' => $reason], false, $c->business_id);
+    }
+
+    /** Staff copies printed without charge, oldest first. */
+    public static function staffCopies(Consultation $c)
+    {
+        return \Spatie\Activitylog\Models\Activity::where('subject_type', $c->getMorphClass())->where('subject_id', $c->id)
+            ->where('description', self::STAFF_COPY)->with('causer')->orderBy('id')->get();
+    }
+
+    /**
      * Adds the report fee to the patient's bill (an unpaid sale on the visit). Charged once: a second
      * call returns the invoice already made. Null when there is nothing to charge.
      */

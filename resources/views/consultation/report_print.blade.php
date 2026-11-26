@@ -119,7 +119,7 @@
         <h3 class="rp-h">@lang('clinic.ex_photos_title')</h3>
         <div class="rp-photos">
             @foreach ($photos as $ph)
-                <img src="{{ $ph->url() }}" alt="{{ $ph->original_name }}">
+                <img src="{{ isset($photo_url) ? $photo_url($ph) : $ph->url() }}" alt="{{ $ph->original_name }}">
             @endforeach
         </div>
     @endif

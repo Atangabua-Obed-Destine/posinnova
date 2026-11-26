@@ -121,6 +121,22 @@ class PortalController extends Controller
         return view('patient_portal.visit_show')->with(compact('patient', 'visit'));
     }
 
+    /**
+     * The full report of one of the patient's consultations, once it is paid (or where the clinic charges
+     * nothing and shows the full notes). See App\Utils\ConsultationReportFee::portalMayView.
+     */
+    public function consultationReport($id)
+    {
+        $patient = $this->patient();
+        $consultation = Consultation::forBusiness($patient->business_id)
+            ->where('contact_id', $patient->id) // ownership guard
+            ->findOrFail($id);
+        abort_unless(\App\Utils\ConsultationReportFee::portalMayView($consultation), 403);
+
+        return view('consultation.report_print')
+            ->with(\App\Http\Controllers\ConsultationController::reportViewData($consultation, true));
+    }
+
     public function prescriptions()
     {
         $patient = $this->patient();
