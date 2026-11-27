@@ -73,9 +73,10 @@
                 <div class="ap-row ap-row--request">
                     <div class="ap-time">{{ $ap->start }}<small>{{ $day_label($ap->date) }}</small><small>{{ @format_date($ap->date) }}</small></div>
                     <div class="ap-body">
-                        <span class="ap-name">{{ optional($ap->patient)->name }}</span>
+                        <span class="ap-name">{{ $ap->display_name }}</span>
                         <span class="label label-warning">@lang('clinic.appt_status_requested')</span>
-                        <div class="ap-sub">{{ optional(optional($ap->patient)->patientDetails)->file_number }} · {{ optional($ap->patient)->mobile }}
+                        @if ($ap->isGuest())<span class="label label-info">@lang('clinic.pr_guest')</span>@endif
+                        <div class="ap-sub">@if (! $ap->isGuest()){{ optional(optional($ap->patient)->patientDetails)->file_number }} · @endif{{ $ap->display_mobile }}
                             @if ($show_doctor) · <i class="fas fa-user-md"></i> {{ trim(optional($ap->doctor)->user_full_name) }}@endif
                             @if ($ap->reason) · {{ $ap->reason }}@endif
                             · {{ __('clinic.appt_asked_on', ['date' => @format_datetime($ap->created_at)]) }}</div>
@@ -98,9 +99,12 @@
                 <div class="ap-row">
                     <div class="ap-time">{{ $ap->start }}<small>– {{ $ap->end }}</small></div>
                     <div class="ap-body">
-                        <span class="ap-name">{{ optional($ap->patient)->name }}</span>
+                        <span class="ap-name">{{ $ap->display_name }}</span>
                         @if ($ap->source == 'portal')<span class="label label-default" title="{{ __('clinic.appt_from_portal') }}"><i class="fas fa-mobile-alt"></i></span>@endif
-                        <div class="ap-sub">{{ optional(optional($ap->patient)->patientDetails)->file_number }} · {{ optional($ap->patient)->mobile }}
+                        @if ($ap->source == 'whatsapp')<span class="label label-default" title="WhatsApp"><i class="fab fa-whatsapp"></i></span>@endif
+                        @if ($ap->source == 'public')<span class="label label-default" title="{{ __('clinic.appt_from_public') }}"><i class="fas fa-globe"></i></span>@endif
+                        @if ($ap->isGuest())<span class="label label-info">@lang('clinic.pr_guest')</span>@endif
+                        <div class="ap-sub">@if (! $ap->isGuest()){{ optional(optional($ap->patient)->patientDetails)->file_number }} · @endif{{ $ap->display_mobile }}
                             @if ($show_doctor) · <i class="fas fa-user-md"></i> {{ trim(optional($ap->doctor)->user_full_name) }}@endif
                             @if ($ap->reason) · {{ $ap->reason }}@endif
                             @if ($ap->reminded_at) · <i class="fab fa-whatsapp"></i> {{ __('clinic.appt_reminded', ['date' => @format_datetime($ap->reminded_at)]) }}@endif

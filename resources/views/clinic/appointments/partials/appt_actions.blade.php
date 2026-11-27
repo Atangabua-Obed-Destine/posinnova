@@ -33,7 +33,7 @@
                 <a href="{{ $ap_wa }}" target="_blank" rel="noopener" class="btn btn-xs btn-default ap-wa js-wa" data-url="{{ action([$A, 'reminded'], [$ap->id]) }}"><i class="fab fa-whatsapp"></i> @lang('clinic.appt_whatsapp')</a>
             @endif
             <button type="button" class="btn btn-xs btn-default js-move" data-id="{{ $ap->id }}" data-doctor="{{ $ap->doctor_id }}" data-date="{{ $ap->date->toDateString() }}"
-                data-patient="{{ optional($ap->patient)->name }}" data-current="{{ @format_date($ap->date) }} {{ $ap->start }} · {{ trim(optional($ap->doctor)->user_full_name) }}"><i class="fas fa-exchange-alt"></i> @lang('clinic.appt_move')</button>
+                data-patient="{{ $ap->display_name }}" data-current="{{ @format_date($ap->date) }} {{ $ap->start }} · {{ trim(optional($ap->doctor)->user_full_name) }}"><i class="fas fa-exchange-alt"></i> @lang('clinic.appt_move')</button>
             <form method="POST" action="{{ action([$A, 'cancel'], [$ap->id]) }}" class="js-reason" data-prompt="{{ __('clinic.appt_cancel_prompt') }}">@csrf{!! $ap_keep !!}
                 <input type="hidden" name="reason">
                 <button class="btn btn-xs btn-default"><i class="fas fa-ban"></i> @lang('messages.cancel')</button>

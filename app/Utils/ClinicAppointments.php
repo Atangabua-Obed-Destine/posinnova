@@ -6,8 +6,10 @@ use App\ClinicAppointment;
 use App\ClinicDoctorDayOff;
 use App\ClinicDoctorHour;
 use App\Contact;
+use App\PatientDetail;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * PosInnova clinic: appointments.
@@ -171,7 +173,8 @@ class ClinicAppointments
         $requests = $q->with('patient')->orderBy('date')->orderBy('start_time')->limit(50)->get()
             ->map(fn ($a) => [
                 'id' => $a->id,
-                'patient' => optional($a->patient)->name,
+                'patient' => $a->display_name,
+                'guest' => $a->isGuest(),
                 'doctor' => $doctors[$a->doctor_id] ?? '',
                 'doctor_id' => (int) $a->doctor_id,
                 'date' => $a->date->toDateString(),
@@ -314,6 +317,134 @@ class ClinicAppointments
         }
 
         return [$appt, null];
+    }
+
+    /**
+     * A booking from the public clinic page by someone who is not yet a patient:
+     * their typed name/phone are kept on the request (contact_id null, source
+     * 'public', status requested). Reception registers/links the real patient
+     * when they approve it (see ensurePatient). Same slot / notice / daily-cap /
+     * race rules as book(), but no Contact.
+     *
+     * @return array [ClinicAppointment|null, error message|null]
+     */
+    public static function bookGuest($business_id, $doctor_id, $date, $start, $guest_name, $guest_phone, $reason = null, $location_id = null)
+    {
+        if (! self::enabled($business_id)) {
+            return [null, __('clinic.appt_booking_closed')];
+        }
+        $guest_name = trim((string) $guest_name);
+        $guest_phone = trim((string) $guest_phone);
+        if (mb_strlen($guest_name) < 2) {
+            return [null, __('clinic.appt_guest_name_required')];
+        }
+        if (strlen(preg_replace('/\D+/', '', $guest_phone)) < 6) {
+            return [null, __('clinic.appt_guest_phone_required')];
+        }
+        $doctor_id = (int) $doctor_id;
+        if (! isset(ClinicQueue::doctors($business_id)[$doctor_id])) {
+            return [null, __('clinic.choose_doctor')];
+        }
+        try {
+            $date = Carbon::parse($date)->startOfDay();
+        } catch (\Exception $e) {
+            return [null, __('clinic.appt_slot_past')];
+        }
+        $days_ahead = (int) ClinicSettings::get($business_id, 'appointments_days_ahead');
+        if ($date->lt(Carbon::today()) || $date->gt(Carbon::today()->addDays($days_ahead))) {
+            return [null, __('clinic.appt_slot_past')];
+        }
+        $notice = (int) ClinicSettings::get($business_id, 'appointments_min_notice_hours');
+        $slot = collect(self::slots($business_id, $doctor_id, $date, $notice))->firstWhere('start', (string) $start);
+        if (! $slot || $slot['state'] == 'taken') {
+            return [null, __('clinic.appt_slot_taken')];
+        }
+        if ($slot['state'] == 'past') {
+            return [null, __('clinic.appt_slot_past')];
+        }
+        if (! self::dayHasRoom($business_id, $doctor_id, $date)) {
+            return [null, __('clinic.appt_day_full')];
+        }
+        // light anti-abuse: a number may hold only so many open guest requests
+        $tail = substr(preg_replace('/\D+/', '', $guest_phone), -9);
+        if (strlen($tail) >= 8) {
+            $open = ClinicAppointment::forBusiness($business_id)->open()->whereNull('contact_id')
+                ->whereRaw("REPLACE(REPLACE(REPLACE(guest_phone,' ',''),'+',''),'-','') LIKE ?", ['%'.$tail])->count();
+            if ($open >= self::MAX_OPEN_PER_PATIENT) {
+                return [null, __('clinic.appt_too_many', ['n' => self::MAX_OPEN_PER_PATIENT])];
+            }
+        }
+        try {
+            $appt = ClinicAppointment::create([
+                'business_id' => $business_id,
+                'contact_id' => null,
+                'guest_name' => mb_substr($guest_name, 0, 150),
+                'guest_phone' => mb_substr($guest_phone, 0, 40),
+                'doctor_id' => $doctor_id,
+                'location_id' => $location_id ?: \App\BusinessLocation::where('business_id', $business_id)->value('id'),
+                'date' => $date->toDateString(),
+                'start_time' => $slot['start'].':00',
+                'end_time' => $slot['end'].':00',
+                'status' => 'requested',
+                'source' => 'public',
+                'slot_key' => self::slotKey($doctor_id, $date, $slot['start']),
+                'reason' => $reason ? mb_substr(trim($reason), 0, 500) : null,
+                'created_by' => null,
+            ]);
+        } catch (QueryException $e) {
+            if (($e->errorInfo[0] ?? '') == '23000') {
+                return [null, __('clinic.appt_slot_taken')];
+            }
+            throw $e;
+        }
+
+        return [$appt, null];
+    }
+
+    /**
+     * Makes sure an appointment points at a real patient. A guest request has
+     * none until approved: match the typed phone to an existing patient, or
+     * create one (named from the guest fields). Returns the Contact.
+     */
+    public static function ensurePatient(ClinicAppointment $appt, $user_id = null)
+    {
+        if ($appt->contact_id) {
+            return $appt->patient;
+        }
+        $name = trim((string) $appt->guest_name) ?: __('clinic.appt_guest');
+        $phone = trim((string) $appt->guest_phone);
+
+        $existing = $phone ? ClinicWhatsApp::patientByNumber($appt->business_id, $phone) : null;
+        if ($existing) {
+            $appt->contact_id = $existing->id;
+            $appt->save();
+
+            return $existing;
+        }
+        $by = $user_id ?: \App\Business::where('id', $appt->business_id)->value('owner_id');
+        $contact = DB::transaction(function () use ($appt, $name, $phone, $by) {
+            $c = (new ContactUtil())->createNewContact([
+                'business_id' => $appt->business_id,
+                'type' => 'customer',
+                'is_patient' => 1,
+                'contact_type' => 'individual',
+                'first_name' => mb_substr($name, 0, 150),
+                'name' => mb_substr($name, 0, 255),
+                'mobile' => mb_substr($phone, 0, 40),
+                'created_by' => $by,
+            ])['data'];
+            PatientDetail::create([
+                'contact_id' => $c->id,
+                'business_id' => $appt->business_id,
+                'file_number' => PatientDetail::generateFileNumber($appt->business_id),
+            ]);
+
+            return $c;
+        });
+        $appt->contact_id = $contact->id;
+        $appt->save();
+
+        return $contact;
     }
 
     /**

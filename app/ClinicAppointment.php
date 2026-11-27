@@ -44,6 +44,24 @@ class ClinicAppointment extends Model
         return $this->belongsTo(Contact::class, 'contact_id');
     }
 
+    /** A public-page booking by someone who is not yet a patient (reception registers them on approval). */
+    public function isGuest()
+    {
+        return empty($this->contact_id);
+    }
+
+    /** The name to show on the diary / alert: the patient's, or the guest's typed name. */
+    public function getDisplayNameAttribute()
+    {
+        return $this->contact_id ? optional($this->patient)->name : ($this->guest_name ?: null);
+    }
+
+    /** The phone to show / message: the patient's mobile, or the guest's typed phone. */
+    public function getDisplayMobileAttribute()
+    {
+        return $this->contact_id ? optional($this->patient)->mobile : ($this->guest_phone ?: null);
+    }
+
     public function doctor()
     {
         return $this->belongsTo(User::class, 'doctor_id');

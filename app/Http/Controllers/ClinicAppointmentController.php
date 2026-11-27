@@ -268,10 +268,23 @@ class ClinicAppointmentController extends Controller
         if ($appt->status != 'requested') {
             return $this->back($request, $appt->date)->with('status', ['success' => false, 'msg' => __('clinic.appt_not_requested')]);
         }
+        // a public-page guest request: register (or match) the real patient now, so
+        // the booking has a contact, can be checked in, and gets the confirmation message
+        $new_patient = false;
+        if ($appt->isGuest()) {
+            $existing = \App\Utils\ClinicWhatsApp::patientByNumber($appt->business_id, (string) $appt->guest_phone);
+            \App\Utils\ClinicAppointments::ensurePatient($appt, $request->session()->get('user.id'));
+            $new_patient = ! $existing; // matched an existing patient, or freshly registered?
+        }
         $appt->status = 'confirmed';
         $appt->confirmed_at = now();
         $appt->confirmed_by = $request->session()->get('user.id');
         $appt->save();
+
+        $flash = $this->whatsappFlash($appt, 'confirmation');
+        $msg = $new_patient ? __('clinic.appt_confirmed_new_patient', ['name' => $appt->display_name]) : __('clinic.appt_confirmed');
+
+        return $this->back($request, $appt->date)->with('status', ['success' => true, 'msg' => $msg])->with($flash);
 
         return $this->back($request, $appt->date)->with('status', ['success' => true, 'msg' => __('clinic.appt_confirmed')])
             ->with($this->whatsappFlash($appt, 'confirmation'));
@@ -446,8 +459,8 @@ class ClinicAppointmentController extends Controller
         if ($clash->isNotEmpty()) {
             $msg .= ' '.trans_choice('clinic.appt_day_off_has_bookings', $clash->count(), ['n' => $clash->count()]);
             $back->with('dayoff_clash', ['doctor_id' => $doctor_id, 'rows' => $clash->map(fn ($a) => [
-                'date' => $a->date->toDateString(), 'start' => $a->start, 'patient' => optional($a->patient)->name,
-                'mobile' => optional($a->patient)->mobile, 'status' => $a->status,
+                'date' => $a->date->toDateString(), 'start' => $a->start, 'patient' => $a->display_name,
+                'mobile' => $a->display_mobile, 'status' => $a->status,
             ])->all()]);
         }
 

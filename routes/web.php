@@ -994,6 +994,14 @@ Route::get('webhook/whatsapp', [\App\Http\Controllers\WhatsAppWebhookController:
 Route::post('webhook/whatsapp', [\App\Http\Controllers\WhatsAppWebhookController::class, 'receive']);
 Route::get('privacy', [\App\Http\Controllers\ClinicWhatsAppController::class, 'privacy'])->middleware('language');
 
+// Public clinic page (hospital module) — no login; the clinic is resolved from the slug
+Route::middleware(['setData', 'language'])->prefix('c')->name('clinic-public.')->group(function () {
+    Route::get('{slug}', [\App\Http\Controllers\ClinicPublicController::class, 'show'])->name('show');
+    Route::get('{slug}/dr/{doctor}', [\App\Http\Controllers\ClinicPublicController::class, 'show'])->whereNumber('doctor')->name('doctor');
+    Route::get('{slug}/slots', [\App\Http\Controllers\ClinicPublicController::class, 'slots'])->name('slots');
+    Route::post('{slug}/book', [\App\Http\Controllers\ClinicPublicController::class, 'book'])->middleware('throttle:12,1')->name('book');
+});
+
 Route::middleware(['setData', 'language'])->prefix('portal')->name('portal.')->group(function () {
     Route::get('login', [\App\Http\Controllers\PatientPortal\AuthController::class, 'showLogin'])->name('login');
     Route::post('login', [\App\Http\Controllers\PatientPortal\AuthController::class, 'login'])->name('login.submit');

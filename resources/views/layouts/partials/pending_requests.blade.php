@@ -26,7 +26,7 @@
         'ago' => __('clinic.pr_ago'), 'approve' => __('clinic.pr_approve'), 'decline' => __('clinic.pr_decline'),
         'title' => __('clinic.pr_title'), 'open' => __('clinic.pr_open'),
         'sound_on' => __('clinic.pr_sound_on'), 'sound_off' => __('clinic.pr_sound_off'),
-        'reason' => __('clinic.appt_decline_prompt'),
+        'reason' => __('clinic.appt_decline_prompt'), 'guest' => __('clinic.pr_guest'),
     ];
 @endphp
 @if ($pi_ap !== null)
@@ -126,6 +126,7 @@
                 : fill(esc(L.many), { n: '<strong>' + w.length + '</strong>' });
             var sub = fill(L.sub, { doctor: first.doctor, date: first.date, time: first.start });
             sub += ' · ' + fill(L.ago, { n: first.minutes_ago });
+            if (first.guest) { sub += ' · ' + L.guest; }
             document.getElementById('pi_appt_sub').textContent = sub;
             document.getElementById('pi_appt_ok_form').action = box.getAttribute('data-confirm').replace('__ID__', first.id);
             document.getElementById('pi_appt_no_form').action = box.getAttribute('data-decline').replace('__ID__', first.id);

@@ -30,15 +30,16 @@ class ClinicSettingsController extends Controller
         $this->authorizeAccess();
 
         $business_id = request()->session()->get('user.business_id');
-        $business = Business::findOrFail($business_id, ['id', 'hospital_file_prefix', 'hospital_file_counter', 'consultation_fee', 'morgue_daily_fee']);
+        $business = Business::findOrFail($business_id, ['id', 'name', 'slug', 'hospital_file_prefix', 'hospital_file_counter', 'consultation_fee', 'morgue_daily_fee']);
         $settings = ClinicSettings::all($business_id);
 
         $prefix = $business->hospital_file_prefix ?: 'PMI';
         $next_file_number = $prefix.'-'.str_pad(($business->hospital_file_counter ?? 0) + 1, 4, '0', STR_PAD_LEFT);
 
         $admins = \App\Utils\ClinicQueue::admins($business_id);
+        $doctors = \App\Utils\ClinicQueue::doctors($business_id);
 
-        return view('clinic.settings', compact('business', 'settings', 'next_file_number', 'admins'));
+        return view('clinic.settings', compact('business', 'settings', 'next_file_number', 'admins', 'doctors'));
     }
 
     public function update(Request $request)
@@ -57,6 +58,9 @@ class ClinicSettingsController extends Controller
             'appointments_min_notice_hours' => 'nullable|integer|min:0|max:72',
             'appointments_daily_cap' => 'nullable|integer|min:0|max:100',
             'whatsapp_country_code' => 'nullable|regex:/^\+?\d{1,4}$/',
+            'public_slug' => 'nullable|string|max:150',
+            'public_map_lat' => 'nullable|numeric|between:-90,90',
+            'public_map_lng' => 'nullable|numeric|between:-180,180',
         ]);
 
         $business_id = $request->session()->get('user.business_id');
@@ -67,12 +71,24 @@ class ClinicSettingsController extends Controller
                 $update[$fee] = $this->num_uf($request->input($fee));
             }
         }
+        // the public-page slug lives on the business row (indexed for /c/{slug} lookup)
+        if ($request->has('public_slug')) {
+            $slug = \Illuminate\Support\Str::slug((string) $request->input('public_slug'));
+            if ($slug === '') {
+                $update['slug'] = null;
+            } elseif (! \App\Business::where('slug', $slug)->where('id', '!=', $business_id)->exists()) {
+                $update['slug'] = $slug;
+            } else {
+                return redirect()->action([self::class, 'index'])->with('status', ['success' => 0, 'msg' => __('clinic.public_slug_taken')]);
+            }
+        }
         Business::where('id', $business_id)->update($update);
 
         $input = $request->only([
             'pay_first', 'plan_billing_anchor', 'plan_fixed_day', 'plan_grace_days', 'plan_unpaid_rule', 'insurance_covers_plans',
             'appointments_enabled', 'appointments_portal', 'appointments_days_ahead', 'appointments_min_notice_hours', 'appointments_booked_first',
             'appointments_approval', 'appointments_daily_cap', 'appointments_whatsapp_bot', 'whatsapp_country_code',
+            'public_page_enabled', 'public_tagline', 'public_description', 'public_map_lat', 'public_map_lng', 'public_doctors',
             'sections', 'portal_enabled', 'portal_idle_minutes', 'portal_consultation_detail',
         ]);
         $input['report_fee'] = $this->num_uf($request->input('report_fee'));

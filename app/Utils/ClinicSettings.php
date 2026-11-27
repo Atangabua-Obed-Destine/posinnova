@@ -35,6 +35,13 @@ class ClinicSettings
         'appointments_daily_cap' => 0,     // most appointments a doctor takes in a day (0 = no limit); blocks online booking only, reception may override
         'appointments_doctor_caps' => [],  // per-doctor override of the daily cap, [user_id => n]
         'appointments_whatsapp_bot' => false, // patients may book over the clinic WhatsApp number (the chat bot)
+        // Public clinic page (/c/{slug}): a shareable page with the clinic's doctors and open slots
+        'public_page_enabled' => false,    // the page is live (a slug on the business is also required)
+        'public_tagline' => '',            // a short line under the clinic name
+        'public_description' => '',         // a paragraph about the clinic
+        'public_map_lat' => null,           // map pin
+        'public_map_lng' => null,
+        'public_doctors' => [],            // which doctor user_ids to show (empty = all with hours)
         'whatsapp_country_code' => '237',  // added to local numbers in WhatsApp reminder links
         // Insurance
         'insurance_covers_plans' => false, // true: an insured patient's monthly plan invoice is split with the insurer too
@@ -112,6 +119,15 @@ class ClinicSettings
             ? self::cleanCaps($input['appointments_doctor_caps'])
             : self::get($business_id, 'appointments_doctor_caps');
         $s['appointments_whatsapp_bot'] = ! empty($input['appointments_whatsapp_bot']);
+        $s['public_page_enabled'] = ! empty($input['public_page_enabled']);
+        $s['public_tagline'] = mb_substr(trim((string) ($input['public_tagline'] ?? '')), 0, 150);
+        $s['public_description'] = mb_substr(trim((string) ($input['public_description'] ?? '')), 0, 2000);
+        $s['public_map_lat'] = isset($input['public_map_lat']) && is_numeric($input['public_map_lat']) ? (float) $input['public_map_lat'] : null;
+        $s['public_map_lng'] = isset($input['public_map_lng']) && is_numeric($input['public_map_lng']) ? (float) $input['public_map_lng'] : null;
+        // the public-doctors map is edited on its own control; keep what is stored unless this save carries it
+        $s['public_doctors'] = array_key_exists('public_doctors', $input)
+            ? array_values(array_unique(array_filter(array_map('intval', (array) $input['public_doctors']))))
+            : self::get($business_id, 'public_doctors');
         $cc = preg_replace('/\D+/', '', (string) ($input['whatsapp_country_code'] ?? ''));
         $s['whatsapp_country_code'] = substr($cc, 0, 4);
         foreach (self::SECTIONS as $sec) {

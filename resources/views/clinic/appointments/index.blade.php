@@ -81,8 +81,9 @@
                         @foreach ($requests as $r)
                             <tr>
                                 <td style="white-space:nowrap;"><strong>{{ @format_date($r->date) }} {{ $r->start }}</strong><br><small class="text-muted">{{ trim(optional($r->doctor)->user_full_name) }}</small></td>
-                                <td><span class="ap-name">{{ optional($r->patient)->name }}</span>
-                                    <br><small class="text-muted">{{ optional(optional($r->patient)->patientDetails)->file_number }} · {{ optional($r->patient)->mobile }}</small></td>
+                                <td><span class="ap-name">{{ $r->display_name }}</span>
+                                    @if ($r->isGuest())<span class="label label-info" style="font-weight:600;">{{ __('clinic.pr_guest') }}</span>@endif
+                                    <br><small class="text-muted">@if (! $r->isGuest()){{ optional(optional($r->patient)->patientDetails)->file_number }} · @endif{{ $r->display_mobile }}</small></td>
                                 <td>{{ $r->reason ?: '-' }}<br><small class="text-muted">{{ __('clinic.appt_asked_on', ['date' => @format_datetime($r->created_at)]) }}</small></td>
                                 <td class="text-right">
                                     @include('clinic.appointments.partials.appt_actions', ['ap' => $r])

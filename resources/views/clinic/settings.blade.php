@@ -157,6 +157,56 @@
                     <i class="fab fa-whatsapp" style="color:#16a34a;"></i> @lang('clinic.wa_settings_link')</a></p>
             @endcomponent
 
+            @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.pub_setting_title')])
+                <div class="checkbox">
+                    <label>{!! Form::checkbox('public_page_enabled', 1, $settings['public_page_enabled']) !!} @lang('clinic.pub_setting_enabled')</label>
+                </div>
+                <div class="form-group">
+                    {!! Form::label('public_slug', __('clinic.pub_setting_slug') . ':') !!}
+                    <div class="input-group">
+                        <span class="input-group-addon">{{ url('c') }}/</span>
+                        {!! Form::text('public_slug', $business->slug, ['class' => 'form-control', 'maxlength' => 150, 'placeholder' => 'my-clinic']) !!}
+                    </div>
+                    @if ($business->slug)
+                        <p class="help-block" style="margin-bottom:2px;">
+                            <i class="fas fa-link"></i> <a href="{{ url('c/'.$business->slug) }}" target="_blank">{{ url('c/'.$business->slug) }}</a>
+                        </p>
+                        <p class="help-block" style="margin-top:0;">@lang('clinic.pub_setting_doctor_link'): <code>{{ url('c/'.$business->slug.'/dr/{id}') }}</code></p>
+                    @else
+                        <p class="help-block">@lang('clinic.pub_setting_slug_help')</p>
+                    @endif
+                </div>
+                <div class="form-group">
+                    {!! Form::label('public_tagline', __('clinic.pub_setting_tagline') . ':') !!}
+                    {!! Form::text('public_tagline', $settings['public_tagline'], ['class' => 'form-control', 'maxlength' => 150]) !!}
+                </div>
+                <div class="form-group">
+                    {!! Form::label('public_description', __('clinic.pub_setting_description') . ':') !!}
+                    {!! Form::textarea('public_description', $settings['public_description'], ['class' => 'form-control', 'rows' => 3, 'maxlength' => 2000]) !!}
+                </div>
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            {!! Form::label('public_map_lat', __('clinic.pub_setting_lat') . ':') !!}
+                            {!! Form::text('public_map_lat', $settings['public_map_lat'], ['class' => 'form-control', 'placeholder' => '4.0511']) !!}
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            {!! Form::label('public_map_lng', __('clinic.pub_setting_lng') . ':') !!}
+                            {!! Form::text('public_map_lng', $settings['public_map_lng'], ['class' => 'form-control', 'placeholder' => '9.7679']) !!}
+                        </div>
+                    </div>
+                </div>
+                <p class="help-block" style="margin-top:-6px;">@lang('clinic.pub_setting_map_help')</p>
+                <div class="form-group">
+                    {!! Form::label('public_doctors', __('clinic.pub_setting_doctors') . ':') !!}
+                    {!! Form::select('public_doctors[]', $doctors, $settings['public_doctors'], ['class' => 'form-control', 'multiple' => true, 'id' => 'public_doctors']) !!}
+                    <p class="help-block">@lang('clinic.pub_setting_doctors_help')</p>
+                </div>
+                <p class="help-block"><i class="fas fa-map-marker-alt"></i> @lang('clinic.pub_setting_gbp_tip')</p>
+            @endcomponent
+
             @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.patient_portal')])
                 <div class="checkbox">
                     <label>{!! Form::checkbox('portal_enabled', 1, $s['portal_enabled']) !!} @lang('clinic.portal_enabled')</label>
