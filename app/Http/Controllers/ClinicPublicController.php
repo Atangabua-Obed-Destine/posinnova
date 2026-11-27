@@ -156,10 +156,22 @@ class ClinicPublicController extends Controller
             (string) $request->input('guest_name'), (string) $request->input('guest_phone'), $request->input('reason')
         );
         if ($error) {
-            return back()->withInput()->with('pub_status', ['ok' => false, 'msg' => $error]);
+            // which part of the page the error is about: a field, or the chosen time
+            $field = $error === __('clinic.appt_guest_phone_required') ? 'guest_phone'
+                : ($error === __('clinic.appt_guest_name_required') ? 'guest_name' : 'slot');
+
+            return back()->withInput()->with('pub_status', ['ok' => false, 'msg' => $error, 'field' => $field]);
         }
         \App\Utils\ClinicWhatsApp::notifyDoctorRequest($appt);
 
-        return redirect()->route('clinic-public.show', $slug)->with('pub_status', ['ok' => true, 'msg' => __('clinic.pub_book_ok')]);
+        // what the visitor booked, for the confirmation screen
+        $done = [
+            'doctor' => $this->publicDoctors($bid)[$doctor_id] ?? '',
+            'date' => Carbon::parse($appt->date)->locale(app()->getLocale())->isoFormat('dddd D MMMM'),
+            'time' => $appt->start,
+            'name' => $appt->guest_name,
+        ];
+
+        return redirect()->route('clinic-public.show', $slug)->with('pub_done', $done);
     }
 }

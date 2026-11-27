@@ -114,10 +114,10 @@
                         <div class="ap-time">{{ $s['start'] }}</div>
                         <div class="ap-body">
                             @if ($ap)
-                                <span class="ap-name">{{ optional($ap->patient)->name }}</span>
+                                <span class="ap-name">{{ $ap->display_name }}</span>@if ($ap->isGuest()) <span class="label label-info">@lang('clinic.pr_guest')</span>@endif
                                 <span class="label {{ $label_cls[$ap->status] ?? 'label-default' }}">@lang('clinic.appt_status_' . $ap->status)</span>
                                 @if ($ap->source == 'portal')<span class="label label-default" title="{{ __('clinic.appt_from_portal') }}"><i class="fas fa-mobile-alt"></i></span>@endif
-                                <div class="ap-sub">{{ optional(optional($ap->patient)->patientDetails)->file_number }} · {{ optional($ap->patient)->mobile }}
+                                <div class="ap-sub">@if (! $ap->isGuest()){{ optional(optional($ap->patient)->patientDetails)->file_number }} · @endif{{ $ap->display_mobile }}
                                     @if ($ap->reason) · {{ $ap->reason }}@endif
                                     @if ($ap->reminded_at) · <i class="fab fa-whatsapp"></i> {{ __('clinic.appt_reminded', ['date' => @format_datetime($ap->reminded_at)]) }}@endif
                                 </div>
@@ -144,7 +144,7 @@
     @if ($cancelled->isNotEmpty())
         <p class="text-muted" style="margin-top:14px;"><i class="fas fa-ban"></i> @lang('clinic.appt_cancelled_today'):
             @foreach ($cancelled as $c)
-                {{ $c->start }} {{ optional($c->patient)->name }} ({{ __('clinic.appt_status_' . $c->status) }}{{ $c->cancel_reason ? ': '.$c->cancel_reason : '' }}){{ $loop->last ? '' : ' · ' }}
+                {{ $c->start }} {{ $c->display_name }} ({{ __('clinic.appt_status_' . $c->status) }}{{ $c->cancel_reason ? ': '.$c->cancel_reason : '' }}){{ $loop->last ? '' : ' · ' }}
             @endforeach
         </p>
     @endif

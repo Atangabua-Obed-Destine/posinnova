@@ -171,7 +171,7 @@ class ClinicDashboard
                 })->take(self::LIST_SIZE)->map(function ($a) use ($now) {
                     return [
                         'time' => substr($a->start_time, 0, 5),
-                        'name' => optional($a->patient)->name,
+                        'name' => $a->display_name,
                         'doctor' => $a->doctor ? trim($a->doctor->user_full_name) : null,
                         'status' => $a->status,
                         'late' => $a->status == 'confirmed' && $a->start_time < $now,

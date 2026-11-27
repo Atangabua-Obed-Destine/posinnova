@@ -26,7 +26,7 @@
         'ago' => __('clinic.pr_ago'), 'approve' => __('clinic.pr_approve'), 'decline' => __('clinic.pr_decline'),
         'title' => __('clinic.pr_title'), 'open' => __('clinic.pr_open'),
         'sound_on' => __('clinic.pr_sound_on'), 'sound_off' => __('clinic.pr_sound_off'),
-        'reason' => __('clinic.appt_decline_prompt'), 'guest' => __('clinic.pr_guest'),
+        'reason' => __('clinic.appt_decline_prompt'), 'guest' => __('clinic.pr_guest'), 'just_now' => __('clinic.pr_just_now'),
     ];
 @endphp
 @if ($pi_ap !== null)
@@ -124,8 +124,8 @@
             document.getElementById('pi_appt_msg').innerHTML = w.length === 1
                 ? fill(esc(L.one), { name: '<strong>' + esc(first.patient) + '</strong>' })
                 : fill(esc(L.many), { n: '<strong>' + w.length + '</strong>' });
-            var sub = fill(L.sub, { doctor: first.doctor, date: first.date, time: first.start });
-            sub += ' · ' + fill(L.ago, { n: first.minutes_ago });
+            var sub = fill(L.sub, { doctor: first.doctor, date: first.date_label || first.date, time: first.start });
+            sub += ' · ' + (first.minutes_ago < 1 ? L.just_now : fill(L.ago, { n: first.minutes_ago }));
             if (first.guest) { sub += ' · ' + L.guest; }
             document.getElementById('pi_appt_sub').textContent = sub;
             document.getElementById('pi_appt_ok_form').action = box.getAttribute('data-confirm').replace('__ID__', first.id);

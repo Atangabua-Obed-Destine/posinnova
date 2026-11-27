@@ -178,6 +178,7 @@ class ClinicAppointments
                 'doctor' => $doctors[$a->doctor_id] ?? '',
                 'doctor_id' => (int) $a->doctor_id,
                 'date' => $a->date->toDateString(),
+                'date_label' => $a->date->copy()->locale(app()->getLocale())->isoFormat('ddd D MMM'),
                 'start' => $a->start,
                 'minutes_ago' => $a->created_at ? $a->created_at->diffInMinutes() : 0,
                 'reason' => $a->reason,
