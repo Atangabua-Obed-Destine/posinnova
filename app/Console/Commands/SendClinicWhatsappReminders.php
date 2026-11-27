@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Utils\ClinicWhatsApp;
+use App\Utils\ClinicWhatsAppBot;
 use Illuminate\Console\Command;
 
 /**
@@ -18,6 +19,12 @@ class SendClinicWhatsappReminders extends Command
 
     public function handle()
     {
+        // clear out WhatsApp booking-bot chats that were abandoned mid-way
+        $swept = ClinicWhatsAppBot::sweepExpired();
+        if ($swept) {
+            $this->info("Swept {$swept} expired WhatsApp bot session(s)");
+        }
+
         $done = ClinicWhatsApp::runReminders();
         foreach ($done as $business_id => $n) {
             $this->info("Business {$business_id}: {$n} reminder(s) sent");

@@ -77,6 +77,10 @@ class AppointmentController extends Controller
         if ($date->lt(Carbon::today()) || $date->gt(Carbon::today()->addDays($days_ahead))) {
             return ['slots' => []];
         }
+        // the doctor's daily cap: a full day offers nothing, like a day off
+        if (! ClinicAppointments::dayHasRoom($bid, $doctor_id, $date)) {
+            return ['slots' => [], 'day_off' => ClinicAppointments::isDayOff($bid, $doctor_id, $date), 'full' => true];
+        }
         $notice = (int) ClinicSettings::get($bid, 'appointments_min_notice_hours');
         $free = collect(ClinicAppointments::slots($bid, $doctor_id, $date, $notice))
             ->where('state', 'free')->pluck('start')->values();
@@ -99,6 +103,7 @@ class AppointmentController extends Controller
         if ($error) {
             return back()->withInput()->with('status', ['success' => false, 'msg' => $error]);
         }
+        \App\Utils\ClinicWhatsApp::notifyDoctorRequest($appt);
 
         return redirect()->route('portal.appointments')->with('status', ['success' => true, 'msg' => __('clinic.appt_portal_requested')]);
     }

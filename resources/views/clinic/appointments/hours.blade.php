@@ -83,6 +83,17 @@
                         </div>
                     </form>
 
+                    <form method="POST" action="{{ action([$A, 'storeDoctorCap'], [$id]) }}" style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; margin-bottom:12px;">
+                        @csrf
+                        <div style="flex:1; min-width:160px;">
+                            <label for="cap_{{ $id }}" style="font-weight:normal; font-size:12px;"><i class="fas fa-user-clock"></i> @lang('clinic.appt_cap_label')</label>
+                            <input type="number" name="max_per_day" id="cap_{{ $id }}" min="0" max="100" class="form-control input-sm"
+                                value="{{ $caps[$id] ?? '' }}" placeholder="{{ $default_cap > 0 ? $default_cap : '∞' }}">
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-default"><i class="fas fa-save"></i> @lang('messages.save')</button>
+                        <div style="flex-basis:100%; margin:0;"><small class="text-muted">@lang('clinic.appt_cap_hint')</small></div>
+                    </form>
+
                     <div><strong><i class="fas fa-umbrella-beach"></i> @lang('clinic.appt_days_off')</strong></div>
                     @if ($offs->isEmpty())
                         <p class="text-muted" style="margin:4px 0 8px;">@lang('clinic.appt_no_days_off')</p>

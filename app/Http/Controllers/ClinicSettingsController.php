@@ -55,6 +55,7 @@ class ClinicSettingsController extends Controller
             'portal_idle_minutes' => 'nullable|integer|min:5|max:240',
             'appointments_days_ahead' => 'nullable|integer|min:1|max:180',
             'appointments_min_notice_hours' => 'nullable|integer|min:0|max:72',
+            'appointments_daily_cap' => 'nullable|integer|min:0|max:100',
             'whatsapp_country_code' => 'nullable|regex:/^\+?\d{1,4}$/',
         ]);
 
@@ -70,7 +71,8 @@ class ClinicSettingsController extends Controller
 
         $input = $request->only([
             'pay_first', 'plan_billing_anchor', 'plan_fixed_day', 'plan_grace_days', 'plan_unpaid_rule', 'insurance_covers_plans',
-            'appointments_enabled', 'appointments_portal', 'appointments_days_ahead', 'appointments_min_notice_hours', 'appointments_booked_first', 'whatsapp_country_code',
+            'appointments_enabled', 'appointments_portal', 'appointments_days_ahead', 'appointments_min_notice_hours', 'appointments_booked_first',
+            'appointments_approval', 'appointments_daily_cap', 'appointments_whatsapp_bot', 'whatsapp_country_code',
             'sections', 'portal_enabled', 'portal_idle_minutes', 'portal_consultation_detail',
         ]);
         $input['report_fee'] = $this->num_uf($request->input('report_fee'));

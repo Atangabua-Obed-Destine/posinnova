@@ -184,6 +184,23 @@ class ClinicAppointmentController extends Controller
             'days', 'today', 'to', 'requests', 'by_day', 'booked', 'offs'));
     }
 
+    /**
+     * The loud "pending requests" bar polls this (JSON). Returns the booking
+     * requests this user should approve, honouring the appointments_approval
+     * setting, or {can:false} for anyone who is not an audience. Never aborts,
+     * so the poller just stays quiet (mirrors the doctor queue's waiting()).
+     */
+    public function pending(Request $request)
+    {
+        $enabled_modules = $request->session()->get('business.enabled_modules', []);
+        if (! is_array($enabled_modules) || ! in_array('hospital', $enabled_modules)) {
+            return response()->json(['can' => false]);
+        }
+        $business_id = $request->session()->get('user.business_id');
+
+        return response()->json(ClinicAppointments::pendingFor($business_id, auth()->user()));
+    }
+
     /** Free slots of a doctor on a day, for moving a booking (JSON). */
     public function freeSlots(Request $request)
     {
@@ -340,8 +357,24 @@ class ClinicAppointmentController extends Controller
         $hours = ClinicDoctorHour::forBusiness($business_id)->orderBy('weekday')->orderBy('start_time')->get()->groupBy('user_id');
         $days_off = ClinicDoctorDayOff::forBusiness($business_id)->whereDate('date', '>=', Carbon::today()->toDateString())
             ->orderBy('date')->get()->groupBy('user_id');
+        $caps = (array) ClinicSettings::get($business_id, 'appointments_doctor_caps');
+        $default_cap = (int) ClinicSettings::get($business_id, 'appointments_daily_cap');
 
-        return view('clinic.appointments.hours', compact('doctors', 'hours', 'days_off', 'access'));
+        return view('clinic.appointments.hours', compact('doctors', 'hours', 'days_off', 'access', 'caps', 'default_cap'));
+    }
+
+    /** Set (or clear, with 0/blank) one doctor's maximum appointments per day. */
+    public function storeDoctorCap(Request $request, $doctor)
+    {
+        $doctor = (int) $doctor;
+        $this->authorizeSchedule($doctor);
+        $business_id = $request->session()->get('user.business_id');
+        if (! isset(ClinicQueue::doctors($business_id)[$doctor])) {
+            return redirect()->action([self::class, 'hours'])->with('status', ['success' => false, 'msg' => __('clinic.choose_doctor')]);
+        }
+        ClinicSettings::setDoctorCap($business_id, $doctor, (int) $request->input('max_per_day', 0));
+
+        return redirect()->action([self::class, 'hours'])->with('status', ['success' => true, 'msg' => __('clinic.appt_cap_saved')]);
     }
 
     public function storeHours(Request $request)

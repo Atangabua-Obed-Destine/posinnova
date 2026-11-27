@@ -816,7 +816,9 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('clinic/whatsapp/inbox/{id}/handled', [\App\Http\Controllers\ClinicWhatsAppController::class, 'handled']);
     Route::post('clinic/whatsapp/inbox/{id}/reply', [\App\Http\Controllers\ClinicWhatsAppController::class, 'reply']);
     Route::get('clinic/appointments/upcoming', [\App\Http\Controllers\ClinicAppointmentController::class, 'upcoming']);
+    Route::get('clinic/appointments/pending', [\App\Http\Controllers\ClinicAppointmentController::class, 'pending']);
     Route::get('clinic/appointments/free-slots', [\App\Http\Controllers\ClinicAppointmentController::class, 'freeSlots']);
+    Route::post('clinic/appointments/doctor-cap/{doctor}', [\App\Http\Controllers\ClinicAppointmentController::class, 'storeDoctorCap']);
     Route::post('clinic/appointments/{id}/move', [\App\Http\Controllers\ClinicAppointmentController::class, 'move']);
     Route::get('clinic/appointments/hours', [\App\Http\Controllers\ClinicAppointmentController::class, 'hours']);
     Route::post('clinic/appointments/hours', [\App\Http\Controllers\ClinicAppointmentController::class, 'storeHours']);

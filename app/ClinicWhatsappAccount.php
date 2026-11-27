@@ -21,6 +21,7 @@ class ClinicWhatsappAccount extends Model
         'send_confirmation' => 'boolean',
         'send_reminder' => 'boolean',
         'send_moved' => 'boolean',
+        'send_doctor_request' => 'boolean',
         'reminder_buttons' => 'boolean',
         'access_token' => 'encrypted',
         'app_secret' => 'encrypted',
@@ -57,13 +58,15 @@ class ClinicWhatsappAccount extends Model
     /** Template names by kind of message. */
     public function templateFor($kind)
     {
-        return ['confirmation' => $this->tpl_confirmation, 'reminder' => $this->tpl_reminder, 'moved' => $this->tpl_moved][$kind] ?? null;
+        return ['confirmation' => $this->tpl_confirmation, 'reminder' => $this->tpl_reminder, 'moved' => $this->tpl_moved,
+            'doctor_request' => $this->tpl_doctor_request][$kind] ?? null;
     }
 
     /** Is the kind of message switched on? */
     public function sends($kind)
     {
-        return ['confirmation' => $this->send_confirmation, 'reminder' => $this->send_reminder, 'moved' => $this->send_moved][$kind] ?? false;
+        return ['confirmation' => $this->send_confirmation, 'reminder' => $this->send_reminder, 'moved' => $this->send_moved,
+            'doctor_request' => $this->send_doctor_request][$kind] ?? false;
     }
 
     /** Approval status Meta gave a template in a language (APPROVED, PENDING, REJECTED...), or null. */

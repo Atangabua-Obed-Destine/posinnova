@@ -161,6 +161,59 @@ class ClinicWhatsApp
         return self::send($acc, $to, ['type' => 'text', 'text' => ['preview_url' => false, 'body' => mb_substr((string) $text, 0, 4000)]], $meta + ['body' => $text]);
     }
 
+    /**
+     * An interactive message (also only within the 24-hour window). $interactive
+     * is Meta's "interactive" object; use sendButtons()/sendList() to build it.
+     */
+    public static function sendInteractive(ClinicWhatsappAccount $acc, $to, array $interactive, array $meta = [])
+    {
+        return self::send($acc, $to, ['type' => 'interactive', 'interactive' => $interactive], $meta);
+    }
+
+    /**
+     * Up to 3 reply buttons. $buttons: [['id' => '...', 'title' => '...'], ...].
+     * Meta limits: body 1024, button title 20, id 256.
+     */
+    public static function sendButtons(ClinicWhatsappAccount $acc, $to, $body, array $buttons, array $meta = [])
+    {
+        $rows = [];
+        foreach (array_slice(array_values($buttons), 0, 3) as $b) {
+            $rows[] = ['type' => 'reply', 'reply' => [
+                'id' => mb_substr((string) $b['id'], 0, 256),
+                'title' => mb_substr((string) $b['title'], 0, 20),
+            ]];
+        }
+        $interactive = ['type' => 'button', 'body' => ['text' => mb_substr((string) $body, 0, 1024)], 'action' => ['buttons' => $rows]];
+
+        return self::sendInteractive($acc, $to, $interactive, $meta + ['body' => $body]);
+    }
+
+    /**
+     * A single-section list. $rows: [['id','title','description'?], ...], up to 10.
+     * Meta limits: body 1024, button 20, row title 24, row description 72.
+     */
+    public static function sendList(ClinicWhatsappAccount $acc, $to, $body, $button_label, array $rows, array $meta = [])
+    {
+        $items = [];
+        foreach (array_slice(array_values($rows), 0, 10) as $r) {
+            $item = [
+                'id' => mb_substr((string) $r['id'], 0, 256),
+                'title' => mb_substr((string) $r['title'], 0, 24),
+            ];
+            if (! empty($r['description'])) {
+                $item['description'] = mb_substr((string) $r['description'], 0, 72);
+            }
+            $items[] = $item;
+        }
+        $interactive = [
+            'type' => 'list',
+            'body' => ['text' => mb_substr((string) $body, 0, 1024)],
+            'action' => ['button' => mb_substr((string) $button_label, 0, 20), 'sections' => [['rows' => $items]]],
+        ];
+
+        return self::sendInteractive($acc, $to, $interactive, $meta + ['body' => $body]);
+    }
+
     private static function send(ClinicWhatsappAccount $acc, $to, array $message, array $meta)
     {
         $msg = ClinicWhatsappMessage::create([
@@ -224,6 +277,48 @@ class ClinicWhatsApp
         }
 
         return $msg;
+    }
+
+    /**
+     * Tells the doctor, over WhatsApp, that a new appointment request is waiting
+     * for them — only when the clinic routes approval to the doctor
+     * (appointments_approval doctor|both) and the doctor's own template is on.
+     * The doctor is staff, not a patient, so the opt-in gate does not apply; it
+     * goes to the doctor's profile mobile and is skipped silently when missing.
+     * Never throws: a WhatsApp hiccup must not break a booking.
+     */
+    public static function notifyDoctorRequest(ClinicAppointment $appt)
+    {
+        try {
+            $acc = self::account($appt->business_id);
+            if (! $acc || ! $acc->ready() || ! $acc->sends('doctor_request')) {
+                return null;
+            }
+            if (! in_array(ClinicSettings::get($appt->business_id, 'appointments_approval'), ['doctor', 'both'], true)) {
+                return null;
+            }
+            $doctor = \App\User::find($appt->doctor_id);
+            $to = $doctor ? self::waNumber($appt->business_id, $doctor->contact_number) : null;
+            if (! $to) {
+                return null;
+            }
+            $appt->loadMissing('patient');
+            $lang = in_array($acc->language, ['en', 'fr'], true) ? $acc->language : 'fr';
+            $params = [
+                optional($appt->patient)->name ?: __('clinic.wa_a_patient', [], $lang),
+                Carbon::parse($appt->date)->locale($lang)->isoFormat('D MMM YYYY'),
+                $appt->start,
+            ];
+
+            return self::sendTemplate($acc, $to, $acc->templateFor('doctor_request'), $lang, $params, [
+                'kind' => 'doctor_request', 'contact_id' => $appt->contact_id, 'appointment_id' => $appt->id,
+                'body' => self::render('doctor_request', $lang, $params),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp doctor-request notify failed', ['business_id' => $appt->business_id, 'error' => $e->getMessage()]);
+
+            return null;
+        }
     }
 
     /**
@@ -350,8 +445,8 @@ class ClinicWhatsApp
             return; // Meta may deliver an event twice
         }
         $type = $m['type'] ?? 'other';
-        $text = $m['text']['body'] ?? $m['button']['text'] ?? $m['interactive']['button_reply']['title'] ?? null;
-        $payload = $m['button']['payload'] ?? $m['interactive']['button_reply']['id'] ?? null;
+        $text = $m['text']['body'] ?? $m['button']['text'] ?? $m['interactive']['button_reply']['title'] ?? $m['interactive']['list_reply']['title'] ?? null;
+        $payload = $m['button']['payload'] ?? $m['interactive']['button_reply']['id'] ?? $m['interactive']['list_reply']['id'] ?? null;
         $from = preg_replace('/\D+/', '', (string) ($m['from'] ?? ''));
         $context = $m['context']['id'] ?? null;
 
@@ -407,6 +502,15 @@ class ClinicWhatsApp
             }
             $in->update(['status' => 'handled', 'handled_at' => now()]);
             self::sendText($acc, $from, __('clinic.wa_stop_ack', [], $lang ?? $acc->language), ['kind' => 'optout', 'contact_id' => $in->contact_id]);
+
+            return;
+        }
+
+        // the booking bot (when switched on): if it takes the message, it is handled;
+        // otherwise the inbound stays in the replies inbox for reception, as before
+        if (ClinicWhatsAppBot::enabled($acc)
+            && ClinicWhatsAppBot::handle($acc, $from, $patient, $text, $payload, $type, $in)) {
+            $in->update(['status' => 'handled', 'handled_at' => now()]);
         }
     }
 
@@ -507,7 +611,7 @@ class ClinicWhatsApp
         if (! $ok) {
             return [false, $error];
         }
-        $mine = [$acc->tpl_confirmation, $acc->tpl_reminder, $acc->tpl_moved];
+        $mine = [$acc->tpl_confirmation, $acc->tpl_reminder, $acc->tpl_moved, $acc->tpl_doctor_request];
         $status = [];
         foreach ((array) ($json['data'] ?? []) as $t) {
             if (in_array($t['name'] ?? null, $mine, true)) {

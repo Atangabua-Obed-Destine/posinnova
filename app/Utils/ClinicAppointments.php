@@ -107,6 +107,83 @@ class ClinicAppointments
     }
 
     /**
+     * The most appointments a doctor takes in a day: the doctor's own override
+     * if set, otherwise the clinic-wide default. 0 means no limit.
+     */
+    public static function dailyCap($business_id, $doctor_id)
+    {
+        $caps = (array) ClinicSettings::get($business_id, 'appointments_doctor_caps');
+        $own = (int) ($caps[(int) $doctor_id] ?? 0);
+
+        return $own > 0 ? $own : (int) ClinicSettings::get($business_id, 'appointments_daily_cap');
+    }
+
+    /**
+     * Is there still room in the doctor's day? True when there is no cap, or the
+     * open (requested + confirmed) appointments already holding a slot that day
+     * are fewer than the cap. Blocks online booking only; reception may override.
+     */
+    public static function dayHasRoom($business_id, $doctor_id, $date)
+    {
+        $cap = self::dailyCap($business_id, $doctor_id);
+        if ($cap <= 0) {
+            return true;
+        }
+        $date = Carbon::parse($date)->toDateString();
+        $taken = ClinicAppointment::forBusiness($business_id)->open()
+            ->where('doctor_id', $doctor_id)->whereDate('date', $date)
+            ->whereNotNull('slot_key')->count();
+
+        return $taken < $cap;
+    }
+
+    /**
+     * The pending booking requests this user should be loudly alerted about, and
+     * whether they are an audience for the alert at all. Honours the clinic's
+     * appointments_approval setting (reception | doctor | both): the front desk
+     * sees every doctor's requests, a doctor sees their own. Shared by the poll
+     * endpoint and the on-page alert bar so both agree. Returns
+     * ['can' => bool, 'requests' => [...], 'manage' => bool].
+     */
+    public static function pendingFor($business_id, $user)
+    {
+        $access = self::access($business_id, $user);
+        $mode = ClinicSettings::get($business_id, 'appointments_approval');
+        $front_desk = $access['see_all'] || $access['manage_all'];
+        $can = false;
+        $scope_doctor = null;
+        if (in_array($mode, ['reception', 'both'], true) && $front_desk) {
+            $can = true;
+        } elseif (in_array($mode, ['doctor', 'both'], true) && $access['own']) {
+            $can = true;
+            $scope_doctor = (int) $access['own'];
+        }
+        if (! $can) {
+            return ['can' => false, 'requests' => [], 'manage' => false];
+        }
+
+        $q = ClinicAppointment::forBusiness($business_id)->where('status', 'requested')
+            ->whereDate('date', '>=', Carbon::today()->toDateString());
+        if ($scope_doctor) {
+            $q->where('doctor_id', $scope_doctor);
+        }
+        $doctors = ClinicQueue::doctors($business_id);
+        $requests = $q->with('patient')->orderBy('date')->orderBy('start_time')->limit(50)->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'patient' => optional($a->patient)->name,
+                'doctor' => $doctors[$a->doctor_id] ?? '',
+                'doctor_id' => (int) $a->doctor_id,
+                'date' => $a->date->toDateString(),
+                'start' => $a->start,
+                'minutes_ago' => $a->created_at ? $a->created_at->diffInMinutes() : 0,
+                'reason' => $a->reason,
+            ])->values();
+
+        return ['can' => true, 'requests' => $requests, 'manage' => (bool) $access['manage_all']];
+    }
+
+    /**
      * The doctor's slots on a date, in order:
      * [start 'H:i', end 'H:i', state free|taken|past, appointment (when taken)].
      * Empty on a day off or a day without hours. $notice_hours makes slots
@@ -201,11 +278,15 @@ class ClinicAppointments
             // the portal speaks to the patient, reception about the patient
             return [null, __($source == 'portal' ? 'clinic.appt_portal_same_day' : 'clinic.appt_same_day')];
         }
-        if ($source == 'portal' && (clone $open)->count() >= self::MAX_OPEN_PER_PATIENT) {
+        if (in_array($source, ['portal', 'whatsapp'], true) && (clone $open)->count() >= self::MAX_OPEN_PER_PATIENT) {
             return [null, __('clinic.appt_too_many', ['n' => self::MAX_OPEN_PER_PATIENT])];
         }
+        // the daily cap holds back patients booking themselves; reception may still add one
+        if (in_array($source, ['portal', 'whatsapp'], true) && ! self::dayHasRoom($business_id, $doctor_id, $date)) {
+            return [null, __('clinic.appt_day_full')];
+        }
 
-        $confirmed = $source != 'portal';
+        $confirmed = ! in_array($source, ['portal', 'whatsapp'], true);
         try {
             $appt = ClinicAppointment::create([
                 'business_id' => $business_id,

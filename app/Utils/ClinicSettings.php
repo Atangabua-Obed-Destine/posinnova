@@ -31,6 +31,10 @@ class ClinicSettings
         'appointments_days_ahead' => 30,   // how far ahead the portal offers slots
         'appointments_min_notice_hours' => 2, // the portal offers no slot starting sooner than this
         'appointments_booked_first' => true, // booked patients are seen before walk-ins in the doctor queue
+        'appointments_approval' => 'reception', // who is loudly alerted to approve a booking request: 'reception' | 'doctor' | 'both'
+        'appointments_daily_cap' => 0,     // most appointments a doctor takes in a day (0 = no limit); blocks online booking only, reception may override
+        'appointments_doctor_caps' => [],  // per-doctor override of the daily cap, [user_id => n]
+        'appointments_whatsapp_bot' => false, // patients may book over the clinic WhatsApp number (the chat bot)
         'whatsapp_country_code' => '237',  // added to local numbers in WhatsApp reminder links
         // Insurance
         'insurance_covers_plans' => false, // true: an insured patient's monthly plan invoice is split with the insurer too
@@ -100,6 +104,14 @@ class ClinicSettings
         $s['appointments_days_ahead'] = max(1, min(180, (int) ($input['appointments_days_ahead'] ?? 30)));
         $s['appointments_min_notice_hours'] = max(0, min(72, (int) ($input['appointments_min_notice_hours'] ?? 2)));
         $s['appointments_booked_first'] = ! empty($input['appointments_booked_first']);
+        $s['appointments_approval'] = in_array($input['appointments_approval'] ?? '', ['reception', 'doctor', 'both']) ? $input['appointments_approval'] : 'reception';
+        $s['appointments_daily_cap'] = max(0, min(100, (int) ($input['appointments_daily_cap'] ?? 0)));
+        // the per-doctor cap map is edited on the hours page, not this form: keep what is
+        // stored unless this save explicitly carries the map (array_key_exists, so [] can clear it)
+        $s['appointments_doctor_caps'] = array_key_exists('appointments_doctor_caps', $input)
+            ? self::cleanCaps($input['appointments_doctor_caps'])
+            : self::get($business_id, 'appointments_doctor_caps');
+        $s['appointments_whatsapp_bot'] = ! empty($input['appointments_whatsapp_bot']);
         $cc = preg_replace('/\D+/', '', (string) ($input['whatsapp_country_code'] ?? ''));
         $s['whatsapp_country_code'] = substr($cc, 0, 4);
         foreach (self::SECTIONS as $sec) {
@@ -114,6 +126,43 @@ class ClinicSettings
         unset(self::$cache[$business_id]);
 
         return $s;
+    }
+
+    /** Normalise a [user_id => max-per-day] map: positive ints only, 0/blank dropped. */
+    private static function cleanCaps($caps)
+    {
+        $out = [];
+        foreach ((array) $caps as $uid => $n) {
+            $uid = (int) $uid;
+            $n = max(0, min(100, (int) $n));
+            if ($uid > 0 && $n > 0) {
+                $out[$uid] = $n;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Set (or clear, with 0) one doctor's daily-cap override without disturbing
+     * any other setting. Used by the per-doctor field on the hours page.
+     */
+    public static function setDoctorCap($business_id, $doctor_id, $n)
+    {
+        $caps = self::cleanCaps(self::get($business_id, 'appointments_doctor_caps'));
+        $doctor_id = (int) $doctor_id;
+        $n = max(0, min(100, (int) $n));
+        if ($n > 0) {
+            $caps[$doctor_id] = $n;
+        } else {
+            unset($caps[$doctor_id]);
+        }
+        $all = self::all($business_id);
+        $all['appointments_doctor_caps'] = $caps;
+        Business::where('id', $business_id)->update(['hospital_settings' => json_encode($all)]);
+        unset(self::$cache[$business_id]);
+
+        return $caps;
     }
 
     public static function forget($business_id = null)

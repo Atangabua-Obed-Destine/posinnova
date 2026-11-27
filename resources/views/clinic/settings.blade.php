@@ -115,6 +115,10 @@
                 <div class="checkbox">
                     <label>{!! Form::checkbox('appointments_booked_first', 1, $s['appointments_booked_first']) !!} @lang('clinic.appt_setting_booked_first')</label>
                 </div>
+                <div class="checkbox">
+                    <label>{!! Form::checkbox('appointments_whatsapp_bot', 1, $s['appointments_whatsapp_bot']) !!} @lang('clinic.appt_setting_wa_bot')</label>
+                    <p class="help-block" style="margin-top:0;">@lang('clinic.appt_setting_wa_bot_help')</p>
+                </div>
                 <div class="row">
                     <div class="col-xs-6">
                         <div class="form-group">
@@ -126,6 +130,21 @@
                         <div class="form-group">
                             {!! Form::label('appointments_min_notice_hours', __('clinic.appt_setting_notice') . ':') !!}
                             {!! Form::number('appointments_min_notice_hours', $s['appointments_min_notice_hours'], ['class' => 'form-control', 'min' => 0, 'max' => 72]) !!}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            {!! Form::label('appointments_approval', __('clinic.appt_setting_approval') . ':') !!}
+                            {!! Form::select('appointments_approval', ['reception' => __('clinic.appt_approval_reception'), 'doctor' => __('clinic.appt_approval_doctor'), 'both' => __('clinic.appt_approval_both')], $s['appointments_approval'], ['class' => 'form-control']) !!}
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            {!! Form::label('appointments_daily_cap', __('clinic.appt_setting_daily_cap') . ':') !!}
+                            {!! Form::number('appointments_daily_cap', $s['appointments_daily_cap'], ['class' => 'form-control', 'min' => 0, 'max' => 100]) !!}
+                            <p class="help-block" style="margin-bottom:0;">@lang('clinic.appt_setting_daily_cap_help')</p>
                         </div>
                     </div>
                 </div>
