@@ -568,4 +568,24 @@ class ClinicAppointments
     {
         return self::whatsappLink($appt->business_id, optional($appt->patient)->mobile, self::message($appt, $moved));
     }
+
+    /**
+     * A wa.me link telling the patient (or a public-page guest, who has no portal)
+     * that their request was declined, and why. Null when there is no phone.
+     */
+    public static function whatsappDeclined(ClinicAppointment $appt, $reason)
+    {
+        $util = new Util();
+        $appt->loadMissing(['patient', 'doctor']);
+        $text = __('clinic.appt_whatsapp_declined_text', [
+            'name' => $appt->contact_id ? (optional($appt->patient)->first_name ?: optional($appt->patient)->name) : $appt->guest_name,
+            'clinic' => \App\Business::where('id', $appt->business_id)->value('name'),
+            'doctor' => trim(optional($appt->doctor)->user_full_name),
+            'date' => $util->format_date($appt->date->toDateString()),
+            'time' => $appt->start,
+            'reason' => trim((string) $reason),
+        ]);
+
+        return self::whatsappLink($appt->business_id, $appt->display_mobile, $text);
+    }
 }

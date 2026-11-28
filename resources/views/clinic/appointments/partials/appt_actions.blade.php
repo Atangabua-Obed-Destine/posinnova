@@ -22,7 +22,8 @@
         @endif
         @if ($ap->status == 'requested')
             <form method="POST" action="{{ action([$A, 'confirm'], [$ap->id]) }}" data-review="{{ $ap->id }}">@csrf{!! $ap_keep !!}<button class="btn btn-xs btn-success"><i class="fas fa-check"></i> @lang('clinic.appt_confirm')</button></form>
-            <form method="POST" action="{{ action([$A, 'decline'], [$ap->id]) }}" class="js-reason" data-prompt="{{ __('clinic.appt_decline_prompt') }}">@csrf{!! $ap_keep !!}
+            {{-- opens the review window on the reason (pending_requests partial); the reason is required --}}
+            <form method="POST" action="{{ action([$A, 'decline'], [$ap->id]) }}" data-review-decline="{{ $ap->id }}">@csrf{!! $ap_keep !!}
                 <input type="hidden" name="reason">
                 <button class="btn btn-xs btn-default"><i class="fas fa-ban"></i> @lang('clinic.appt_decline')</button>
             </form>

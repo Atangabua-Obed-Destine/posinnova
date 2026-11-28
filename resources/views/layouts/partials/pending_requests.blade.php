@@ -51,7 +51,9 @@
         'rv_over' => __('clinic.rv_over'), 'rv_fills' => __('clinic.rv_fills'), 'rv_day_off' => __('clinic.rv_day_off'),
         'rv_same_day' => __('clinic.rv_same_day'), 'rv_handled' => __('clinic.rv_handled'),
         'rv_confirm' => __('clinic.rv_confirm'), 'rv_confirm_anyway' => __('clinic.rv_confirm_anyway'),
-        'rv_decline' => __('clinic.rv_decline'), 'rv_decline_reason' => __('clinic.appt_decline_prompt'),
+        'rv_decline' => __('clinic.rv_decline'), 'rv_decline_reason' => __('clinic.rv_decline_reason'),
+        'rv_reasons' => __('clinic.rv_reasons'), 'rv_reason_ph' => __('clinic.rv_reason_ph'), 'rv_reason_required' => __('clinic.rv_reason_required'),
+        'rv_wa_decline_link' => __('clinic.rv_wa_decline_link'), 'rv_no_phone' => __('clinic.rv_no_phone'),
         'rv_decline_send' => __('clinic.rv_decline_send'), 'rv_back' => __('clinic.rv_back'),
         'rv_open_diary' => __('clinic.rv_open_diary'), 'rv_close' => __('clinic.rv_close'), 'rv_done' => __('clinic.rv_done'),
         'rv_wa_auto' => __('clinic.rv_wa_auto'), 'rv_wa_link' => __('clinic.rv_wa_link'), 'rv_wa_error' => __('clinic.rv_wa_error'),
@@ -131,6 +133,13 @@
         .pi-rv-list .s.requested { background: #fffaeb; color: #b54708; }
         .pi-rv-list .s.confirmed { background: #ecfdf3; color: #067647; }
         .pi-rv-reason { width: 100%; min-height: 70px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font: inherit; }
+        .pi-rv-reason.bad { border-color: #b42318; background: #fef3f2; }
+        .pi-rv-decline { width: 100%; }
+        .pi-rv-decline label { display: block; font-weight: 700; margin: 0 0 8px; }
+        .pi-rv-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .pi-rv-chip { min-height: 36px; padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #334155; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .pi-rv-chip:hover { border-color: #b42318; color: #b42318; }
+        .pi-rv-ferr { color: #b42318; font-weight: 700; font-size: 13.5px; margin: 6px 0 0; }
         .pi-rv-done { text-align: center; padding: 10px 0 4px; }
         .pi-rv-done .big { width: 60px; height: 60px; margin: 0 auto 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; }
     </style>
@@ -255,7 +264,7 @@
                 .catch(function () { rvState.busy = false; done({ ok: false, msg: L.rv_error }); });
         }
 
-        function rvResult(res) {
+        function rvResult(res, kind) {
             var ok = res && res.ok;
             var html = '<div class="pi-rv-done"><div class="big" style="background:' + (ok ? '#ecfdf3;color:#067647' : '#fef3f2;color:#b42318') + '">' + (ok ? '<i class="fas fa-check"></i>' : '<i class="fas fa-exclamation"></i>') + '</div>'
                 + '<div style="font-size:16px;font-weight:700">' + esc((res && res.msg) || L.rv_error) + '</div>';
@@ -264,23 +273,53 @@
             html += '</div>';
             $('pi_rv_body').innerHTML = html;
             var foot = '';
-            if (ok && ! res.whatsapp_auto && res.whatsapp_link) { foot += '<a class="pi-rv-b wa" target="_blank" rel="noopener" href="' + esc(res.whatsapp_link) + '">' + esc(L.rv_wa_link) + '</a>'; }
+            if (ok && ! res.whatsapp_auto && res.whatsapp_link) {
+                foot += '<a class="pi-rv-b wa" id="pi_rv_wa" target="_blank" rel="noopener" href="' + esc(res.whatsapp_link) + '"><i class="fab fa-whatsapp"></i> '
+                    + esc(kind === 'decline' ? L.rv_wa_decline_link : L.rv_wa_link) + '</a>';
+            }
+            if (ok && kind === 'decline' && ! res.whatsapp_link) {
+                $('pi_rv_body').insertAdjacentHTML('beforeend', '<div class="pi-rv-alert amber" style="margin-top:12px">' + esc(L.rv_no_phone) + '</div>');
+            }
             rvFoot(foot + '<span class="pi-rv-spacer"></span><button type="button" class="pi-rv-b ok" data-rv-close id="pi_rv_done">' + esc(L.rv_done) + '</button>');
             setTimeout(function () { var b = $('pi_rv_done'); if (b) { b.focus(); } }, 50);
         }
 
         function rvConfirm() {
             var b = $('pi_rv_confirm'); if (b) { b.textContent = L.rv_working; }
-            rvSend('confirm', {}, rvResult);
+            rvSend('confirm', {}, function (res) { rvResult(res, 'confirm'); });
         }
+
+        /* Decline: the reason is required (the patient is told why); quick picks or free text */
         function rvDeclineAsk() {
-            rvFoot('<label for="pi_rv_reason" style="width:100%;font-weight:700;margin:0">' + esc(L.rv_decline_reason) + '</label>'
-                + '<textarea id="pi_rv_reason" class="pi-rv-reason" maxlength="191"></textarea>'
+            var chips = (L.rv_reasons || []).map(function (t) {
+                return '<button type="button" class="pi-rv-chip">' + esc(t) + '</button>';
+            }).join('');
+            rvFoot('<div class="pi-rv-decline">'
+                + '<label for="pi_rv_reason">' + esc(L.rv_decline_reason) + '</label>'
+                + '<div class="pi-rv-chips">' + chips + '</div>'
+                + '<textarea id="pi_rv_reason" class="pi-rv-reason" maxlength="191" aria-describedby="pi_rv_reason_err" placeholder="' + esc(L.rv_reason_ph) + '"></textarea>'
+                + '<p class="pi-rv-ferr" id="pi_rv_reason_err" role="alert" hidden></p></div>'
                 + '<button type="button" class="pi-rv-b" id="pi_rv_back">' + esc(L.rv_back) + '</button><span class="pi-rv-spacer"></span>'
-                + '<button type="button" class="pi-rv-b danger" id="pi_rv_decline_send">' + esc(L.rv_decline_send) + '</button>');
+                + '<button type="button" class="pi-rv-b danger" id="pi_rv_decline_send"><i class="fas fa-ban"></i> ' + esc(L.rv_decline_send) + '</button>');
+            var box = $('pi_rv_reason'), err = $('pi_rv_reason_err');
+            var showErr = function (msg) { err.textContent = msg || ''; err.hidden = ! msg; box.classList.toggle('bad', !! msg); };
+            Array.prototype.forEach.call(document.querySelectorAll('#pi_rv_foot .pi-rv-chip'), function (c) {
+                c.onclick = function () { box.value = c.textContent; showErr(''); box.focus(); };
+            });
+            box.addEventListener('input', function () { showErr(''); });
             $('pi_rv_back').onclick = function () { rvRender(rvState.data); };
-            $('pi_rv_decline_send').onclick = function () { rvSend('decline', { reason: $('pi_rv_reason').value }, rvResult); };
-            setTimeout(function () { $('pi_rv_reason').focus(); }, 50);
+            $('pi_rv_decline_send').onclick = function () {
+                var reason = box.value.trim();
+                if (reason.length < 3) { showErr(L.rv_reason_required); box.focus(); return; }
+                rvSend('decline', { reason: reason }, function (res) {
+                    if (res && ! res.ok && res.field === 'reason') {   // the server agrees: no reason, no decline
+                        Array.prototype.forEach.call(document.querySelectorAll('#pi_rv_foot button'), function (b) { b.disabled = false; });
+                        showErr(res.msg); box.focus(); return;
+                    }
+                    rvResult(res, 'decline');
+                });
+            };
+            setTimeout(function () { box.focus(); }, 50);
         }
 
         function rvOpen(id, declineFirst) {
@@ -300,12 +339,14 @@
 
         if (rv) {
             rv.addEventListener('click', function (e) { if (e.target.closest('[data-rv-close]') && ! rvState.busy) { rvClose(); } });
-            // the diary's / upcoming list's Confirm buttons open the review window first
+            // the diary's / upcoming list's Confirm and Decline buttons open the review window first
             document.addEventListener('submit', function (e) {
-                var f = e.target, id = f && f.getAttribute && f.getAttribute('data-review');
-                if (! id) { return; }
+                var f = e.target;
+                if (! f || ! f.getAttribute) { return; }
+                var id = f.getAttribute('data-review'), dec = f.getAttribute('data-review-decline');
+                if (! id && ! dec) { return; }
                 e.preventDefault(); e.stopPropagation();   // and keep common.js from disabling its button
-                rvOpen(id, false);
+                rvOpen(id || dec, !! dec);
             }, true);
         }
 

@@ -384,9 +384,19 @@ class ClinicAppointmentController extends Controller
 
             return $this->back($request, $appt->date)->with('status', ['success' => false, 'msg' => __('clinic.appt_not_requested')]);
         }
-        ClinicAppointments::release($appt, 'declined', $request->session()->get('user.id'), $request->input('reason'));
+        // the patient is told why: a decline always carries a reason
+        $reason = trim((string) $request->input('reason'));
+        if (mb_strlen($reason) < 3) {
+            if ($request->expectsJson()) {
+                return response()->json(['ok' => false, 'field' => 'reason', 'msg' => __('clinic.rv_reason_required')], 422);
+            }
+
+            return $this->back($request, $appt->date)->with('status', ['success' => false, 'msg' => __('clinic.rv_reason_required')]);
+        }
+        ClinicAppointments::release($appt, 'declined', $request->session()->get('user.id'), $reason);
         if ($request->expectsJson()) {
-            return response()->json(['ok' => true, 'msg' => __('clinic.appt_declined')]);
+            return response()->json(['ok' => true, 'msg' => __('clinic.appt_declined'),
+                'whatsapp_link' => ClinicAppointments::whatsappDeclined($appt, $reason)]);
         }
 
         return $this->back($request, $appt->date)->with('status', ['success' => true, 'msg' => __('clinic.appt_declined')]);
