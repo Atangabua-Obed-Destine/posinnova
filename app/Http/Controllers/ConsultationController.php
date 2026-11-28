@@ -150,11 +150,20 @@ class ConsultationController extends Controller
         $exam_templates = \App\Utils\ClinicExamTemplates::forConsultation($business_id);
         $exam = $consultation ? \App\ConsultationExam::where('consultation_id', $consultation->id)->first() : null;
         // photos / videos taken before the consultation is first saved wait under this token
+        // a new consultation starts as the consulting doctor's kind: his specialty, else general
+        $default_type = 'general';
+        $default_specialty = null;
+        if (! $consultation) {
+            $consulting = \App\Utils\ClinicQueue::isDoctor(auth()->user(), $business_id) ? auth()->id() : ($visit->doctor_id ?: auth()->id());
+            $default_specialty = \App\Utils\ClinicDoctors::specialty($consulting);
+            $default_type = $default_specialty ? 'specialist' : 'general';
+        }
         $attach_token = $consultation ? null : (preg_match('/^[A-Za-z0-9]{32}$/', (string) old('attach_token')) ? old('attach_token') : \Illuminate\Support\Str::random(32));
 
         return view('consultation.create')
             ->with(compact('visit', 'departments', 'default_fee', 'lab_tests', 'imaging_catalogue', 'fee_billed', 'history', 'history_labs',
-                'consultation', 'doctor_lists', 'rx_rows', 'lab_requests', 'imaging_requests', 'exam_templates', 'exam', 'attach_token', 'correcting'));
+                'consultation', 'doctor_lists', 'rx_rows', 'lab_requests', 'imaging_requests', 'exam_templates', 'exam', 'attach_token', 'correcting',
+                'default_type', 'default_specialty'));
     }
 
     /**
@@ -522,7 +531,7 @@ class ConsultationController extends Controller
 
         return [
             'consultation_type' => $request->input('consultation_type'),
-            'specialty' => $request->input('consultation_type') == 'specialist' ? (mb_substr(trim((string) $request->input('specialty')), 0, 191) ?: null) : null,
+            'specialty' => $request->input('consultation_type') == 'specialist' ? (mb_substr(trim((string) $request->input('specialty')), 0, 100) ?: null) : null,
             'chief_complaint' => $request->input('chief_complaint') ?: null,
             'history_of_complaint' => $request->input('history_of_complaint') ?: null,
             'vitals_weight' => $num('vitals_weight'),

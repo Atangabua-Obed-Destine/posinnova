@@ -49,8 +49,9 @@
             @if ($access['see_all'])
                 <select name="doctor_id" class="form-control input-sm" onchange="this.form.submit()" aria-label="{{ __('clinic.doctor') }}">
                     <option value="all">@lang('clinic.appt_all_doctors')</option>
+                    @php $doc_specs = \App\Utils\ClinicDoctors::specialties(array_keys($all_doctors)); @endphp
                     @foreach ($all_doctors as $id => $name)
-                        <option value="{{ $id }}" {{ $doctor_id == $id ? 'selected' : '' }}>{{ $id == auth()->id() ? __('clinic.appt_me', ['name' => $name]) : $name }}</option>
+                        <option value="{{ $id }}" {{ $doctor_id == $id ? 'selected' : '' }}>{{ $id == auth()->id() ? __('clinic.appt_me', ['name' => $name]) : $name }}{{ ! empty($doc_specs[$id]) ? ' · '.$doc_specs[$id] : '' }}</option>
                     @endforeach
                 </select>
             @endif

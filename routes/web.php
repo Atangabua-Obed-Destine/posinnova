@@ -818,8 +818,10 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('clinic/my-practice', [\App\Http\Controllers\ClinicMyPracticeController::class, 'index']);
     Route::post('clinic/my-practice/fee', [\App\Http\Controllers\ClinicMyPracticeController::class, 'saveFee']);
     Route::post('clinic/my-practice/phone', [\App\Http\Controllers\ClinicMyPracticeController::class, 'savePhone']);
+    Route::post('clinic/my-practice/specialty', [\App\Http\Controllers\ClinicMyPracticeController::class, 'saveSpecialty']);
     Route::get('clinic/appointments/upcoming', [\App\Http\Controllers\ClinicAppointmentController::class, 'upcoming']);
     Route::get('clinic/appointments/pending', [\App\Http\Controllers\ClinicAppointmentController::class, 'pending']);
+    Route::get('clinic/activity', [\App\Http\Controllers\ClinicActivityController::class, 'index']);
     Route::get('clinic/appointments/free-slots', [\App\Http\Controllers\ClinicAppointmentController::class, 'freeSlots']);
     Route::post('clinic/appointments/doctor-cap/{doctor}', [\App\Http\Controllers\ClinicAppointmentController::class, 'storeDoctorCap']);
     Route::post('clinic/appointments/{id}/move', [\App\Http\Controllers\ClinicAppointmentController::class, 'move']);

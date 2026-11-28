@@ -196,7 +196,7 @@
 
     {{-- Consultation type --}}
     @php
-        $spec_now = $fv('specialty');
+        $spec_now = $fv('specialty', $default_specialty ?? null);
         $spec_opts = collect($doctor_lists['specialty'] ?? [])->mapWithKeys(fn ($v) => [$v => $v])->all();
         if ($spec_now && ! isset($spec_opts[$spec_now])) {
             $spec_opts = [$spec_now => $spec_now] + $spec_opts;
@@ -209,7 +209,7 @@
             <div class="col-sm-3">
                 <div class="form-group">
                     {!! Form::label('consultation_type', __('lang_v1.consultation_type') . ':*') !!}
-                    {!! Form::select('consultation_type', ['general' => __('lang_v1.consultation_type_general'), 'specialist' => __('lang_v1.consultation_type_specialist')], $fv('consultation_type', 'general'), ['class' => 'form-control select2', 'id' => 'consultation_type', 'required']) !!}
+                    {!! Form::select('consultation_type', ['general' => __('lang_v1.consultation_type_general'), 'specialist' => __('lang_v1.consultation_type_specialist')], $fv('consultation_type', $default_type ?? 'general'), ['class' => 'form-control select2', 'id' => 'consultation_type', 'required']) !!}
                 </div>
             </div>
             <div class="col-sm-3 specialty_field" style="display:none;">

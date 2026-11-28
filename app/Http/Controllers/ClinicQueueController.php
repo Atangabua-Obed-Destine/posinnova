@@ -84,7 +84,7 @@ class ClinicQueueController extends Controller
 
     /**
      * The waiting alert's refresh (every page, doctors only): who is waiting for the signed-in doctor.
-     * See App\Utils\ClinicQueue::waitingFor and layouts/partials/waiting_alert.
+     * See App\Utils\ClinicQueue::waitingFor; the activity widget now reads it through App\Utils\ClinicActivity.
      */
     public function waiting(Request $request)
     {

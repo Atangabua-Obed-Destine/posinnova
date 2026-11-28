@@ -17,6 +17,18 @@
     .ci-card.is-on { border-color: #2563eb; background: #eff6ff; }
     .ci-card .ci-title { font-weight: 700; font-size: 15px; color: #0f172a; }
     .ci-card .ci-sub { color: #64748b; font-size: 12px; margin-top: 2px; }
+    .ci-card .ci-spec { display: inline-block; margin-top: 4px; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #f1f5f9; color: #475569; }
+    .ci-card .ci-spec.is-sp { background: #ede9fe; color: #5b21b6; }
+    .ci-card.ci-hide { display: none; }
+    .ci-find { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 10px; }
+    .ci-search { position: relative; flex: 1 1 240px; max-width: 360px; }
+    .ci-search i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+    .ci-search input { width: 100%; min-height: 38px; padding: 6px 10px 6px 32px; border: 1px solid #cbd5e1; border-radius: 10px; }
+    .ci-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ci-chip { min-height: 32px; padding: 4px 12px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; font-size: 13px; font-weight: 600; color: #334155; }
+    .ci-chip.on { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .ci-none { color: #64748b; margin: 4px 0 10px; }
+    .ci-none[hidden] { display: none; }
     .ci-card .ci-price { font-weight: 700; font-size: 18px; color: #1d4ed8; margin-top: 6px; }
     .ci-card .ci-covers { color: #334155; font-size: 12px; white-space: pre-line; margin-top: 6px; }
     .ci-step { font-weight: 700; color: #334155; margin: 4px 0 10px; }
@@ -80,15 +92,39 @@
             <div class="opd-only">
                 @if (! empty($doctors))
                     <div class="ci-step">2. @lang('clinic.doctor')</div>
-                    <div class="ci-cards" style="margin-bottom:16px;">
+                    @php
+                        $specialties = $specialties ?? [];
+                        $sp_used = collect($specialties)->filter()->unique()->sort(SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
+                    @endphp
+                    @if (count($doctors) > 1)
+                        <div class="ci-find" id="ci_find">
+                            <div class="ci-search"><i class="fas fa-search"></i>
+                                <input type="search" id="ci_doc_search" placeholder="{{ __('clinic.sp_search') }}" aria-label="{{ __('clinic.sp_search') }}" autocomplete="off"></div>
+                            @if (count($sp_used))
+                                <div class="ci-chips" role="group" aria-label="{{ __('clinic.sp_specialists') }}">
+                                    <button type="button" class="ci-chip on" data-f="all">{{ __('clinic.sp_all') }}</button>
+                                    <button type="button" class="ci-chip" data-f="general">{{ __('clinic.sp_generals') }}</button>
+                                    <button type="button" class="ci-chip" data-f="specialist">{{ __('clinic.sp_specialists') }}</button>
+                                    @foreach ($sp_used as $sp)
+                                        <button type="button" class="ci-chip" data-f="sp:{{ $sp }}">{{ $sp }}</button>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+                    <div class="ci-cards" id="ci_doctors" style="margin-bottom:6px;">
                         @foreach ($doctors as $doc_id => $doc_name)
-                            <label class="ci-card {{ $old_doctor == $doc_id ? 'is-on' : '' }}">
+                            @php $sp = $specialties[$doc_id] ?? null; @endphp
+                            <label class="ci-card {{ $old_doctor == $doc_id ? 'is-on' : '' }}" data-name="{{ $doc_name }}" data-spec="{{ $sp }}">
                                 <input type="radio" name="doctor_id" value="{{ $doc_id }}" {{ $old_doctor == $doc_id ? 'checked' : '' }}>
                                 <div class="ci-title"><i class="fas fa-user-md"></i> {{ $doc_name }}</div>
+                                <div class="ci-spec {{ $sp ? 'is-sp' : '' }}">{{ $sp ?: __('clinic.sp_general') }}</div>
                                 <div class="ci-sub">{{ __('clinic.n_waiting', ['n' => $waiting[$doc_id] ?? 0]) }}</div>
                             </label>
                         @endforeach
                     </div>
+                    <p class="ci-none" id="ci_doc_none" hidden>{{ __('clinic.sp_none_match') }} <a href="#" id="ci_doc_all">{{ __('clinic.sp_show_all') }}</a></p>
+                    <div style="margin-bottom:10px;"></div>
                 @endif
 
                 @if ($has_plans)
@@ -192,6 +228,40 @@
 
 @section('javascript')
     <script>
+        // find a doctor by name or specialty; the chosen doctor never disappears
+        (function () {
+            var box = document.getElementById('ci_doctors');
+            if (! box || ! document.getElementById('ci_find')) { return; }
+            var q = document.getElementById('ci_doc_search'), none = document.getElementById('ci_doc_none'), filter = 'all';
+            var fold = function (s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); };
+            function apply() {
+                var words = fold(q.value).split(/\s+/).filter(Boolean), shown = 0;
+                box.querySelectorAll('.ci-card').forEach(function (c) {
+                    var sp = c.getAttribute('data-spec') || '', hay = fold(c.getAttribute('data-name') + ' ' + (sp || @json(__('clinic.sp_general'))));
+                    var ok = words.every(function (w) { return hay.indexOf(w) >= 0; });
+                    if (filter === 'general') { ok = ok && ! sp; }
+                    else if (filter === 'specialist') { ok = ok && !! sp; }
+                    else if (filter.indexOf('sp:') === 0) { ok = ok && sp === filter.slice(3); }
+                    if (c.querySelector('input').checked) { ok = true; }
+                    c.classList.toggle('ci-hide', ! ok);
+                    if (ok) { shown++; }
+                });
+                none.hidden = shown > 0;
+            }
+            q.addEventListener('input', apply);
+            document.querySelectorAll('#ci_find .ci-chip').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    document.querySelectorAll('#ci_find .ci-chip').forEach(function (x) { x.classList.toggle('on', x === b); });
+                    filter = b.getAttribute('data-f'); apply();
+                });
+            });
+            document.getElementById('ci_doc_all').addEventListener('click', function (e) {
+                e.preventDefault(); q.value = ''; filter = 'all';
+                document.querySelectorAll('#ci_find .ci-chip').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-f') === 'all'); });
+                apply(); q.focus();
+            });
+        })();
+
         $(document).ready(function () {
             $('#visit_patient_id').select2({
                 ajax: {

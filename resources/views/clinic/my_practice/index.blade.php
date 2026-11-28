@@ -88,6 +88,18 @@
     .mp-offs { list-style:none; margin:0 0 8px; padding:0; font-size:13.5px; }
     .mp-offs li { padding:4px 0; }
     .mp-link { display:flex; gap:6px; } .mp-link input { flex:1; min-width:0; }
+    .mp-share { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; background:var(--brand-l); border:1px solid #a5f3fc; border-radius:16px; padding:12px 14px; margin-bottom:14px; }
+    .mp-share.off { background:#f8fafc; border-color:var(--line); }
+    .mp-share-t { flex:1 1 220px; min-width:0; }
+    .mp-share-t b { display:block; font-size:15px; font-weight:800; }
+    .mp-share-t span { color:var(--muted); font-size:13px; }
+    .mp-share .mp-link { flex:2 1 260px; min-width:0; }
+    .mp-share .mp-link input { width:100%; min-height:40px; padding:7px 10px; border:1px solid #cbd5e1; border-radius:10px; font:inherit; font-size:13.5px; background:#fff; }
+    .mp-share-a { display:flex; flex-wrap:wrap; gap:6px; }
+    .mp-btn.wa { color:#15803d !important; border-color:#86efac; }
+    @media (max-width:600px) { .mp-share-a { width:100%; } .mp-share-a .mp-btn { flex:1 1 auto; } }
+    .mp-kind { display:flex; flex-wrap:wrap; gap:6px 16px; }
+    .mp-kind label { display:inline-flex !important; align-items:center; gap:6px; font-weight:600; font-size:14px; min-height:32px; cursor:pointer; }
     .mp-note { background:var(--warn-l); border:1px solid #fedf89; color:var(--warn); border-radius:12px; padding:10px 12px; font-size:13.5px; margin-bottom:10px; }
 </style>
 
@@ -99,6 +111,28 @@
         </div>
         <a class="home" href="{{ url('home') }}?home=1"><i class="fas fa-th-large"></i> {{ __('clinic.mp_clinic_home') }}</a>
     </div>
+
+    @if ($link)
+        <div class="mp-share" id="mp_share">
+            <div class="mp-share-t">
+                <b><i class="fas fa-link"></i> {{ __('clinic.mp_link_title') }}</b>
+                <span>{{ __('clinic.mp_link_only_you') }}</span>
+            </div>
+            <div class="mp-link"><input type="text" id="mp_link" value="{{ $link }}" readonly aria-label="{{ __('clinic.mp_link_title') }}"></div>
+            <div class="mp-share-a">
+                <button type="button" class="mp-btn pri" id="mp_copy"><i class="fas fa-copy"></i> {{ __('clinic.mp_copy') }}</button>
+                <a class="mp-btn wa" id="mp_wa" target="_blank" rel="noopener"
+                    href="https://wa.me/?text={{ rawurlencode(__('clinic.mp_share_text', ['link' => $link])) }}"><i class="fab fa-whatsapp"></i> {{ __('clinic.mp_share') }}</a>
+                <a class="mp-btn" id="mp_open" target="_blank" rel="noopener" href="{{ $link }}"><i class="fas fa-external-link-alt"></i> {{ __('clinic.mp_open_link') }}</a>
+            </div>
+        </div>
+    @elseif ($link_off)
+        <div class="mp-share off" id="mp_share">
+            <div class="mp-share-t"><b><i class="fas fa-link"></i> {{ __('clinic.mp_link_title') }}</b>
+                <span>{{ __('clinic.mp_link_off') }}</span></div>
+            <div class="mp-share-a"><a class="mp-btn" href="{{ url('clinic/settings') }}"><i class="fas fa-cog"></i> {{ __('clinic.mp_link_turn_on') }}</a></div>
+        </div>
+    @endif
 
     <div class="mp-strip" id="mp_strip">
         <a class="mp-stat {{ count($news) ? 'hot' : '' }}" href="#mp_news"><b id="mp_new_n">{{ count($news) }}</b><span>{{ __('clinic.mp_stat_new') }}</span></a>
@@ -201,6 +235,21 @@
         <div class="mp-card mp-set" id="mp_settings">
             <h2><i class="fas fa-sliders-h"></i> {{ __('clinic.mp_settings_title') }}</h2>
 
+            <h3>{{ __('clinic.sp_title') }}</h3>
+            <form method="POST" action="{{ action([$M, 'saveSpecialty']) }}" id="mp_spec_form">@csrf
+                <div class="mp-kind" role="radiogroup" aria-label="{{ __('clinic.sp_title') }}">
+                    <label><input type="radio" name="kind" value="general" id="mp_kind_general" {{ $specialty ? '' : 'checked' }}> {{ __('clinic.sp_i_am_general') }}</label>
+                    <label><input type="radio" name="kind" value="specialist" id="mp_kind_specialist" {{ $specialty ? 'checked' : '' }}> {{ __('clinic.sp_i_am_specialist') }}</label>
+                </div>
+                <div class="mp-row" id="mp_spec_row" {{ $specialty ? '' : 'hidden' }} style="margin-top:6px">
+                    <div><input type="text" name="specialty" id="mp_specialty" list="mp_spec_list" value="{{ $specialty }}" maxlength="100"
+                        placeholder="{{ __('clinic.sp_placeholder') }}" aria-label="{{ __('clinic.sp_which') }}" autocomplete="off">
+                        <datalist id="mp_spec_list">@foreach ($specialties as $sp)<option value="{{ $sp }}">@endforeach</datalist></div>
+                </div>
+                <div style="margin-top:6px"><button class="mp-btn" type="submit"><i class="fas fa-save"></i> {{ __('messages.save') }}</button></div>
+                <p class="mp-muted" style="margin:4px 0 0">{{ __('clinic.sp_hint') }}</p>
+            </form>
+
             <h3>{{ __('clinic.mp_week_title') }}</h3>
             <table class="mp-week">
                 @foreach ($week as $w => $span)
@@ -266,14 +315,6 @@
             </form>
             <p class="mp-muted" style="margin:4px 0 0">{{ __('clinic.mp_phone_hint') }}</p>
 
-            @if ($link)
-                <h3>{{ __('clinic.mp_link_title') }}</h3>
-                <div class="mp-link"><input type="text" id="mp_link" value="{{ $link }}" readonly aria-label="{{ __('clinic.mp_link_title') }}">
-                    <button type="button" class="mp-btn sm" id="mp_copy"><i class="fas fa-copy"></i> {{ __('clinic.mp_copy') }}</button></div>
-                <a class="mp-btn sm" style="margin-top:6px; color:#16a34a !important" target="_blank" rel="noopener"
-                    href="https://wa.me/?text={{ rawurlencode(__('clinic.mp_share_text', ['link' => $link])) }}"><i class="fab fa-whatsapp"></i> {{ __('clinic.mp_share') }}</a>
-                <p class="mp-muted" style="margin:4px 0 0">{{ __('clinic.mp_link_hint') }}</p>
-            @endif
         </div>
     </div>
 </section>
@@ -289,10 +330,22 @@
         if (c) {
             c.addEventListener('click', function () {
                 var i = document.getElementById('mp_link'); i.select();
-                try { navigator.clipboard.writeText(i.value); } catch (e) { document.execCommand('copy'); }
+                try { document.execCommand('copy'); } catch (e) {}
+                try { if (navigator.clipboard) { navigator.clipboard.writeText(i.value).catch(function () { /* copied above */ }); } } catch (e) {}
                 c.innerHTML = '<i class="fas fa-check"></i> ' + @json(__('clinic.mp_copied'));
+                setTimeout(function () { c.innerHTML = '<i class="fas fa-copy"></i> ' + @json(__('clinic.mp_copy')); }, 2500);
             });
         }
+        var rows = document.getElementById('mp_spec_row');
+        document.querySelectorAll('#mp_spec_form input[name=kind]').forEach(function (r) {
+            r.addEventListener('change', function () {
+                var sp = document.getElementById('mp_kind_specialist').checked;
+                rows.hidden = ! sp;
+                document.getElementById('mp_specialty').required = sp;
+                if (sp) { document.getElementById('mp_specialty').focus(); }
+            });
+        });
+        document.getElementById('mp_specialty').required = document.getElementById('mp_kind_specialist').checked;
     })();
 </script>
 @endsection

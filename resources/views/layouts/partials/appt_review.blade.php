@@ -1,42 +1,26 @@
 {{--
-    PosInnova: a booking request never goes unseen, and is never approved blind.
-
-    1. The loud bar (every page; a compact floating alert on the POS screen): the appointment requests the
-       signed-in user should approve — reception sees every doctor's, a doctor their own, following the
-       clinic's "who approves" setting. Red, flashing, a chime; checked every 5 s (clinic/appointments/pending).
-    2. The review window: Approve / Decline (on the bar, the POS alert, and the diary's Confirm buttons) open it
-       first. It shows who, when, with which doctor, and the doctor's whole day — the appointments, how many
-       there will be, the daily limit, an overbooking / day-off / same-day warning. Approving or declining
-       happens in the background (JSON), so the page — a sale in progress on the POS — is never left.
-    Namespaced pi-appt / pi_appt_* / pi-rv so it never clashes with the doctor "patient waiting" bar (pi-wait).
+    PosInnova: a booking request is never approved blind. The review window: the activity widget's
+    Review button, My practice, and the diary's Confirm / Decline buttons (form[data-review="<id>"])
+    open it first. It shows who, when, with which doctor, and the doctor's whole day (appointments, how
+    many there will be, the daily limit, overbooking / day-off / same-day warnings). Approving or
+    declining (a reason is required) happens in the background (JSON), so the page — a sale in progress
+    on the POS — is never left. window.piApptReview(id, declineFirst) opens it from anywhere.
+    Rendered for anyone who may approve appointments (also inside wide-screen tabs).
 --}}
 @php
-    $pi_ap = null;      // the requests for the bar (null: no bar for this user)
     $pi_rv = false;     // may this user approve anything (then the review window is on the page)
-    $pi_compact = ! empty($compact);
     try {
         $pi_apu = auth()->user();
         $pi_apmods = session('business.enabled_modules', []);
-        if ($pi_apu && is_array($pi_apmods) && in_array('hospital', $pi_apmods)
-            && ! request()->is('consultations/create') && ! request()->is('consultations/*/edit')) {
+        if ($pi_apu && is_array($pi_apmods) && in_array('hospital', $pi_apmods)) {
             $pi_apbid = session('user.business_id');
             $pi_acc = \App\Utils\ClinicAppointments::access($pi_apbid, $pi_apu);
             $pi_rv = $pi_acc['manage_all'] || $pi_acc['own'] !== null;
-            $pi_apd = \App\Utils\ClinicAppointments::pendingFor($pi_apbid, $pi_apu);
-            if (! empty($pi_apd['can'])) {
-                $pi_ap = $pi_apd;
-            }
         }
     } catch (\Throwable $e) {
-        $pi_ap = null;
         $pi_rv = false;
     }
     $pi_apl = [
-        'one' => __('clinic.pr_one'), 'many' => __('clinic.pr_many'), 'sub' => __('clinic.pr_sub'),
-        'ago' => __('clinic.pr_ago'), 'just_now' => __('clinic.pr_just_now'), 'guest' => __('clinic.pr_guest'),
-        'title' => __('clinic.pr_title'), 'pos' => __('clinic.pr_pos'), 'pos_one' => __('clinic.pr_pos_one'),
-        'sound_on' => __('clinic.pr_sound_on'), 'sound_off' => __('clinic.pr_sound_off'),
-        // review window
         'rv_loading' => __('clinic.rv_loading'), 'rv_error' => __('clinic.rv_error'),
         'rv_new_patient' => __('clinic.rv_new_patient'), 'rv_will_register' => __('clinic.rv_will_register'),
         'rv_matches' => __('clinic.rv_matches'), 'rv_file' => __('clinic.rv_file'),
@@ -60,36 +44,16 @@
         'rv_working' => __('clinic.rv_working'),
     ];
     $pi_urls = [
-        'pending' => url('clinic/appointments/pending'),
         'review' => url('clinic/appointments/__ID__/review'),
         'confirm' => url('clinic/appointments/__ID__/confirm'),
         'decline' => url('clinic/appointments/__ID__/decline'),
     ];
 @endphp
-@if ($pi_ap !== null || $pi_rv)
+@if ($pi_rv)
     <style>
-        .pi-appt { margin: 10px 15px 0; padding: 10px 14px; border-radius: 12px; display: none; background: #d92d20; color: #fff; border: 2px solid #912018; }
-        .pi-appt.pi-appt-on { display: block; animation: piApptPulse 1.2s ease-in-out infinite; box-shadow: 0 0 0 0 rgba(217, 45, 32, .55); }
-        @keyframes piApptPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(217, 45, 32, .55); } 50% { box-shadow: 0 0 0 10px rgba(217, 45, 32, 0); } }
-        .pi-appt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-        .pi-appt-text { flex: 1 1 240px; min-width: 0; line-height: 1.4; font-size: 15px; }
-        .pi-appt-text strong { font-size: 16px; }
-        .pi-appt-sub { display: block; font-size: 12.5px; opacity: .9; }
-        .pi-appt-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-        .pi-appt-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 8px 18px; border-radius: 8px; border: none; font-weight: 800; font-size: 15px; cursor: pointer; }
-        .pi-appt-ok { background: #fff; color: #067647; }
-        .pi-appt-no { background: transparent; color: #fff; border: 1px solid #fff; font-weight: 700; }
-        .pi-appt a.pi-appt-link { color: inherit !important; text-decoration: underline !important; font-weight: 600; font-size: 13px; }
-        .pi-appt-mute { background: transparent; border: 1px solid currentColor; color: inherit; border-radius: 8px; min-height: 34px; padding: 4px 10px; font-size: 12.5px; cursor: pointer; }
-        /* the POS screen: a compact floating alert above the payment bar, never over the cart */
-        .pi-appt.pi-appt-compact { position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); margin: 0; z-index: 1040; padding: 6px 6px 6px 14px; border-radius: 999px; max-width: calc(100vw - 24px); }
-        .pi-appt-compact .pi-appt-row { flex-wrap: nowrap; gap: 8px; }
-        .pi-appt-compact .pi-appt-text { flex: 0 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
-        .pi-appt-compact .pi-appt-btn { min-height: 38px; padding: 6px 14px; border-radius: 999px; font-size: 14px; }
-        .pi-appt-compact .pi-appt-mute { border-radius: 999px; }
-        @media (prefers-reduced-motion: reduce) { .pi-appt.pi-appt-on { animation: none; } }
-        @media print { .pi-appt, .pi-rv { display: none !important; } }
 
+
+        @media print { .pi-rv { display: none !important; } }
         /* review window */
         .pi-rv { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: flex-start; justify-content: center; padding: 4vh 12px; overflow-y: auto; }
         .pi-rv[hidden], .pi-rv [hidden] { display: none !important; }
@@ -144,35 +108,15 @@
         .pi-rv-done .big { width: 60px; height: 60px; margin: 0 auto 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; }
     </style>
 
-    @if ($pi_ap !== null)
-        <div class="pi-appt no-print {{ $pi_compact ? 'pi-appt-compact' : '' }}" id="pi_appt" role="alert" aria-live="assertive"
-            data-initial='@json($pi_ap)'>
-            <div class="pi-appt-row">
-                <div class="pi-appt-text"><i class="fas fa-calendar-check" aria-hidden="true"></i> <span id="pi_appt_msg"></span>
-                    @unless ($pi_compact)<span class="pi-appt-sub" id="pi_appt_sub"></span>@endunless</div>
-                <div class="pi-appt-btns">
-                    <button type="button" class="pi-appt-btn pi-appt-ok" id="pi_appt_ok"><i class="fas fa-search" aria-hidden="true"></i> <span>{{ $pi_compact ? __('clinic.pr_review') : __('clinic.pr_approve') }}</span></button>
-                    @unless ($pi_compact)
-                        <button type="button" class="pi-appt-btn pi-appt-no" id="pi_appt_no"><i class="fas fa-ban" aria-hidden="true"></i> <span>@lang('clinic.pr_decline')</span></button>
-                        <a class="pi-appt-link" href="{{ action([\App\Http\Controllers\ClinicAppointmentController::class, 'index']) }}">@lang('clinic.pr_open')</a>
-                    @endunless
-                    <button type="button" class="pi-appt-mute" id="pi_appt_mute" aria-label="{{ __('clinic.pr_sound_on') }}"></button>
-                </div>
-            </div>
+    <div class="pi-rv no-print" id="pi_rv" hidden role="dialog" aria-modal="true" aria-labelledby="pi_rv_title">
+        <div class="pi-rv-back" data-rv-close></div>
+        <div class="pi-rv-box">
+            <div class="pi-rv-head"><h3 id="pi_rv_title">@lang('clinic.rv_title')</h3>
+                <button type="button" class="pi-rv-x" data-rv-close aria-label="{{ __('clinic.rv_close') }}">&times;</button></div>
+            <div class="pi-rv-body" id="pi_rv_body"></div>
+            <div class="pi-rv-foot" id="pi_rv_foot"></div>
         </div>
-    @endif
-
-    @if ($pi_rv)
-        <div class="pi-rv no-print" id="pi_rv" hidden role="dialog" aria-modal="true" aria-labelledby="pi_rv_title">
-            <div class="pi-rv-back" data-rv-close></div>
-            <div class="pi-rv-box">
-                <div class="pi-rv-head"><h3 id="pi_rv_title">@lang('clinic.rv_title')</h3>
-                    <button type="button" class="pi-rv-x" data-rv-close aria-label="{{ __('clinic.rv_close') }}">&times;</button></div>
-                <div class="pi-rv-body" id="pi_rv_body"></div>
-                <div class="pi-rv-foot" id="pi_rv_foot"></div>
-            </div>
-        </div>
-    @endif
+    </div>
 
     <script>
     (function () {
@@ -182,7 +126,8 @@
         var $ = function (id) { return document.getElementById(id); };
         var esc = function (s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
         var fill = function (t, o) { return String(t).replace(/:(\w+)/g, function (m, k) { return o[k] !== undefined ? o[k] : m; }); };
-        var poll = function () {};
+        // the activity widget refreshes when a request was handled here
+        var poll = function () { try { window.dispatchEvent(new CustomEvent('pi:activity')); } catch (e) { /* old browser */ } };
         var pl = function (key, n) { return (n === 1 && L[key + '_one']) ? L[key + '_one'] : L[key]; };
 
         /* ------------------------------------------------------------ review window */
@@ -193,6 +138,7 @@
         function rvClose() {
             if (! rv) { return; }
             rv.hidden = true;
+            document.documentElement.classList.remove('pi-rv-open');
             document.removeEventListener('keydown', rvKey);
             // lists of requests on this page are now out of date
             if (rvState.changed && /\/clinic\/(appointments|my-practice)/.test(location.pathname)) { location.reload(); }
@@ -328,6 +274,7 @@
             $('pi_rv_body').innerHTML = '<p class="pi-rv-muted">' + esc(L.rv_loading) + '</p>';
             rvFoot('<button type="button" class="pi-rv-b" data-rv-close>' + esc(L.rv_close) + '</button>');
             rv.hidden = false;
+            document.documentElement.classList.add('pi-rv-open');
             document.addEventListener('keydown', rvKey);
             fetch(U.review.replace('__ID__', id), { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(function (r) { if (! r.ok) { throw new Error(r.status); } return r.json(); })
@@ -344,105 +291,13 @@
                 var f = e.target;
                 if (! f || ! f.getAttribute) { return; }
                 var id = f.getAttribute('data-review'), dec = f.getAttribute('data-review-decline');
-                if (! id && ! dec) { return; }
+                // only appointment ids: other screens (ledger, payroll) use data-review for their own window
+                if (! /^\d+$/.test(id || '') && ! /^\d+$/.test(dec || '')) { return; }
+                if (! /^\d+$/.test(id || '')) { id = null; }
                 e.preventDefault(); e.stopPropagation();   // and keep common.js from disabling its button
                 rvOpen(id || dec, !! dec);
             }, true);
         }
-
-        /* ------------------------------------------------------------ the loud bar */
-        var box = $('pi_appt');
-        if (! box) { return; }
-        var REMIND_MS = 180000, POLL_MS = 5000;
-        var compact = box.classList.contains('pi-appt-compact');
-        var baseTitle = document.title, flash = null, audio = null, first = null;
-        var store = { get: function (k, d) { try { var v = sessionStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-                      set: function (k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } } };
-        var lastIds = store.get('pi_appt_ids', []), lastChime = store.get('pi_appt_chime', 0);
-        var muted = function () { try { return localStorage.getItem('pi_appt_mute') === '1'; } catch (e) { return false; } };
-
-        function chime() {
-            if (muted()) { return; }
-            try {
-                audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-                if (audio.state === 'suspended') { audio.resume(); }
-                [0, 0.35, 0.9, 1.25].forEach(function (at, i) {
-                    var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + at;
-                    o.type = 'sine'; o.frequency.value = i % 2 ? 660 : 880;
-                    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.6, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-                    o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + 0.32);
-                });
-            } catch (e) { /* no sound on this browser */ }
-            try { if (navigator.vibrate && (! navigator.userActivation || navigator.userActivation.hasBeenActive)) { navigator.vibrate([300, 150, 300]); } } catch (e) { /* ignore */ }
-            lastChime = Date.now();
-            store.set('pi_appt_chime', lastChime);
-        }
-        ['click', 'keydown', 'touchstart'].forEach(function (ev) {
-            document.addEventListener(ev, function () {
-                try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') { audio.resume(); } } catch (e) { /* ignore */ }
-            }, { once: true, passive: true });
-        });
-
-        function titleFlash(n) {
-            clearInterval(flash); flash = null; document.title = baseTitle;
-            if (! n) { return; }
-            var on = false, t = fill(L.title, { n: n });
-            flash = setInterval(function () { on = ! on; document.title = on ? t : baseTitle; }, 1000);
-        }
-
-        function render(d) {
-            var w = (d && d.requests) || [];
-            if (! w.length) {
-                box.className = 'pi-appt no-print' + (compact ? ' pi-appt-compact' : ''); titleFlash(0); first = null;
-                lastIds = []; store.set('pi_appt_ids', []); return;
-            }
-            first = w[0];
-            box.className = 'pi-appt no-print pi-appt-on' + (compact ? ' pi-appt-compact' : '');
-            if (compact) {
-                $('pi_appt_msg').innerHTML = fill(esc(pl('pos', w.length)), { n: '<strong>' + w.length + '</strong>' }) + (w.length === 1 ? ' · ' + esc(first.patient) : '');
-            } else {
-                $('pi_appt_msg').innerHTML = w.length === 1
-                    ? fill(esc(L.one), { name: '<strong>' + esc(first.patient) + '</strong>' })
-                    : fill(esc(L.many), { n: '<strong>' + w.length + '</strong>' });
-                var sub = fill(L.sub, { doctor: first.doctor, date: first.date_label || first.date, time: first.start });
-                sub += ' · ' + (first.minutes_ago < 1 ? L.just_now : fill(L.ago, { n: first.minutes_ago }));
-                if (first.guest) { sub += ' · ' + L.guest; }
-                $('pi_appt_sub').textContent = sub;
-            }
-            $('pi_appt_mute').textContent = muted() ? L.sound_off : L.sound_on;
-            titleFlash(w.length);
-
-            var ids = w.map(function (x) { return x.id; });
-            var arrived = ids.some(function (id) { return lastIds.indexOf(id) < 0; });
-            if (arrived || Date.now() - lastChime > REMIND_MS) { chime(); }
-            lastIds = ids;
-            store.set('pi_appt_ids', ids);
-        }
-
-        $('pi_appt_ok').onclick = function () { if (first) { rvOpen(first.id, false); } };
-        if ($('pi_appt_no')) { $('pi_appt_no').onclick = function () { if (first) { rvOpen(first.id, true); } }; }
-        $('pi_appt_mute').addEventListener('click', function () {
-            try { localStorage.setItem('pi_appt_mute', muted() ? '0' : '1'); } catch (e) { /* ignore */ }
-            this.textContent = muted() ? L.sound_off : L.sound_on;
-            if (! muted()) { chime(); }
-        });
-
-        poll = function () {
-            if (document.hidden) { return; }
-            var x = new XMLHttpRequest();
-            x.open('GET', U.pending);
-            x.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            x.setRequestHeader('Accept', 'application/json');
-            x.onload = function () {
-                if (x.status !== 200) { return; }
-                try { var d = JSON.parse(x.responseText); render(d && d.can ? d : { requests: [] }); } catch (e) { /* ignore */ }
-            };
-            x.send();
-        };
-        try { render(JSON.parse(box.getAttribute('data-initial'))); } catch (e) { /* ignore */ }
-        setInterval(poll, POLL_MS);
-        document.addEventListener('visibilitychange', function () { if (! document.hidden) { poll(); } });
-        window.addEventListener('focus', poll);
     })();
     </script>
 @endif

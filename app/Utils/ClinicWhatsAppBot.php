@@ -213,8 +213,13 @@ class ClinicWhatsAppBot
         self::note($acc, $s, $note);
         self::to($s, 'pick_doctor');
         $rows = [];
+        $specs = ClinicDoctors::specialties(array_keys($doctors));
         foreach ($doctors as $id => $name) {
-            $rows[] = ['id' => 'BOT:DOC:'.$id, 'title' => $name];
+            $row = ['id' => 'BOT:DOC:'.$id, 'title' => $name];
+            if (! empty($specs[$id])) {
+                $row['description'] = mb_substr($specs[$id], 0, 72);
+            }
+            $rows[] = $row;
         }
 
         return self::list($acc, $s, __('clinic.wa_bot_pick_doctor', [], $lang), __('clinic.wa_bot_doctors_btn', [], $lang), $rows);

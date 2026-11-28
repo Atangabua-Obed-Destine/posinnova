@@ -207,6 +207,26 @@
                 <p class="help-block"><i class="fas fa-map-marker-alt"></i> @lang('clinic.pub_setting_gbp_tip')</p>
             @endcomponent
 
+            @if (! empty($doctors))
+                @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.sp_admin_title')])
+                    <p class="help-block" style="margin-top:0;">@lang('clinic.sp_admin_help')</p>
+                    <table class="table table-condensed" id="sp_admin_table" style="margin-bottom:0;">
+                        @foreach ($doctors as $doc_id => $doc_name)
+                            @php
+                                $sp_now = $doctor_specialties[$doc_id] ?? null;
+                                $sp_opts = ['' => __('clinic.sp_general')] + array_combine($specialty_choices, $specialty_choices);
+                                if ($sp_now && ! isset($sp_opts[$sp_now])) { $sp_opts[$sp_now] = $sp_now; }
+                            @endphp
+                            <tr>
+                                <td style="vertical-align:middle; width:45%;"><label for="sp_doc_{{ $doc_id }}" style="margin:0; font-weight:600;">{{ $doc_name }}</label></td>
+                                <td>{!! Form::select('doctor_specialty['.$doc_id.']', $sp_opts, $sp_now ?? '', ['class' => 'form-control input-sm', 'id' => 'sp_doc_'.$doc_id]) !!}</td>
+                            </tr>
+                        @endforeach
+                    </table>
+                    <p class="help-block" style="margin-bottom:0;"><a href="{{ url('clinic/doctor-lists') }}">@lang('clinic.dl_specialty')</a></p>
+                @endcomponent
+            @endif
+
             @component('components.widget', ['class' => 'box-solid', 'title' => __('clinic.patient_portal')])
                 <div class="checkbox">
                     <label>{!! Form::checkbox('portal_enabled', 1, $s['portal_enabled']) !!} @lang('clinic.portal_enabled')</label>

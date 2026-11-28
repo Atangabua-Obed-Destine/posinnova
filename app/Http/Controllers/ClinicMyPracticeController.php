@@ -7,6 +7,7 @@ use App\ClinicDoctorDayOff;
 use App\ClinicDoctorHour;
 use App\Notifications\ClinicAppointmentNotification;
 use App\Utils\ClinicAppointments;
+use App\Utils\ClinicDoctors;
 use App\Utils\ClinicFees;
 use App\Utils\ClinicQueue;
 use App\Utils\ClinicSettings;
@@ -119,12 +120,19 @@ class ClinicMyPracticeController extends Controller
         }
         $slug = \App\Business::where('id', $bid)->value('slug');
         $link = ($slug && ClinicSettings::get($bid, 'public_page_enabled')) ? route('clinic-public.doctor', [$slug, $me]) : null;
+        $link_off = ! $link && $user->hasRole('Admin#'.$bid);   // an admin is told how to turn the page on
+        $specialty = ClinicDoctors::specialty($me);
+        $specialties = ClinicDoctors::choices($bid);
+        if ($specialty && ! in_array($specialty, $specialties, true)) {
+            array_unshift($specialties, $specialty);
+        }
         $default_cap = (int) ClinicSettings::get($bid, 'appointments_daily_cap');
         $own_cap = (int) (((array) ClinicSettings::get($bid, 'appointments_doctor_caps'))[$me] ?? 0);
 
         return view('clinic.my_practice.index', compact(
             'user', 'news', 'days', 'days_n', 'today_list', 'waiting', 'requests', 'cap', 'own_cap', 'default_cap',
-            'can_schedule', 'can_manage', 'can_fee', 'can_call', 'fee_cols', 'own_fees', 'week', 'offs', 'link'
+            'can_schedule', 'can_manage', 'can_fee', 'can_call', 'fee_cols', 'own_fees', 'week', 'offs', 'link', 'link_off',
+            'specialty', 'specialties'
         ));
     }
 
@@ -175,6 +183,20 @@ class ClinicMyPracticeController extends Controller
         $user->save();
 
         return $this->back()->with('status', ['success' => true, 'msg' => __('clinic.mp_phone_saved')]);
+    }
+
+    /** His own specialty: general (empty) or one of the clinic's list. */
+    public function saveSpecialty(Request $request)
+    {
+        [$bid, $user] = $this->doctor();
+        $kind = $request->input('kind') === 'specialist' ? 'specialist' : 'general';
+        $value = $kind === 'specialist' ? trim((string) $request->input('specialty')) : '';
+        if ($kind === 'specialist' && ClinicDoctors::isGeneral($value)) {
+            return $this->back()->with('status', ['success' => false, 'msg' => __('clinic.sp_choose')]);
+        }
+        $stored = ClinicDoctors::set($bid, $user->id, $value, $user->id);
+
+        return $this->back()->with('status', ['success' => true, 'msg' => $stored ? __('clinic.sp_saved_as', ['specialty' => $stored]) : __('clinic.sp_saved_general')]);
     }
 
     private function back()

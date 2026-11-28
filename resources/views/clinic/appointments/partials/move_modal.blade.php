@@ -22,8 +22,9 @@
                     <div class="form-group">
                         <label for="move_doctor">@lang('clinic.doctor'):</label>
                         <select name="doctor_id" id="move_doctor" class="form-control">
+                            @php $doc_specs = \App\Utils\ClinicDoctors::specialties(array_keys($all_doctors)); @endphp
                             @foreach ($all_doctors as $id => $name)
-                                <option value="{{ $id }}">{{ $name }}</option>
+                                <option value="{{ $id }}">{{ $name }}{{ ! empty($doc_specs[$id]) ? ' · '.$doc_specs[$id] : '' }}</option>
                             @endforeach
                         </select>
                     </div>

@@ -253,8 +253,11 @@ class VisitController extends Controller
             }
         }
 
+        // each doctor's specialty: the cards show it and reception can filter / search by it
+        $specialties = \App\Utils\ClinicDoctors::specialties(array_keys($doctors));
+
         return view('visit.create')->with(compact('business_locations', 'preselected_patient', 'doctors', 'packages',
-            'default_fee', 'wards_on', 'pay_first', 'waiting', 'has_plans', 'has_cover', 'appointment'))
+            'default_fee', 'wards_on', 'pay_first', 'waiting', 'has_plans', 'has_cover', 'appointment', 'specialties'))
             // doctors' own prices: the cards show the chosen doctor's
             ->with('fee_overrides', \App\Utils\ClinicFees::overrides($business_id));
     }

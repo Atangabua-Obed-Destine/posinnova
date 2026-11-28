@@ -99,13 +99,11 @@
             </div>
             <div class="tw-flex-1 tw-overflow-y-auto tw-h-screen" id="scrollable-container">
                 {{-- staff alerts name patients: never on the customer display --}}
-                @if (! $pos_layout && $request->segment(1) != 'customer-display')
-                    @include('layouts.partials.waiting_alert')
-                    @include('layouts.partials.pending_requests')
-                    @include('layouts.partials.consult_resume')
-                @elseif ($pos_layout)
-                    {{-- the POS screen: a compact booking-request alert; reviewing keeps the sale in progress --}}
-                    @include('layouts.partials.pending_requests', ['compact' => true])
+                {{-- one floating activity widget (booking requests, patients waiting, consultations to finish) and
+                     the booking review window; on the POS too, where reviewing keeps the sale in progress --}}
+                @if ($request->segment(1) != 'customer-display')
+                    @include('layouts.partials.appt_review')
+                    @include('layouts.partials.activity_widget', ['pos' => $pos_layout])
                 @endif
                 @yield('content')
                 @if (!$pos_layout)

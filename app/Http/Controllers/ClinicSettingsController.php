@@ -38,8 +38,10 @@ class ClinicSettingsController extends Controller
 
         $admins = \App\Utils\ClinicQueue::admins($business_id);
         $doctors = \App\Utils\ClinicQueue::doctors($business_id);
+        $doctor_specialties = \App\Utils\ClinicDoctors::specialties(array_keys($doctors));
+        $specialty_choices = \App\Utils\ClinicDoctors::choices($business_id);
 
-        return view('clinic.settings', compact('business', 'settings', 'next_file_number', 'admins', 'doctors'));
+        return view('clinic.settings', compact('business', 'settings', 'next_file_number', 'admins', 'doctors', 'doctor_specialties', 'specialty_choices'));
     }
 
     public function update(Request $request)
@@ -98,6 +100,22 @@ class ClinicSettingsController extends Controller
             array_keys(\App\Utils\ClinicQueue::admins($business_id))
         ));
         ClinicSettings::save($business_id, $input);
+
+        // doctors' specialties live on each doctor's user row, not in the settings JSON
+        if ($request->has('doctor_specialty')) {
+            $doctor_ids = array_keys(\App\Utils\ClinicQueue::doctors($business_id));
+            $now = \App\Utils\ClinicDoctors::specialties($doctor_ids);
+            foreach ((array) $request->input('doctor_specialty') as $doc_id => $value) {
+                $doc_id = (int) $doc_id;
+                if (! in_array($doc_id, $doctor_ids, true)) {
+                    continue;
+                }
+                $value = trim((string) $value);
+                if (\App\Utils\ClinicDoctors::fold($value) !== \App\Utils\ClinicDoctors::fold($now[$doc_id] ?? '')) {
+                    \App\Utils\ClinicDoctors::set($business_id, $doc_id, $value, auth()->id());
+                }
+            }
+        }
 
         return redirect()->action([self::class, 'index'])
             ->with('status', ['success' => 1, 'msg' => __('clinic.settings_saved')]);

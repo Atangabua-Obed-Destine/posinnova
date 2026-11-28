@@ -4,7 +4,16 @@
     $initials = count($words) > 1 ? mb_strtoupper(mb_substr($words[0], 0, 1).mb_substr($words[1], 0, 1))
         : (mb_strlen($words[0]) <= 4 ? mb_strtoupper($words[0]) : mb_strtoupper(mb_substr($words[0], 0, 2)));
     $meta_desc = $tagline ?: ($description ? \Illuminate\Support\Str::limit(strip_tags($description), 160) : __('clinic.pub_meta_default', ['name' => $business->name]));
-    $page_url = route('clinic-public.show', $slug);
+    $solo = ! empty($solo) && $selected !== null;
+    $specialties = $specialties ?? [];
+    $solo_name = $solo ? ($doctors[$selected] ?? '') : null;
+    $solo_spec = $solo ? ($specialties[$selected] ?? null) : null;
+    $clinic_url = route('clinic-public.show', $slug);
+    $page_url = $solo ? route('clinic-public.doctor', [$slug, $selected]) : $clinic_url;
+    $sp_used = collect($specialties)->filter()->unique()->sort(SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
+    $finder = ! $solo && count($doctors) > 1;
+    $n0 = $solo ? 0 : 1;   // step numbers: the doctor step is skipped on a doctor's own link
+    $page_title = $solo ? $solo_name.' · '.$business->name : $business->name.' · '.__('clinic.pub_title_suffix');
     $status = session('pub_status');
     $done = session('pub_done');
     $tel_digits = ($location && $location->mobile) ? \App\Utils\ClinicWhatsApp::waNumber($business->id, $location->mobile) : null;
@@ -31,6 +40,7 @@
             'nav' => '<polygon points="3 11 22 2 13 21 11 13 3 11"/>',
             'doc' => '<path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/>',
             'clock' => '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+            'search' => '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
             'arrow' => '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',
         ][$name] ?? '';
 
@@ -42,10 +52,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $business->name }} · {{ __('clinic.pub_title_suffix') }}</title>
+    <title>{{ $page_title }}</title>
     <meta name="description" content="{{ $meta_desc }}">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="{{ $business->name }} · {{ __('clinic.pub_title_suffix') }}">
+    <meta property="og:title" content="{{ $page_title }}">
     <meta property="og:description" content="{{ $meta_desc }}">
     <meta property="og:url" content="{{ $page_url }}">
     @if ($logo)<meta property="og:image" content="{{ $logo }}">@endif
@@ -100,6 +110,26 @@
         .doccard b { display:block; font-size:15px; line-height:1.25; }
         .doccard small { display:block; color:var(--muted); font-size:12.5px; margin-top:2px; }
         .doccard small.soon { color:var(--ok); font-weight:600; }
+        .doccard small.spec { color:#5b21b6; font-weight:700; }
+        .doccard small.spec.gen { color:var(--muted); font-weight:600; }
+        .doccard.hide { display:none; }
+        .finder { display:flex; flex-direction:column; gap:10px; margin:0 0 12px; }
+        .search { position:relative; }
+        .search .ico { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--muted); }
+        .search input[type=text] { padding-left:42px; }
+        .fchips { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+        .fchip { flex:none; min-height:38px; padding:6px 14px; border:1.5px solid var(--line); border-radius:999px; background:#fff; cursor:pointer; font:inherit; font-size:13.5px; font-weight:600; color:inherit; white-space:nowrap; }
+        .fchip[aria-pressed="true"] { background:var(--ink); color:#fff; border-color:var(--ink); }
+        .nomatch { color:var(--muted); font-size:14px; margin:4px 0 0; }
+        .nomatch button { background:none; border:0; padding:0; font:inherit; font-weight:700; color:var(--brand-d); text-decoration:underline; cursor:pointer; min-height:32px; }
+        .solo { display:flex; align-items:center; gap:14px; padding:14px; border-radius:16px; background:var(--brand-l); border:1px solid #a5f3fc; margin:4px 0 6px; }
+        .solo .av { width:54px; height:54px; border-radius:50%; background:#fff; color:var(--brand-d); display:flex; align-items:center; justify-content:center; flex:none; }
+        .solo b { display:block; font-size:18px; line-height:1.25; }
+        .solo .spec { display:inline-block; margin-top:3px; padding:1px 10px; border-radius:999px; background:#ede9fe; color:#5b21b6; font-size:13px; font-weight:700; }
+        .solo .spec.gen { background:#fff; color:var(--muted); }
+        .solo small { display:block; color:var(--ok); font-weight:600; font-size:13px; margin-top:3px; }
+        .others { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:46px; margin-top:16px; padding:9px 14px; border-radius:12px; border:1.5px dashed #94a3b8; background:#fff; color:var(--ink); font-weight:700; font-size:14.5px; text-decoration:none; }
+        .others:hover { border-color:var(--brand); color:var(--brand-d); }
         .doccard[aria-pressed="true"] { border-color:var(--brand); background:var(--brand-l); box-shadow:0 0 0 3px rgba(14,116,144,.12); }
 
         .chips { display:flex; flex-wrap:wrap; gap:8px; }
@@ -169,6 +199,7 @@
             </div>
             <div class="quick">
                 <a class="qbtn main" href="#book">{!! $ico('cal') !!} {{ __('clinic.pub_book_heading') }}</a>
+                @if ($solo)<a class="qbtn" href="{{ $clinic_url }}" id="heroOthers">{!! $ico('user') !!} {{ __('clinic.pub_our_doctors') }}</a>@endif
                 @if ($tel)<a class="qbtn" href="{{ $tel }}">{!! $ico('phone') !!} {{ __('clinic.pub_call') }}</a>@endif
                 @if ($whatsapp)<a class="qbtn" href="{{ $whatsapp }}" target="_blank" rel="noopener">{!! $ico('chat') !!} {{ __('clinic.pub_whatsapp') }}</a>@endif
             </div>
@@ -195,8 +226,8 @@
                 @endif
 
                 <div id="booker" @if ($done) hidden @endif>
-                    <h2 id="book_h">{{ __('clinic.pub_book_heading') }}</h2>
-                    <p class="sub">{{ __('clinic.pub_book_sub') }}</p>
+                    <h2 id="book_h">{{ $solo ? __('clinic.pub_book_with', ['name' => $solo_name]) : __('clinic.pub_book_heading') }}</h2>
+                    <p class="sub">{{ $solo ? __('clinic.pub_solo_sub') : __('clinic.pub_book_sub') }}</p>
 
                     @if ($status && ! $status['ok'] && (($status['field'] ?? '') === '' || ! isset($schedules[(int) old('doctor_id')])))
                         <div class="flash err" role="alert">{{ $status['msg'] }}</div>
@@ -205,15 +236,44 @@
                     @if (empty($doctors))
                         <p class="sub">{{ __('clinic.pub_no_days') }}</p>
                     @else
-                        <div class="step" id="docStep" style="margin-top:6px;">
+                        @if ($solo)
+                            @php $first = $schedules[$selected]['days'][0] ?? null; @endphp
+                            <div class="solo" id="soloDoc">
+                                <span class="av">{!! $ico('doc', 26) !!}</span>
+                                <span>
+                                    <b>{{ $solo_name }}</b>
+                                    <span class="spec {{ $solo_spec ? '' : 'gen' }}">{{ $solo_spec ?: __('clinic.sp_general') }}</span>
+                                    @if ($first)<small>{{ __('clinic.pub_next') }} {{ $first['label'] }}</small>@endif
+                                </span>
+                            </div>
+                        @endif
+                        <div class="step" id="docStep" style="margin-top:6px;" @if ($solo) hidden @endif>
                             <p class="shead"><span class="num">1</span>{{ __('clinic.pub_choose_doctor') }}</p>
+                            @if ($finder)
+                                <div class="finder" id="finder">
+                                    <div class="search">{!! $ico('search') !!}
+                                        <input type="text" id="docSearch" placeholder="{{ __('clinic.sp_search') }}" aria-label="{{ __('clinic.sp_search') }}" autocomplete="off" enterkeyhint="search"></div>
+                                    @if (count($sp_used))
+                                        <div class="fchips" id="docFilter" role="group" aria-label="{{ __('clinic.sp_specialists') }}">
+                                            <button type="button" class="fchip" data-f="all" aria-pressed="true">{{ __('clinic.sp_all') }}</button>
+                                            <button type="button" class="fchip" data-f="general" aria-pressed="false">{{ __('clinic.sp_generals') }}</button>
+                                            <button type="button" class="fchip" data-f="specialist" aria-pressed="false">{{ __('clinic.sp_specialists') }}</button>
+                                            @foreach ($sp_used as $sp)
+                                                <button type="button" class="fchip" data-f="sp:{{ $sp }}" aria-pressed="false">{{ $sp }}</button>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
                             <div class="docs" id="docChips">
                                 @foreach ($doctors as $id => $name)
-                                    @php $first = $schedules[$id]['days'][0] ?? null; @endphp
-                                    <button type="button" class="doccard" data-doc="{{ $id }}" aria-pressed="false">
+                                    @continue($solo && $id !== $selected)
+                                    @php $first = $schedules[$id]['days'][0] ?? null; $dsp = $specialties[$id] ?? null; @endphp
+                                    <button type="button" class="doccard" data-doc="{{ $id }}" data-name="{{ $name }}" data-spec="{{ $dsp }}" aria-pressed="false">
                                         <span class="av">{!! $ico('doc', 20) !!}</span>
                                         <span>
                                             <b>{{ $name }}</b>
+                                            <small class="spec {{ $dsp ? '' : 'gen' }}">{{ $dsp ?: __('clinic.sp_general') }}</small>
                                             @if ($first)
                                                 <small class="soon">{{ __('clinic.pub_next') }} {{ $first['label'] }}</small>
                                             @else
@@ -223,16 +283,17 @@
                                     </button>
                                 @endforeach
                             </div>
+                            <p class="nomatch" id="noMatch" hidden>{{ __('clinic.sp_none_match') }} <button type="button" id="showAll">{{ __('clinic.sp_show_all') }}</button></p>
                         </div>
 
                         <div class="step" id="dayStep" hidden>
-                            <p class="shead"><span class="num">2</span>{{ __('clinic.pub_choose_day') }}</p>
+                            <p class="shead"><span class="num">{{ 1 + $n0 }}</span>{{ __('clinic.pub_choose_day') }}</p>
                             <div class="chips" id="dayChips"></div>
                             <p class="sub" id="noDays" hidden>{{ __('clinic.pub_no_days') }}</p>
                         </div>
 
                         <div class="step" id="timeStep" hidden>
-                            <p class="shead"><span class="num">3</span>{{ __('clinic.pub_choose_time') }}</p>
+                            <p class="shead"><span class="num">{{ 2 + $n0 }}</span>{{ __('clinic.pub_choose_time') }}</p>
                             <p class="ferr" id="err_slot" role="alert" hidden></p>
                             <div id="timeChips"></div>
                             <p class="sub" id="loadingSlots" hidden>{{ __('clinic.pub_loading') }}</p>
@@ -240,7 +301,7 @@
                         </div>
 
                         <div class="step" id="whoStep" hidden>
-                            <p class="shead"><span class="num">4</span>{{ __('clinic.pub_your_details') }}</p>
+                            <p class="shead"><span class="num">{{ 3 + $n0 }}</span>{{ __('clinic.pub_your_details') }}</p>
                             <div class="summary"><span id="chosenSummary"></span><a id="changeLink" role="button" tabindex="0">{{ __('clinic.pub_change') }}</a></div>
                             <div class="who" id="whoChoice">
                                 <button type="button" class="whobtn primary" id="newBtn">
@@ -256,6 +317,7 @@
                                 <input type="hidden" name="doctor_id" id="f_doctor" value="{{ old('doctor_id') }}">
                                 <input type="hidden" name="date" id="f_date" value="{{ old('date') }}">
                                 <input type="hidden" name="start" id="f_start" value="{{ old('start') }}">
+                                @if ($solo)<input type="hidden" name="from_doctor" value="{{ $selected }}">@endif
                                 <div class="hp" aria-hidden="true"><label for="hp_website">Website</label><input type="text" id="hp_website" name="website" tabindex="-1" autocomplete="off"></div>
 
                                 <label for="g_name">{{ __('clinic.pub_form_name') }}</label>
@@ -273,6 +335,10 @@
                                 <button type="submit" class="btn btn-brand btn-block" id="sendBtn">{{ __('clinic.pub_form_submit') }}</button>
                             </form>
                         </div>
+                    @endif
+
+                    @if ($solo)
+                        <a class="others" href="{{ $clinic_url }}" id="otherDoctors">{!! $ico('user') !!} {{ count($doctors) > 1 ? __('clinic.pub_see_others') : __('clinic.pub_see_clinic') }}</a>
                     @endif
 
                     @if ($whatsapp)
@@ -432,6 +498,32 @@
         Array.prototype.forEach.call(document.querySelectorAll('#docChips .doccard'), function (c) {
             c.onclick = function () { chooseDoctor(c.getAttribute('data-doc')); };
         });
+
+        // find a doctor: by name or specialty, general or specialists
+        var sq = $('docSearch'), filt = 'all', GEN = @json(__('clinic.sp_general'));
+        var fold = function (s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
+        function applyFind() {
+            var words = sq ? fold(sq.value).split(/\s+/).filter(Boolean) : [], shown = 0;
+            Array.prototype.forEach.call(document.querySelectorAll('#docChips .doccard'), function (c) {
+                var sp = c.getAttribute('data-spec') || '', hay = fold(c.getAttribute('data-name') + ' ' + (sp || GEN));
+                var ok = words.every(function (w) { return hay.indexOf(w) >= 0; });
+                if (filt === 'general') { ok = ok && ! sp; }
+                else if (filt === 'specialist') { ok = ok && !! sp; }
+                else if (filt.indexOf('sp:') === 0) { ok = ok && sp === filt.slice(3); }
+                if (c.getAttribute('aria-pressed') === 'true') { ok = true; }
+                c.classList.toggle('hide', ! ok);
+                if (ok) { shown++; }
+            });
+            show('noMatch', shown === 0);
+        }
+        function setFilter(f) {
+            filt = f;
+            Array.prototype.forEach.call(document.querySelectorAll('#docFilter .fchip'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-f') === f ? 'true' : 'false'); });
+            applyFind();
+        }
+        if (sq) { sq.addEventListener('input', applyFind); }
+        Array.prototype.forEach.call(document.querySelectorAll('#docFilter .fchip'), function (b) { b.onclick = function () { setFilter(b.getAttribute('data-f')); }; });
+        var sa = $('showAll'); if (sa) { sa.onclick = function () { if (sq) { sq.value = ''; } setFilter('all'); }; }
         var nb = $('newBtn'); if (nb) { nb.onclick = function () { openForm(true); bring('guestForm'); }; }
         var ch = $('changeLink');
         if (ch) {

@@ -6,6 +6,7 @@ use App\Business;
 use App\BusinessLocation;
 use App\ClinicWhatsappAccount;
 use App\Utils\ClinicAppointments;
+use App\Utils\ClinicDoctors;
 use App\Utils\ClinicSettings;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -89,7 +90,20 @@ class ClinicPublicController extends Controller
             $schedules[$id] = ['name' => $name, 'days' => $days];
         }
 
-        $selected = $doctor !== null && isset($doctors[(int) $doctor]) ? (int) $doctor : null;
+        // a doctor's own link: only him (the others are one button away); an unknown id opens the clinic page
+        $selected = null;
+        $solo = false;
+        if ($doctor !== null) {
+            if (! isset($doctors[(int) $doctor])) {
+                return redirect()->route('clinic-public.show', $slug);
+            }
+            $selected = (int) $doctor;
+            $solo = true;
+        }
+        $specialties = ClinicDoctors::specialties(array_keys($doctors));
+        foreach ($schedules as $id => $row) {
+            $schedules[$id]['specialty'] = $specialties[$id] ?? null;
+        }
         $data = [
             'business' => $business,
             'location' => $location,
@@ -97,6 +111,8 @@ class ClinicPublicController extends Controller
             'doctors' => $doctors,
             'schedules' => $schedules,
             'selected' => $selected,
+            'solo' => $solo,
+            'specialties' => $specialties,
             'tagline' => ClinicSettings::get($bid, 'public_tagline'),
             'description' => ClinicSettings::get($bid, 'public_description'),
             'map_lat' => ClinicSettings::get($bid, 'public_map_lat'),
@@ -172,6 +188,10 @@ class ClinicPublicController extends Controller
             'name' => $appt->guest_name,
         ];
 
-        return redirect()->route('clinic-public.show', $slug)->with('pub_done', $done);
+        // back where the patient booked from: the doctor's own link or the clinic page
+        $back = (int) $request->input('from_doctor') === $doctor_id
+            ? route('clinic-public.doctor', [$slug, $doctor_id]) : route('clinic-public.show', $slug);
+
+        return redirect()->to($back)->with('pub_done', $done);
     }
 }
