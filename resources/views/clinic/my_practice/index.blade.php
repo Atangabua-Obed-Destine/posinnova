@@ -98,6 +98,7 @@
     .mp-share-a { display:flex; flex-wrap:wrap; gap:6px; }
     .mp-btn.wa { color:#15803d !important; border-color:#86efac; }
     @media (max-width:600px) { .mp-share-a { width:100%; } .mp-share-a .mp-btn { flex:1 1 auto; } }
+    .mp-select, #mp_specialty_other { width:100%; min-height:44px; padding:8px 10px; border:1px solid #cbd5e1; border-radius:10px; font:inherit; font-size:15px; background:#fff; }
     .mp-kind { display:flex; flex-wrap:wrap; gap:6px 16px; }
     .mp-kind label { display:inline-flex !important; align-items:center; gap:6px; font-weight:600; font-size:14px; min-height:32px; cursor:pointer; }
     .mp-note { background:var(--warn-l); border:1px solid #fedf89; color:var(--warn); border-radius:12px; padding:10px 12px; font-size:13.5px; margin-bottom:10px; }
@@ -241,10 +242,17 @@
                     <label><input type="radio" name="kind" value="general" id="mp_kind_general" {{ $specialty ? '' : 'checked' }}> {{ __('clinic.sp_i_am_general') }}</label>
                     <label><input type="radio" name="kind" value="specialist" id="mp_kind_specialist" {{ $specialty ? 'checked' : '' }}> {{ __('clinic.sp_i_am_specialist') }}</label>
                 </div>
-                <div class="mp-row" id="mp_spec_row" {{ $specialty ? '' : 'hidden' }} style="margin-top:6px">
-                    <div><input type="text" name="specialty" id="mp_specialty" list="mp_spec_list" value="{{ $specialty }}" maxlength="100"
-                        placeholder="{{ __('clinic.sp_placeholder') }}" aria-label="{{ __('clinic.sp_which') }}" autocomplete="off">
-                        <datalist id="mp_spec_list">@foreach ($specialties as $sp)<option value="{{ $sp }}">@endforeach</datalist></div>
+                {{-- a real list (a phone opens it as a picker); "Other" lets him type one the clinic's list does not have --}}
+                <div id="mp_spec_row" {{ $specialty ? '' : 'hidden' }} style="margin-top:6px">
+                    <select name="specialty" id="mp_specialty" class="mp-select" aria-label="{{ __('clinic.sp_which') }}">
+                        <option value="">{{ __('clinic.sp_which') }}</option>
+                        @foreach ($specialties as $sp)
+                            <option value="{{ $sp }}" {{ $specialty === $sp ? 'selected' : '' }}>{{ $sp }}</option>
+                        @endforeach
+                        <option value="__other">{{ __('clinic.sp_other') }}</option>
+                    </select>
+                    <input type="text" name="specialty_other" id="mp_specialty_other" maxlength="100" hidden style="margin-top:6px"
+                        placeholder="{{ __('clinic.sp_placeholder') }}" aria-label="{{ __('clinic.sp_other') }}" autocomplete="off">
                 </div>
                 <div style="margin-top:6px"><button class="mp-btn" type="submit"><i class="fas fa-save"></i> {{ __('messages.save') }}</button></div>
                 <p class="mp-muted" style="margin:4px 0 0">{{ __('clinic.sp_hint') }}</p>
@@ -336,16 +344,19 @@
                 setTimeout(function () { c.innerHTML = '<i class="fas fa-copy"></i> ' + @json(__('clinic.mp_copy')); }, 2500);
             });
         }
-        var rows = document.getElementById('mp_spec_row');
+        var rows = document.getElementById('mp_spec_row'), pick = document.getElementById('mp_specialty'), other = document.getElementById('mp_specialty_other');
+        function specState() {
+            var sp = document.getElementById('mp_kind_specialist').checked, typed = pick.value === '__other';
+            rows.hidden = ! sp;
+            pick.required = sp;
+            other.hidden = ! (sp && typed);
+            other.required = sp && typed;
+        }
         document.querySelectorAll('#mp_spec_form input[name=kind]').forEach(function (r) {
-            r.addEventListener('change', function () {
-                var sp = document.getElementById('mp_kind_specialist').checked;
-                rows.hidden = ! sp;
-                document.getElementById('mp_specialty').required = sp;
-                if (sp) { document.getElementById('mp_specialty').focus(); }
-            });
+            r.addEventListener('change', function () { specState(); if (! rows.hidden) { pick.focus(); } });
         });
-        document.getElementById('mp_specialty').required = document.getElementById('mp_kind_specialist').checked;
+        pick.addEventListener('change', function () { specState(); if (! other.hidden) { other.focus(); } });
+        specState();
     })();
 </script>
 @endsection

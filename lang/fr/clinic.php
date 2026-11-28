@@ -2135,6 +2135,7 @@ return [
     'sp_i_am_general' => 'Médecin généraliste',
     'sp_i_am_specialist' => 'Spécialiste',
     'sp_which' => 'Quelle spécialité ?',
+    'sp_other' => 'Autre (à saisir)',
     'sp_placeholder' => 'ex. ORL, Pédiatrie…',
     'sp_hint' => 'Affichée aux patients sur la page de réservation et à l’accueil, et remplie quand vous commencez une consultation.',
     'sp_choose' => 'Veuillez choisir votre spécialité.',

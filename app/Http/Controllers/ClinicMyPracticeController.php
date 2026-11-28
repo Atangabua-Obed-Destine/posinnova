@@ -190,7 +190,13 @@ class ClinicMyPracticeController extends Controller
     {
         [$bid, $user] = $this->doctor();
         $kind = $request->input('kind') === 'specialist' ? 'specialist' : 'general';
-        $value = $kind === 'specialist' ? trim((string) $request->input('specialty')) : '';
+        $value = trim((string) $request->input('specialty'));
+        if ($value === '__other') {   // "Other": the one he typed
+            $value = trim((string) $request->input('specialty_other'));
+        }
+        if ($kind !== 'specialist') {
+            $value = '';
+        }
         if ($kind === 'specialist' && ClinicDoctors::isGeneral($value)) {
             return $this->back()->with('status', ['success' => false, 'msg' => __('clinic.sp_choose')]);
         }

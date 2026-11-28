@@ -2134,6 +2134,7 @@ return [
     'sp_i_am_general' => 'General doctor',
     'sp_i_am_specialist' => 'Specialist',
     'sp_which' => 'Which specialty?',
+    'sp_other' => 'Other (type it)',
     'sp_placeholder' => 'e.g. ENT, Paediatrics…',
     'sp_hint' => 'Shown to patients on the booking page and at reception, and filled in when you start a consultation.',
     'sp_choose' => 'Please choose your specialty.',
