@@ -266,6 +266,10 @@ class ClinicAppointmentController extends Controller
         $appt = $this->find($id);
         $this->authorizeFor($appt->doctor_id);
         if ($appt->status != 'requested') {
+            if ($request->expectsJson()) {
+                return response()->json(['ok' => false, 'msg' => __('clinic.appt_not_requested')], 409);
+            }
+
             return $this->back($request, $appt->date)->with('status', ['success' => false, 'msg' => __('clinic.appt_not_requested')]);
         }
         // a public-page guest request: register (or match) the real patient now, so
@@ -284,10 +288,89 @@ class ClinicAppointmentController extends Controller
         $flash = $this->whatsappFlash($appt, 'confirmation');
         $msg = $new_patient ? __('clinic.appt_confirmed_new_patient', ['name' => $appt->display_name]) : __('clinic.appt_confirmed');
 
-        return $this->back($request, $appt->date)->with('status', ['success' => true, 'msg' => $msg])->with($flash);
+        // the review window approves in the background, so the page (a sale in progress) is kept
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'msg' => $msg,
+                'whatsapp_auto' => ! empty($flash['appt_whatsapp_auto']),
+                'whatsapp_link' => $flash['appt_whatsapp'] ?? null,
+                'whatsapp_error' => $flash['appt_whatsapp_error'] ?? null]);
+        }
 
-        return $this->back($request, $appt->date)->with('status', ['success' => true, 'msg' => __('clinic.appt_confirmed')])
-            ->with($this->whatsappFlash($appt, 'confirmation'));
+        return $this->back($request, $appt->date)->with('status', ['success' => true, 'msg' => $msg])->with($flash);
+    }
+
+    /**
+     * Everything reception needs before approving a request (JSON for the review
+     * window): who, when, with whom, and the doctor's whole day — how many
+     * appointments, the daily limit, and whether this one overbooks the doctor.
+     */
+    public function review(Request $request, $id)
+    {
+        $appt = $this->find($id);
+        $this->authorizeFor($appt->doctor_id);
+        $bid = $appt->business_id;
+        $locale = app()->getLocale();
+        $appt->load(['patient.patientDetails', 'doctor']);
+
+        $day = ClinicAppointment::forBusiness($bid)->where('doctor_id', $appt->doctor_id)
+            ->whereDate('date', $appt->date->toDateString())
+            ->whereIn('status', ['requested', 'confirmed', 'checked_in'])
+            ->with('patient')->orderBy('start_time')->get();
+        $confirmed = $day->whereIn('status', ['confirmed', 'checked_in'])->count();
+        $pending = $day->where('status', 'requested')->count();
+        $after = $confirmed + ($appt->status == 'requested' ? 1 : 0);
+        $cap = ClinicAppointments::dailyCap($bid, $appt->doctor_id);
+        $free = collect(ClinicAppointments::slots($bid, $appt->doctor_id, $appt->date))->where('state', 'free')->count();
+        $hours = ClinicDoctorHour::forBusiness($bid)->where('user_id', $appt->doctor_id)
+            ->where('weekday', $appt->date->dayOfWeekIso)->orderBy('start_time')->get()
+            ->map(fn ($h) => substr($h->start_time, 0, 5).'–'.substr($h->end_time, 0, 5))->implode(', ');
+
+        $match = null;
+        if ($appt->isGuest() && $appt->guest_phone) {
+            $m = \App\Utils\ClinicWhatsApp::patientByNumber($bid, $appt->guest_phone);
+            if ($m) {
+                $match = ['name' => $m->name, 'file' => optional($m->patientDetails)->file_number];
+            }
+        }
+        $same_day = null;
+        if ($appt->contact_id) {
+            $o = ClinicAppointment::forBusiness($bid)->open()->where('contact_id', $appt->contact_id)
+                ->whereDate('date', $appt->date->toDateString())->where('id', '!=', $appt->id)->with('doctor')->first();
+            if ($o) {
+                $same_day = ['time' => $o->start, 'doctor' => trim(optional($o->doctor)->user_full_name)];
+            }
+        }
+
+        return response()->json([
+            'id' => $appt->id,
+            'status' => $appt->status,
+            'patient' => $appt->display_name,
+            'phone' => $appt->display_mobile,
+            'guest' => $appt->isGuest(),
+            'file' => $appt->isGuest() ? null : optional(optional($appt->patient)->patientDetails)->file_number,
+            'match' => $match,
+            'doctor' => trim(optional($appt->doctor)->user_full_name),
+            'date_label' => $appt->date->copy()->locale($locale)->isoFormat('dddd D MMMM YYYY'),
+            'time' => $appt->start.'–'.$appt->end,
+            'reason' => $appt->reason,
+            'source' => $appt->source,
+            'asked' => $appt->created_at ? $appt->created_at->locale($locale)->diffForHumans() : null,
+            'day' => $day->map(fn ($a) => [
+                'time' => $a->start, 'name' => $a->display_name, 'status' => $a->status,
+                'status_label' => __('clinic.appt_status_'.$a->status), 'guest' => $a->isGuest(), 'this' => $a->id == $appt->id,
+            ])->values(),
+            'confirmed' => $confirmed,
+            'pending' => $pending,
+            'after' => $after,
+            'cap' => $cap,
+            'over' => $cap > 0 && $after > $cap,
+            'fills' => $cap > 0 && $after == $cap,
+            'free' => $free,
+            'hours' => $hours,
+            'day_off' => ClinicAppointments::isDayOff($bid, $appt->doctor_id, $appt->date),
+            'same_day' => $same_day,
+            'diary_url' => action([self::class, 'index'], ['date' => $appt->date->toDateString(), 'doctor_id' => $appt->doctor_id]),
+        ]);
     }
 
     public function decline(Request $request, $id)
@@ -295,9 +378,16 @@ class ClinicAppointmentController extends Controller
         $appt = $this->find($id);
         $this->authorizeFor($appt->doctor_id);
         if ($appt->status != 'requested') {
+            if ($request->expectsJson()) {
+                return response()->json(['ok' => false, 'msg' => __('clinic.appt_not_requested')], 409);
+            }
+
             return $this->back($request, $appt->date)->with('status', ['success' => false, 'msg' => __('clinic.appt_not_requested')]);
         }
         ClinicAppointments::release($appt, 'declined', $request->session()->get('user.id'), $request->input('reason'));
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'msg' => __('clinic.appt_declined')]);
+        }
 
         return $this->back($request, $appt->date)->with('status', ['success' => true, 'msg' => __('clinic.appt_declined')]);
     }

@@ -21,7 +21,7 @@
             <a href="{{ action([\App\Http\Controllers\VisitController::class, 'show'], [$ap->visit_id]) }}" class="btn btn-xs btn-default"><i class="fas fa-eye"></i> @lang('clinic.appt_open_visit')</a>
         @endif
         @if ($ap->status == 'requested')
-            <form method="POST" action="{{ action([$A, 'confirm'], [$ap->id]) }}">@csrf{!! $ap_keep !!}<button class="btn btn-xs btn-success"><i class="fas fa-check"></i> @lang('clinic.appt_confirm')</button></form>
+            <form method="POST" action="{{ action([$A, 'confirm'], [$ap->id]) }}" data-review="{{ $ap->id }}">@csrf{!! $ap_keep !!}<button class="btn btn-xs btn-success"><i class="fas fa-check"></i> @lang('clinic.appt_confirm')</button></form>
             <form method="POST" action="{{ action([$A, 'decline'], [$ap->id]) }}" class="js-reason" data-prompt="{{ __('clinic.appt_decline_prompt') }}">@csrf{!! $ap_keep !!}
                 <input type="hidden" name="reason">
                 <button class="btn btn-xs btn-default"><i class="fas fa-ban"></i> @lang('clinic.appt_decline')</button>

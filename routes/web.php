@@ -825,6 +825,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('clinic/appointments/hours/{id}/delete', [\App\Http\Controllers\ClinicAppointmentController::class, 'deleteHours']);
     Route::post('clinic/appointments/days-off', [\App\Http\Controllers\ClinicAppointmentController::class, 'storeDayOff']);
     Route::post('clinic/appointments/days-off/{id}/delete', [\App\Http\Controllers\ClinicAppointmentController::class, 'deleteDayOff']);
+    Route::get('clinic/appointments/{id}/review', [\App\Http\Controllers\ClinicAppointmentController::class, 'review'])->whereNumber('id');
     Route::post('clinic/appointments/{id}/confirm', [\App\Http\Controllers\ClinicAppointmentController::class, 'confirm']);
     Route::post('clinic/appointments/{id}/decline', [\App\Http\Controllers\ClinicAppointmentController::class, 'decline']);
     Route::post('clinic/appointments/{id}/cancel', [\App\Http\Controllers\ClinicAppointmentController::class, 'cancel']);
