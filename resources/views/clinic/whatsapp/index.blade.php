@@ -201,6 +201,10 @@
                             <span class="wa-inline" style="display:inline-flex; margin-left:6px;"><input type="time" name="reminder_time" value="{{ old('reminder_time', $acc->reminder_time) }}" class="form-control input-sm" aria-label="{{ __('clinic.wa_reminder_time') }}" required></span></div>
                         <div class="checkbox" style="margin-left:20px;"><label><input type="checkbox" name="reminder_buttons" value="1" {{ $acc->reminder_buttons ? 'checked' : '' }}> @lang('clinic.wa_reminder_buttons')</label></div>
                         <div class="checkbox"><label><input type="checkbox" name="send_moved" value="1" {{ $acc->send_moved ? 'checked' : '' }}> @lang('clinic.wa_send_moved')</label></div>
+                        <label style="margin-top:8px;">@lang('clinic.wa_to_doctors')</label>
+                        <div class="checkbox" style="margin-top:0;"><label><input type="checkbox" name="send_doctor_update" value="1" {{ $acc->send_doctor_update ? 'checked' : '' }}> @lang('clinic.wa_send_doctor_update')</label></div>
+                        <div class="checkbox"><label><input type="checkbox" name="send_doctor_request" value="1" {{ $acc->send_doctor_request ? 'checked' : '' }}> @lang('clinic.wa_send_doctor_request')</label></div>
+                        <p class="help-block" style="margin-bottom:0">@lang('clinic.wa_to_doctors_help')</p>
                     </div>
                     <div class="form-group">
                         <label for="wa_language">@lang('clinic.wa_language')</label>

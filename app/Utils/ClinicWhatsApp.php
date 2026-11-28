@@ -322,6 +322,44 @@ class ClinicWhatsApp
     }
 
     /**
+     * Tells a doctor on WhatsApp that one of his appointments was booked (or
+     * confirmed) for him, moved or cancelled — the doctor's own utility template
+     * (tpl_doctor_update). Sent to the doctor's profile mobile; skipped silently
+     * when WhatsApp is not ready, the message is switched off, or he has no number.
+     * Never throws.
+     */
+    public static function notifyDoctorUpdate(ClinicAppointment $appt, $kind, $doctor = null)
+    {
+        try {
+            $acc = self::account($appt->business_id);
+            if (! $acc || ! $acc->ready() || ! $acc->sends('doctor_update')) {
+                return null;
+            }
+            $doctor = $doctor ?: \App\User::find($appt->doctor_id);
+            $to = $doctor ? self::waNumber($appt->business_id, $doctor->contact_number) : null;
+            if (! $to) {
+                return null;
+            }
+            $lang = in_array($acc->language, ['en', 'fr'], true) ? $acc->language : 'fr';
+            $params = [
+                __('clinic.wa_du_'.$kind, [], $lang),
+                $appt->display_name ?: __('clinic.wa_a_patient', [], $lang),
+                Carbon::parse($appt->date)->locale($lang)->isoFormat('D MMM YYYY'),
+                $appt->start,
+            ];
+
+            return self::sendTemplate($acc, $to, $acc->templateFor('doctor_update'), $lang, $params, [
+                'kind' => 'doctor_update', 'contact_id' => $appt->contact_id, 'appointment_id' => $appt->id,
+                'body' => self::render('doctor_update', $lang, $params),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp doctor-update notify failed', ['business_id' => $appt->business_id, 'error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
      * The day-before reminders: for every clinic past its reminder time, each
      * confirmed appointment of tomorrow not reminded yet (by hand or
      * automatically) and never tried. Run every 10 minutes by the scheduler.
@@ -611,7 +649,7 @@ class ClinicWhatsApp
         if (! $ok) {
             return [false, $error];
         }
-        $mine = [$acc->tpl_confirmation, $acc->tpl_reminder, $acc->tpl_moved, $acc->tpl_doctor_request];
+        $mine = [$acc->tpl_confirmation, $acc->tpl_reminder, $acc->tpl_moved, $acc->tpl_doctor_request, $acc->tpl_doctor_update];
         $status = [];
         foreach ((array) ($json['data'] ?? []) as $t) {
             if (in_array($t['name'] ?? null, $mine, true)) {

@@ -39,12 +39,7 @@ class ClinicFeeController extends Controller
     /** The columns: [package_key => [label, clinic price]] */
     private function columns($business_id)
     {
-        $packages = ClinicPackage::forBusiness($business_id)->active()->perVisit()->ordered()->get();
-        if ($packages->isEmpty()) {
-            return [0 => [__('clinic.fee_consultation'), ClinicFees::clinicPrice($business_id)]];
-        }
-
-        return $packages->mapWithKeys(fn ($p) => [$p->id => [$p->name, (float) $p->price]])->all();
+        return ClinicFees::columns($business_id);
     }
 
     public function index()

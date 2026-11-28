@@ -506,6 +506,13 @@ class AdminSidebarMenu
                     $menu->url($url, $title, ['icon' => \App\Utils\ClinicIcons::svg($icon), 'active' => $active])->order($order);
                 };
 
+                // ---- A doctor's own workspace (admins who see patients too), with what is new for him
+                if (\App\Utils\ClinicQueue::isDoctor($u, $hosp_biz)) {
+                    $mp_new = \App\Http\Controllers\ClinicMyPracticeController::unreadCount($u);
+                    $item(action([\App\Http\Controllers\ClinicMyPracticeController::class, 'index']),
+                        __('clinic.mp_title').($mp_new ? ' ('.$mp_new.')' : ''), 'clipboard-heart', $seg1 == 'clinic' && $seg2 == 'my-practice', 5.10);
+                }
+
                 // ---- Front desk
                 if ($u->can('patient.view') || $u->can('patient.create')) {
                     $item(action([\App\Http\Controllers\PatientController::class, 'index']), __('lang_v1.patients'), 'users', $seg1 == 'patients', 5.11);

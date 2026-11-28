@@ -195,7 +195,7 @@
             rv.hidden = true;
             document.removeEventListener('keydown', rvKey);
             // lists of requests on this page are now out of date
-            if (rvState.changed && /\/clinic\/appointments/.test(location.pathname)) { location.reload(); }
+            if (rvState.changed && /\/clinic\/(appointments|my-practice)/.test(location.pathname)) { location.reload(); }
             rvState.changed = false;
         }
         function rvKey(e) { if (e.key === 'Escape' && ! rvState.busy) { rvClose(); } }

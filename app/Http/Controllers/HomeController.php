@@ -75,6 +75,13 @@ class HomeController extends Controller
         //may see sales figures get a "Pharmacy sales" tab (?view=sales) for the usual one.
         $enabled_modules = (array) (session('business.enabled_modules') ?: []);
         $hospital_home = in_array('hospital', $enabled_modules);
+        // a doctor opens on My practice once per sign-in; Home still works afterwards (and with ?home=1)
+        if ($hospital_home && ! request()->session()->get('pi_doctor_landed') && ! request()->has('home')
+            && \App\Utils\ClinicQueue::isDoctor($user, $business_id)) {
+            request()->session()->put('pi_doctor_landed', 1);
+
+            return redirect()->action([\App\Http\Controllers\ClinicMyPracticeController::class, 'index']);
+        }
         if ($hospital_home && ! (request()->input('view') == 'sales' && \App\Utils\ClinicDashboard::canSeeSales(auth()->user(), $business_id))) {
             $dash = \App\Utils\ClinicDashboard::build($business_id, auth()->user());
 

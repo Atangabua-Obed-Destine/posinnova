@@ -199,6 +199,35 @@
 <p>Approval usually takes a few minutes, sometimes up to a day. Then click <span class="wa-menu">Check templates</span> in PosInnova's checklist:
     each should say <span class="label label-success">Approved</span>. Then send yourself a sample reminder from the "Send a test message" step.</p>
 
+<h4 id="g14b">Optional: messages to doctors</h4>
+<p>PosInnova can also WhatsApp a doctor when an appointment is booked for him, moved or cancelled, and, if your doctors approve requests themselves,
+    when a request is waiting for him. Create these two templates the same way (Category <b>Utility</b>, French then English).
+    Each doctor then types his number in <span class="wa-menu">My practice → My WhatsApp number</span>.</p>
+@php
+    $doc_tpls = [
+        'doctor_update' => [['Nouveau rendez-vous', 'Marie', '13 nov. 2026', '10:00'], ['New appointment', 'Marie', '13 Nov 2026', '10:00']],
+        'doctor_request' => [['Marie', '13 nov. 2026', '10:00'], ['Marie', '13 Nov 2026', '10:00']],
+    ];
+@endphp
+@foreach ($doc_tpls as $dkind => [$samples_fr, $samples_en])
+    <div class="wa-tpl">
+        <div class="wa-tpl-head">{{ __('clinic.wa_kind_' . $dkind, [], 'en') }}</div>
+        @include('clinic.whatsapp.partials.copy', ['label' => 'Template name', 'text' => $acc->templateFor($dkind)])
+        <div class="row">
+            <div class="col-md-6">
+                @include('clinic.whatsapp.partials.copy', ['label' => 'Body: French', 'text' => __('clinic.wa_tpl_' . $dkind, [], 'fr'), 'multi' => 1])
+                <div class="wa-copy-label">Sample values (French)</div>
+                <ol style="font-size:13px; margin-bottom:0;">@foreach ($samples_fr as $s)<li><code>{{ $s }}</code></li>@endforeach</ol>
+            </div>
+            <div class="col-md-6">
+                @include('clinic.whatsapp.partials.copy', ['label' => 'Body: English', 'text' => __('clinic.wa_tpl_' . $dkind, [], 'en'), 'multi' => 1])
+                <div class="wa-copy-label">Sample values (English)</div>
+                <ol style="font-size:13px; margin-bottom:0;">@foreach ($samples_en as $s)<li><code>{{ $s }}</code></li>@endforeach</ol>
+            </div>
+        </div>
+    </div>
+@endforeach
+
 <h3>Part 5: Switch it on (5 minutes)</h3>
 <h4 id="g15">Step 15: Choose what to send, and switch on</h4>
 <ol>

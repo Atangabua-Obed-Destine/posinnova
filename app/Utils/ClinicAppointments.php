@@ -316,6 +316,7 @@ class ClinicAppointments
             }
             throw $e;
         }
+        self::tellDoctor($appt, $confirmed ? 'booked' : 'request', $user_id);
 
         return [$appt, null];
     }
@@ -398,8 +399,41 @@ class ClinicAppointments
             }
             throw $e;
         }
+        self::tellDoctor($appt, 'request', null);
 
         return [$appt, null];
+    }
+
+    /**
+     * Tells the doctor about one of his appointments, in the header bell / My
+     * practice and on WhatsApp: booked (or confirmed for him), moved, moved to
+     * another doctor, cancelled, or a request he is the one to approve. Never for
+     * what the doctor did himself; requests only when the clinic routes approval
+     * to doctors (otherwise "booked" follows once reception confirms). Never throws.
+     */
+    public static function tellDoctor(ClinicAppointment $appt, $kind, $actor_id = null, $doctor_id = null)
+    {
+        try {
+            $doctor_id = (int) ($doctor_id ?: $appt->doctor_id);
+            if (! $doctor_id || ($actor_id && (int) $actor_id === $doctor_id)) {
+                return;
+            }
+            $bid = $appt->business_id;
+            if ($kind === 'request' && ! in_array(ClinicSettings::get($bid, 'appointments_approval'), ['doctor', 'both'], true)) {
+                return;
+            }
+            $doctor = \App\User::find($doctor_id);
+            if (! $doctor || ! ClinicQueue::isDoctor($doctor, $bid)) {
+                return;
+            }
+            $appt->loadMissing('patient');
+            $doctor->notify(new \App\Notifications\ClinicAppointmentNotification($appt, $kind));
+            if (in_array($kind, ['booked', 'moved', 'cancelled'], true)) {
+                ClinicWhatsApp::notifyDoctorUpdate($appt, $kind, $doctor);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Clinic: telling the doctor failed', ['appointment' => $appt->id, 'kind' => $kind, 'error' => $e->getMessage()]);
+        }
     }
 
     /**
@@ -514,6 +548,13 @@ class ClinicAppointments
             }
             throw $e;
         }
+        if ((int) $from['doctor_id'] !== (int) $appt->doctor_id) {
+            // given to another doctor: news for both
+            self::tellDoctor($appt, 'moved_away', $user_id, $from['doctor_id']);
+            self::tellDoctor($appt, 'booked', $user_id);
+        } else {
+            self::tellDoctor($appt, 'moved', $user_id);
+        }
 
         return [$appt, null, $from];
     }
@@ -524,12 +565,17 @@ class ClinicAppointments
      */
     public static function release(ClinicAppointment $appt, $status, $user_id = null, $reason = null)
     {
+        $was = $appt->status;
         $appt->status = $status;
         $appt->slot_key = null;
         $appt->cancelled_at = now();
         $appt->cancelled_by = $user_id;
         $appt->cancel_reason = $reason ? mb_substr(trim($reason), 0, 191) : null;
         $appt->save();
+        // the doctor counted on a confirmed one; a request that never was his is not news
+        if ($was === 'confirmed' && $status === 'cancelled') {
+            self::tellDoctor($appt, 'cancelled', $user_id);
+        }
 
         return $appt;
     }

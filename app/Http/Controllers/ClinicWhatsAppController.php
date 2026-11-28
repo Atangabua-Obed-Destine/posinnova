@@ -116,7 +116,7 @@ class ClinicWhatsAppController extends Controller
         $acc->api_version = $request->input('api_version') ?: 'v25.0';
         $acc->language = $request->input('language');
         $acc->reminder_time = $request->input('reminder_time');
-        foreach (['send_confirmation', 'send_reminder', 'send_moved', 'reminder_buttons'] as $f) {
+        foreach (['send_confirmation', 'send_reminder', 'send_moved', 'reminder_buttons', 'send_doctor_update', 'send_doctor_request'] as $f) {
             $acc->{$f} = $request->boolean($f);
         }
         foreach (['tpl_confirmation', 'tpl_reminder', 'tpl_moved'] as $f) {

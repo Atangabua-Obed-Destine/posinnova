@@ -284,6 +284,7 @@ class ClinicAppointmentController extends Controller
         $appt->confirmed_at = now();
         $appt->confirmed_by = $request->session()->get('user.id');
         $appt->save();
+        ClinicAppointments::tellDoctor($appt, 'booked', $request->session()->get('user.id'));
 
         $flash = $this->whatsappFlash($appt, 'confirmation');
         $msg = $new_patient ? __('clinic.appt_confirmed_new_patient', ['name' => $appt->display_name]) : __('clinic.appt_confirmed');
@@ -483,11 +484,19 @@ class ClinicAppointmentController extends Controller
         $this->authorizeSchedule($doctor);
         $business_id = $request->session()->get('user.business_id');
         if (! isset(ClinicQueue::doctors($business_id)[$doctor])) {
-            return redirect()->action([self::class, 'hours'])->with('status', ['success' => false, 'msg' => __('clinic.choose_doctor')]);
+            return $this->scheduleBack($request)->with('status', ['success' => false, 'msg' => __('clinic.choose_doctor')]);
         }
         ClinicSettings::setDoctorCap($business_id, $doctor, (int) $request->input('max_per_day', 0));
 
-        return redirect()->action([self::class, 'hours'])->with('status', ['success' => true, 'msg' => __('clinic.appt_cap_saved')]);
+        return $this->scheduleBack($request)->with('status', ['success' => true, 'msg' => __('clinic.appt_cap_saved')]);
+    }
+
+    /** Back to the hours page, or to My practice when the change was made there. */
+    private function scheduleBack(Request $request)
+    {
+        return $request->input('return') === 'my-practice'
+            ? redirect()->to(action([ClinicMyPracticeController::class, 'index']).'#mp_settings')
+            : redirect()->action([self::class, 'hours']);
     }
 
     public function storeHours(Request $request)
@@ -536,7 +545,7 @@ class ClinicAppointmentController extends Controller
         $doctor_id = (int) $request->input('user_id');
         $this->authorizeSchedule($doctor_id);
         $business_id = $request->session()->get('user.business_id');
-        $back = redirect()->action([self::class, 'hours']);
+        $back = $this->scheduleBack($request);
         try {
             $from = Carbon::parse($request->input('date'))->startOfDay();
             $to = $request->filled('date_to') ? Carbon::parse($request->input('date_to'))->startOfDay() : $from->copy();

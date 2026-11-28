@@ -199,6 +199,35 @@
 <p>La validation prend en général quelques minutes, parfois jusqu'à un jour. Cliquez ensuite sur <span class="wa-menu">Vérifier les modèles</span> dans la liste de PosInnova :
     chacun doit indiquer <span class="label label-success">Validé</span>. Envoyez-vous alors un exemple de rappel depuis l'étape « Envoyer un message de test ».</p>
 
+<h4 id="g14b">Facultatif : messages aux médecins</h4>
+<p>PosInnova peut aussi écrire sur WhatsApp à un médecin quand un rendez-vous est pris pour lui, déplacé ou annulé et, si vos médecins approuvent
+    eux-mêmes les demandes, quand une demande l'attend. Créez ces deux modèles de la même façon (catégorie <b>Utilitaire</b>, en français puis en anglais).
+    Chaque médecin saisit ensuite son numéro dans <span class="wa-menu">Mon cabinet → Mon numéro WhatsApp</span>.</p>
+@php
+    $doc_tpls = [
+        'doctor_update' => [['Nouveau rendez-vous', 'Marie', '13 nov. 2026', '10:00'], ['New appointment', 'Marie', '13 Nov 2026', '10:00']],
+        'doctor_request' => [['Marie', '13 nov. 2026', '10:00'], ['Marie', '13 Nov 2026', '10:00']],
+    ];
+@endphp
+@foreach ($doc_tpls as $dkind => [$samples_fr, $samples_en])
+    <div class="wa-tpl">
+        <div class="wa-tpl-head">{{ __('clinic.wa_kind_' . $dkind, [], 'fr') }}</div>
+        @include('clinic.whatsapp.partials.copy', ['label' => 'Nom du modèle', 'text' => $acc->templateFor($dkind)])
+        <div class="row">
+            <div class="col-md-6">
+                @include('clinic.whatsapp.partials.copy', ['label' => 'Corps : français', 'text' => __('clinic.wa_tpl_' . $dkind, [], 'fr'), 'multi' => 1])
+                <div class="wa-copy-label">Valeurs d'exemple (français)</div>
+                <ol style="font-size:13px; margin-bottom:0;">@foreach ($samples_fr as $s)<li><code>{{ $s }}</code></li>@endforeach</ol>
+            </div>
+            <div class="col-md-6">
+                @include('clinic.whatsapp.partials.copy', ['label' => 'Corps : anglais', 'text' => __('clinic.wa_tpl_' . $dkind, [], 'en'), 'multi' => 1])
+                <div class="wa-copy-label">Valeurs d'exemple (anglais)</div>
+                <ol style="font-size:13px; margin-bottom:0;">@foreach ($samples_en as $s)<li><code>{{ $s }}</code></li>@endforeach</ol>
+            </div>
+        </div>
+    </div>
+@endforeach
+
 <h3>Partie 5 : Mettre en marche (5 minutes)</h3>
 <h4 id="g15">Étape 15 : Choisir quoi envoyer, et activer</h4>
 <ol>

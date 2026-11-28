@@ -22,6 +22,20 @@ class ClinicFees
         return $package ? (float) $package->price : (float) (Business::where('id', $business_id)->value('consultation_fee') ?: 0);
     }
 
+    /**
+     * What a doctor can have his own price for: each active per-visit package
+     * [package_id => [name, clinic price]], or the single consultation fee [0 => ...].
+     */
+    public static function columns($business_id)
+    {
+        $packages = ClinicPackage::forBusiness($business_id)->active()->perVisit()->ordered()->get();
+        if ($packages->isEmpty()) {
+            return [0 => [__('clinic.fee_consultation'), self::clinicPrice($business_id)]];
+        }
+
+        return $packages->mapWithKeys(fn ($p) => [$p->id => [$p->name, (float) $p->price]])->all();
+    }
+
     /** The doctor's own price, or null when they have none. */
     public static function doctorPrice($business_id, $doctor_id, ?ClinicPackage $package = null)
     {

@@ -1396,6 +1396,18 @@ class Util
                     'read_at' => $notification->read_at,
                     'created_at' => $notification->created_at->diffForHumans(),
                 ];
+            } elseif ($notification->type == \App\Notifications\ClinicAppointmentNotification::class) {
+                //PosInnova: a doctor's appointment news (booked / moved / cancelled / request); the
+                //message is printed unescaped by the bell, so the patient name is escaped here
+                $safe = $data;
+                $safe['patient'] = e($data['patient'] ?? '');
+                $notifications_data[] = [
+                    'msg' => \App\Notifications\ClinicAppointmentNotification::message($safe),
+                    'icon_class' => \App\Notifications\ClinicAppointmentNotification::icon($data['kind'] ?? 'booked'),
+                    'link' => action([\App\Http\Controllers\ClinicMyPracticeController::class, 'index']),
+                    'read_at' => $notification->read_at,
+                    'created_at' => $notification->created_at->diffForHumans(),
+                ];
             } else {
                 $moduleUtil = new \App\Utils\ModuleUtil;
                 $module_notification_data = $moduleUtil->getModuleData('parse_notification', $notification);
