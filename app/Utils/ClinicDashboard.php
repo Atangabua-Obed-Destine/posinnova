@@ -47,6 +47,13 @@ class ClinicDashboard
         };
 
         // ---------- quick actions
+        // a doctor's own workspace first (admins who see patients too), with how much is new for him
+        if (ClinicQueue::isDoctor($user, $business_id)) {
+            $mp_new = \App\Http\Controllers\ClinicMyPracticeController::unreadCount($user);
+            $d['actions'][] = ['url' => action([\App\Http\Controllers\ClinicMyPracticeController::class, 'index']),
+                'label' => __('clinic.mp_title').($mp_new ? ' · '.trans_choice('clinic.mp_n_new', $mp_new, ['n' => $mp_new]) : ''),
+                'icon' => 'clipboard-heart', 'primary' => true, 'id' => 'hd_my_practice'];
+        }
         if ($user->can('patient.create')) {
             $d['actions'][] = ['url' => action([\App\Http\Controllers\PatientController::class, 'create']), 'label' => __('clinic.dash_register_patient'), 'icon' => 'user-plus', 'primary' => true];
         }

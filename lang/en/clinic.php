@@ -2048,6 +2048,7 @@ return [
     'rpt_portal_setting_help' => 'When a full consultation report fee is set, patients see the full report only once they have paid for it, whatever is chosen here.',
 
     // My practice (a doctor's own workspace) and the doctor's appointment news
+    'mp_n_new' => '{1} 1 new|[2,*] :n new',
     'mp_title' => 'My practice',
     'mp_good_morning' => 'Good morning',
     'mp_good_afternoon' => 'Good afternoon',

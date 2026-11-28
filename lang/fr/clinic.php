@@ -2049,6 +2049,7 @@ return [
     'rpt_portal_setting_help' => 'Quand des frais de compte rendu complet sont fixés, le patient ne voit le compte rendu complet qu’une fois payé, quel que soit le choix ici.',
 
     // Mon cabinet (l’espace du médecin) et les nouvelles de ses rendez-vous
+    'mp_n_new' => '{1} 1 nouveau|[2,*] :n nouveaux',
     'mp_title' => 'Mon cabinet',
     'mp_good_morning' => 'Bonjour',
     'mp_good_afternoon' => 'Bon après-midi',

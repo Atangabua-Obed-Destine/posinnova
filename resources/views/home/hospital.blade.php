@@ -104,7 +104,7 @@
     @if (! empty($dash['actions']))
         <div class="hd-actions">
             @foreach ($dash['actions'] as $a)
-                <a href="{{ $a['url'] }}" class="hd-act {{ ! empty($a['primary']) ? 'is-primary' : '' }}">{!! \App\Utils\ClinicIcons::svg($a['icon'], '') !!} {{ $a['label'] }}</a>
+                <a href="{{ $a['url'] }}" @if (! empty($a['id'])) id="{{ $a['id'] }}" @endif class="hd-act {{ ! empty($a['primary']) ? 'is-primary' : '' }}">{!! \App\Utils\ClinicIcons::svg($a['icon'], '') !!} {{ $a['label'] }}</a>
             @endforeach
         </div>
     @endif
