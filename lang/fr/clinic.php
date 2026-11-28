@@ -294,6 +294,10 @@ return [
     'requeue' => 'Remettre dans la file',
     'back_in_queue' => 'Le patient est de retour dans la file.',
     'billed_at_checkin' => 'Facturé à l\'arrivée : :package',
+    'doctors_by_role' => 'Médecins (par leur rôle)',
+    'doctors_by_role_help' => 'Le personnel dont le rôle a « Reçoit des patients ». Pour en ajouter ou retirer un, changez son rôle dans Utilisateurs → Rôles.',
+    'doctors_by_role_none' => 'Aucun rôle n’a encore « Reçoit des patients » : seuls les Admins cochés ci-dessous sont médecins. Donnez cette permission au rôle de vos médecins (Utilisateurs → Rôles) et ils apparaîtront ici.',
+    'doctors_by_role_link' => 'Ouvrir les rôles',
     'admin_doctors' => 'Administrateurs qui reçoivent aussi des patients',
     'admin_doctors_help' => 'Les administrateurs ont tous les droits : ils ne sont proposés comme médecins à l\'arrivée que s\'ils sont cochés ici. Le reste du personnel est proposé quand son rôle a « Reçoit des patients ».',
 

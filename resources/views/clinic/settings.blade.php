@@ -48,6 +48,21 @@
                         <p class="help-block" style="margin-left:20px;">@lang('clinic.pay_before_help')</p>
                     </div>
                 </div>
+                <div class="form-group" id="role_doctors">
+                    <label>@lang('clinic.doctors_by_role'):</label>
+                    @if (! empty($role_doctors))
+                        <ul class="list-unstyled" style="margin:0 0 4px;">
+                            @foreach ($role_doctors as [$rd_name, $rd_roles])
+                                <li style="padding:2px 0;"><i class="fas fa-user-md text-muted"></i> <strong>{{ $rd_name }}</strong>
+                                    @if ($rd_roles)<span class="label label-default" style="margin-left:4px;">{{ $rd_roles }}</span>@endif</li>
+                            @endforeach
+                        </ul>
+                        <p class="help-block" style="margin-top:0;">@lang('clinic.doctors_by_role_help')</p>
+                    @else
+                        <p class="help-block" style="margin-top:0;">@lang('clinic.doctors_by_role_none')
+                            @can('roles.view') <a href="{{ url('roles') }}">@lang('clinic.doctors_by_role_link')</a>@endcan</p>
+                    @endif
+                </div>
                 @if (! empty($admins))
                     <div class="form-group">
                         <label>@lang('clinic.admin_doctors'):</label>

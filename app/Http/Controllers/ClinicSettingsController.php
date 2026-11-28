@@ -39,9 +39,15 @@ class ClinicSettingsController extends Controller
         $admins = \App\Utils\ClinicQueue::admins($business_id);
         $doctors = \App\Utils\ClinicQueue::doctors($business_id);
         $doctor_specialties = \App\Utils\ClinicDoctors::specialties(array_keys($doctors));
+        // staff listed as doctors through their role ("Receives patients"), with the role's name
+        $role_doctors = [];
+        foreach (array_diff_key($doctors, $admins) as $doc_id => $doc_name) {
+            $roles = \App\User::find($doc_id)?->getRoleNames()->map(fn ($r) => preg_replace('/#\d+$/', '', $r))->implode(', ');
+            $role_doctors[$doc_id] = [$doc_name, $roles];
+        }
         $specialty_choices = \App\Utils\ClinicDoctors::choices($business_id);
 
-        return view('clinic.settings', compact('business', 'settings', 'next_file_number', 'admins', 'doctors', 'doctor_specialties', 'specialty_choices'));
+        return view('clinic.settings', compact('business', 'settings', 'next_file_number', 'admins', 'doctors', 'doctor_specialties', 'specialty_choices', 'role_doctors'));
     }
 
     public function update(Request $request)

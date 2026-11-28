@@ -293,6 +293,10 @@ return [
     'requeue' => 'Back in queue',
     'back_in_queue' => 'The patient is back in the queue.',
     'billed_at_checkin' => 'Billed at check-in: :package',
+    'doctors_by_role' => 'Doctors (by their role)',
+    'doctors_by_role_help' => 'Staff whose role has "Receives patients". To add or remove one, change their role in Users → Roles.',
+    'doctors_by_role_none' => 'No staff role has "Receives patients" yet, so only the Admins ticked below are doctors. Give that permission to your doctors\' role (Users → Roles) and they appear here.',
+    'doctors_by_role_link' => 'Open Roles',
     'admin_doctors' => 'Admins who also see patients',
     'admin_doctors_help' => 'Admins can do everything, so they are not listed as doctors at check-in unless ticked here. Other staff are listed when their role has "Receives patients".',
 
